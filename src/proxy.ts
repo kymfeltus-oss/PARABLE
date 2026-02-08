@@ -1,45 +1,57 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { createClient } from "@/utils/supabase/server";
 
-const PUBLIC_PATHS = [
-  "/",
-  "/login",
-  "/welcome",
-  "/create-account",
-];
-
-const PUBLIC_FILE = /\.(.*)$/; // allows .svg, .png, .css, .js, etc
-
-export function proxy(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-
-  // ✅ Allow static files (logo, images, fonts, etc)
-  if (PUBLIC_FILE.test(pathname)) {
-    return NextResponse.next();
-  }
-
-  // ✅ Allow Next internals
+// allow Next internals + static assets
+function isPublic(pathname: string) {
   if (
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon")
+    pathname === "/favicon.ico" ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml"
+  ) {
+    return true;
+  }
+
+  return /\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|mjs|map|txt|woff|woff2|ttf|eot)$/.test(
+    pathname
+  );
+}
+
+// ✅ Next.js runs this for every request (proxy replaces middleware)
+export async function proxy(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // never block static assets (fixes /logo.svg redirect)
+  if (isPublic(pathname)) return NextResponse.next();
+
+  // always allow auth/onboarding pages
+  if (
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/create-account") ||
+    pathname.startsWith("/welcome")
   ) {
     return NextResponse.next();
   }
 
-  // ✅ Allow public routes
-  if (PUBLIC_PATHS.includes(pathname)) {
-    return NextResponse.next();
-  }
+  // allow API routes (protect separately if you want)
+  if (pathname.startsWith("/api")) return NextResponse.next();
 
-  // 🔐 Everything else requires auth
-  const isLoggedIn = req.cookies.has("sb-rmerwwmamddqrqtxvkrx-auth-token");
+  // auth gate
+  const supabase = createClient(req);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!isLoggedIn) {
-    const loginUrl = req.nextUrl.clone();
-    loginUrl.pathname = "/login";
-    loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+  if (!user) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("next", pathname);
+    return NextResponse.redirect(url);
   }
 
   return NextResponse.next();
 }
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image).*)"],
+};
