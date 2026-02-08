@@ -1,11 +1,102 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import Sparkles from "@/components/login/Sparkles";
+
+function frac(n: number) {
+  return n - Math.floor(n);
+}
+function prand(seed: number) {
+  // deterministic pseudo-random (SSR-safe)
+  return frac(Math.sin(seed * 9999.123) * 10000);
+}
+
+function MatrixRain() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  // deterministic (index-based), so no hydration weirdness
+  const columns = useMemo(() => {
+    const count = 28; // visual density
+    return Array.from({ length: count }).map((_, i) => {
+      const left = (i / count) * 100;
+      const delay = (i % 7) * 0.55;
+      const duration = 6.5 + (i % 9) * 0.6;
+      const fontSize = 10 + (i % 6) * 2;
+      const opacity = 0.10 + (i % 6) * 0.02;
+      const blur = (i % 5) * 0.25;
+
+      return { i, left, delay, duration, fontSize, opacity, blur };
+    });
+  }, []);
+
+  const glyphs = useMemo(
+    () => "アカサタナハマヤラワ0123456789PARABLE✦✧◇◆•",
+    []
+  );
+
+  if (!mounted) return null;
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[2] overflow-hidden">
+      {/* subtle tint wash */}
+      <div className="absolute inset-0 opacity-[0.18] bg-[radial-gradient(circle_at_40%_30%,rgba(0,242,254,0.18),transparent_55%),radial-gradient(circle_at_70%_70%,rgba(0,242,254,0.10),transparent_60%)]" />
+
+      {columns.map((c) => (
+        <div
+          key={c.i}
+          className="absolute top-[-30%] h-[160%] select-none"
+          style={{
+            left: `${c.left}%`,
+            width: "3.6%",
+            filter: `blur(${c.blur}px)`,
+            opacity: c.opacity,
+          }}
+        >
+          <div
+            className="matrix-fall"
+            style={{
+              animationDelay: `${c.delay}s`,
+              animationDuration: `${c.duration}s`,
+              fontSize: `${c.fontSize}px`,
+            }}
+          >
+            {/* repeat a deterministic pattern (no randomness) */}
+            <div className="leading-[1.15]">
+              {Array.from({ length: 60 }).map((_, r) => {
+                const ch = glyphs[(c.i * 7 + r * 3) % glyphs.length];
+                const isHot = r % 11 === 0;
+                return (
+                  <div
+                    key={r}
+                    className={
+                      isHot
+                        ? "text-[#00f2fe] drop-shadow-[0_0_10px_rgba(0,242,254,0.65)]"
+                        : "text-white/70"
+                    }
+                    style={{
+                      opacity: isHot ? 0.95 : 0.42,
+                    }}
+                  >
+                    {ch}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {/* vignette so it stays premium, not noisy */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_0%,rgba(0,0,0,0.45)_58%,rgba(0,0,0,0.78)_100%)]" />
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const supabase = createClient();
@@ -66,19 +157,30 @@ export default function LoginPage() {
     setInfo("Password reset email sent.");
   };
 
-  // deterministic-ish for one mount (only visual)
+  // ✅ FIX: deterministic shards (no Math.random = no delay + no hydration mismatch)
   const shards = useMemo(
     () =>
-      Array.from({ length: 14 }).map((_, i) => ({
-        id: i,
-        left: `${Math.random() * 100}%`,
-        top: `${Math.random() * 100}%`,
-        delay: Math.random() * 1.8,
-        dur: 8 + Math.random() * 8,
-        rot: -20 + Math.random() * 40,
-        scale: 0.7 + Math.random() * 0.8,
-        opacity: 0.10 + Math.random() * 0.18,
-      })),
+      Array.from({ length: 14 }).map((_, i) => {
+        const r1 = prand(i + 1);
+        const r2 = prand(i + 101);
+        const r3 = prand(i + 1001);
+        const r4 = prand(i + 10001);
+        const r5 = prand(i + 50001);
+        const r6 = prand(i + 90001);
+        const r7 = prand(i + 130001);
+        const r8 = prand(i + 170001);
+
+        return {
+          id: i,
+          left: `${r1 * 100}%`,
+          top: `${r2 * 100}%`,
+          delay: r3 * 1.8,
+          dur: 8 + r4 * 8,
+          rot: -20 + r5 * 40,
+          scale: 0.7 + r6 * 0.8,
+          opacity: 0.10 + r7 * 0.18,
+        };
+      }),
     []
   );
 
@@ -93,7 +195,10 @@ export default function LoginPage() {
         <div className="absolute inset-0 opacity-[0.12] [background:linear-gradient(to_right,rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:84px_84px]" />
 
         {/* moving scanline */}
-        <div className="absolute inset-0 opacity-[0.10] bg-[linear-gradient(to_bottom,transparent,rgba(0,242,254,0.25),transparent)] animate-[scan_5.5s_linear_infinite]" style={{ backgroundSize: "100% 220px" }} />
+        <div
+          className="absolute inset-0 opacity-[0.10] bg-[linear-gradient(to_bottom,transparent,rgba(0,242,254,0.25),transparent)] animate-[scan_5.5s_linear_infinite]"
+          style={{ backgroundSize: "100% 220px" }}
+        />
 
         {/* crystal shards */}
         {shards.map((s) => (
@@ -118,8 +223,13 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_0%,rgba(0,0,0,0.72)_58%,rgba(0,0,0,0.96)_100%)]" />
       </div>
 
+      {/* NEW: Matrix Rain layer */}
+      <MatrixRain />
+
       {/* Sparkles */}
-      <Sparkles />
+      <div className="relative z-[3]">
+        <Sparkles />
+      </div>
 
       {/* CONTENT */}
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-10">
@@ -312,38 +422,6 @@ export default function LoginPage() {
       </div>
 
       <style jsx global>{`
-        @keyframes blob {
-          0%,
-          100% {
-            transform: translate3d(0, 0, 0) rotate(0deg);
-          }
-          50% {
-            transform: translate3d(18px, -12px, 0) rotate(8deg);
-          }
-        }
-        @keyframes ribbon {
-          0%,
-          100% {
-            transform: translate3d(-1%, 0, 0) rotate(0deg);
-          }
-          50% {
-            transform: translate3d(2%, -2%, 0) rotate(6deg);
-          }
-        }
-        @keyframes sheen {
-          0%,
-          60% {
-            transform: translateX(-60%) rotate(12deg);
-            opacity: 0;
-          }
-          80% {
-            opacity: 0.35;
-          }
-          100% {
-            transform: translateX(190%) rotate(12deg);
-            opacity: 0;
-          }
-        }
         @keyframes ocean {
           0%,
           100% {
@@ -367,8 +445,48 @@ export default function LoginPage() {
             transform: translate3d(0, 0, 0) rotate(var(--r, 0deg)) scale(1);
           }
           50% {
-            transform: translate3d(22px, -18px, 0) rotate(calc(var(--r, 0deg) + 8deg)) scale(1.05);
+            transform: translate3d(22px, -18px, 0)
+              rotate(calc(var(--r, 0deg) + 8deg))
+              scale(1.05);
           }
+        }
+        @keyframes matrixFall {
+          0% {
+            transform: translate3d(0, -18%, 0);
+            opacity: 0;
+          }
+          10% {
+            opacity: 0.9;
+          }
+          75% {
+            opacity: 0.55;
+          }
+          100% {
+            transform: translate3d(0, 18%, 0);
+            opacity: 0;
+          }
+        }
+        @keyframes sheen {
+          0%,
+          60% {
+            transform: translateX(-60%) rotate(12deg);
+            opacity: 0;
+          }
+          80% {
+            opacity: 0.35;
+          }
+          100% {
+            transform: translateX(180%) rotate(12deg);
+            opacity: 0;
+          }
+        }
+        .matrix-fall {
+          animation-name: matrixFall;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
+          will-change: transform, opacity;
+          filter: drop-shadow(0 0 10px rgba(0, 242, 254, 0.25));
+          mix-blend-mode: screen;
         }
       `}</style>
     </div>

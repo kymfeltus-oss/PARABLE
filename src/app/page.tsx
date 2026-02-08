@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -21,11 +21,18 @@ const sanctuaryStyles = `
   }
 `;
 
+function frac(n: number) {
+  return n - Math.floor(n);
+}
+function prand(seed: number) {
+  // deterministic pseudo-random (SSR-safe)
+  return frac(Math.sin(seed * 9999.123) * 10000);
+}
+
 export default function FlashPage() {
   const router = useRouter();
   const supabase = createClient();
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [hasMounted, setHasMounted] = useState(false);
   const transitioningRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -45,24 +52,27 @@ export default function FlashPage() {
   };
 
   useEffect(() => {
-    setHasMounted(true);
     containerRef.current?.focus();
-
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Enter") handleEntry();
     };
-
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  // ✅ Sparkles are deterministic now → safe to render immediately (no mount delay)
   const sparkles = useMemo(() => {
-    return [...Array(40)].map((_, i) => ({
-      id: i,
-      left: `${Math.random() * 100}%`,
-      top: `${Math.random() * 100}%`,
-      delay: Math.random() * 5,
-    }));
+    return Array.from({ length: 40 }).map((_, i) => {
+      const r1 = prand(i + 1);
+      const r2 = prand(i + 101);
+      const r3 = prand(i + 1001);
+      return {
+        id: i,
+        left: `${r1 * 100}%`,
+        top: `${r2 * 100}%`,
+        delay: r3 * 2.25, // quick start
+      };
+    });
   }, []);
 
   return (
@@ -79,31 +89,30 @@ export default function FlashPage() {
         <HubBackground />
 
         <div className="absolute inset-0 z-10">
-          {hasMounted &&
-            sparkles.map((s) => (
-              <div
-                key={s.id}
-                className="absolute w-1 h-1 bg-[#00f2ff] rounded-full shadow-[0_0_8px_#00f2ff]"
-                style={{
-                  left: s.left,
-                  top: s.top,
-                  animation: `floatUp 5s ease-in-out infinite`,
-                  animationDelay: `${s.delay}s`,
-                  opacity: 0,
-                }}
-              />
-            ))}
-
-          {hasMounted && (
+          {/* ✅ Sparkles immediately */}
+          {sparkles.map((s) => (
             <div
-              className="absolute bottom-[-2vh] left-[-20%] right-[-20%] h-[35vh] bg-[#00f2ff]/20 blur-[80px] rounded-[100%]"
-              style={{ animation: "fogDrift 12s ease-in-out infinite" }}
+              key={s.id}
+              className="absolute w-1 h-1 bg-[#00f2ff] rounded-full shadow-[0_0_8px_#00f2ff]"
+              style={{
+                left: s.left,
+                top: s.top,
+                animation: `floatUp 4.5s ease-in-out infinite`,
+                animationDelay: `${s.delay}s`,
+                opacity: 0,
+              }}
             />
-          )}
+          ))}
+
+          {/* ✅ Fog immediately */}
+          <div
+            className="absolute bottom-[-2vh] left-[-20%] right-[-20%] h-[35vh] bg-[#00f2ff]/20 blur-[80px] rounded-[100%]"
+            style={{ animation: "fogDrift 12s ease-in-out infinite" }}
+          />
         </div>
       </div>
 
-      {/* CONTENT LAYER */}
+      {/* CONTENT */}
       <motion.div
         className="relative z-20 flex flex-col items-center pointer-events-none w-full max-w-sm md:max-w-xl"
         animate={
@@ -138,7 +147,6 @@ export default function FlashPage() {
             <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[4px] md:tracking-[6px] text-white/40 mb-4">
               Tap or Press Enter to Access
             </p>
-
             <div className="px-10 py-4 md:px-6 md:py-2 border border-[#00f2ff]/30 rounded-xl bg-black/40 backdrop-blur-md shadow-[0_0_20px_rgba(0,242,255,0.1)]">
               <span className="text-[16px] md:text-[14px] font-black text-[#00f2ff] tracking-[4px]">
                 ENTER
