@@ -1,20 +1,42 @@
-// File content goes here after fetching and modifying
+// Import necessary dependencies
+import React, { useEffect, useState } from 'react';
 
-'use client';
+const PAGE_SIZE = 10; // Number of items per page
 
-// Correct component structure with Supabase integration
+const MySanctuaryPage = () => {
+    const [items, setItems] = useState([]);
+    const [cursor, setCursor] = useState(null);
+    const [loading, setLoading] = useState(false);
 
-import { createClient } from '@supabase/supabase-js';
+    const fetchItems = async (cursor) => {
+        setLoading(true);
+        const response = await fetch(`/api/items?cursor=${cursor}&limit=${PAGE_SIZE}`);
+        const data = await response.json();
+        setItems(prevItems => [...prevItems, ...data.items]);
+        setCursor(data.nextCursor);
+        setLoading(false);
+    };
 
-const supabaseUrl = 'your-supabase-url';
-const supabaseAnonKey = 'your-supabase-anon-key';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    useEffect(() => {
+        fetchItems(cursor);
+    }, [cursor]);
 
-export default function MySanctuary() {
-   // Your component logic here
-   return (
-      <div>
-         {/* Your component JSX here */}
-      </div>
-   );
-}
+    const handleLoadMore = () => {
+        fetchItems(cursor);
+    };
+
+    return (
+        <div>
+            <h1>My Sanctuary</h1>
+            <ul>
+                {items.map(item => (
+                    <li key={item.id}>{item.name}</li>
+                ))}
+            </ul>
+            {loading && <p>Loading...</p>}
+            {cursor && !loading && <button onClick={handleLoadMore}>Load More</button>}
+        </div>
+    );
+};
+
+export default MySanctuaryPage;
