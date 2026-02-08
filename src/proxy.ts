@@ -1,48 +1,47 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 
-// allow Next internals + static assets
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)"],
+};
+
+// Allow public assets + public routes
 function isPublic(pathname: string) {
+  // ✅ static assets must be public (this fixes /logo.svg redirect)
   if (
-    pathname.startsWith("/_next") ||
-    pathname === "/favicon.ico" ||
-    pathname === "/robots.txt" ||
-    pathname === "/sitemap.xml"
-  ) {
+    pathname.startsWith("/_next/") ||
+    pathname.startsWith("/favicon.ico") ||
+    pathname.startsWith("/robots.txt") ||
+    pathname.startsWith("/sitemap.xml")
+  ) return true;
+
+  // Any file in /public (logo.svg, png, jpg, css, etc.)
+  if (/\.(svg|png|jpg|jpeg|webp|gif|ico|css|js|map|txt|woff|woff2|ttf|eot)$/.test(pathname)) {
     return true;
   }
 
-  return /\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|mjs|map|txt|woff|woff2|ttf|eot)$/.test(
-    pathname
-  );
-}
-
-// ✅ Next.js runs this for every request (proxy replaces middleware)
-export async function proxy(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-
-  // never block static assets (fixes /logo.svg redirect)
-  if (isPublic(pathname)) return NextResponse.next();
-
-  // always allow auth/onboarding pages
-  if (
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/create-account") ||
-    pathname.startsWith("/welcome")
-  ) {
-    return NextResponse.next();
+  // ✅ public pages
+  if (pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/create-account") || pathname.startsWith("/welcome")) {
+    return true;
   }
 
-  // allow API routes (protect separately if you want)
-  if (pathname.startsWith("/api")) return NextResponse.next();
+  // ✅ public API routes (if any)
+  if (pathname.startsWith("/api/")) return true;
 
-  // auth gate
-  const supabase = createClient(req);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  return false;
+}
 
-  if (!user) {
+// IMPORTANT: Next.js runs this for each request
+export default async function proxy(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  if (isPublic(pathname)) return NextResponse.next();
+
+  // Auth check
+  const supabase = createClient();
+  const { data } = await supabase.auth.getUser();
+
+  if (!data?.user) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);
@@ -51,7 +50,3 @@ export async function proxy(req: NextRequest) {
 
   return NextResponse.next();
 }
-
-export const config = {
-  matcher: ["/((?!_next/static|_next/image).*)"],
-};
