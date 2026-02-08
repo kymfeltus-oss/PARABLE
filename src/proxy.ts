@@ -1,8 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
-export const runtime = "nodejs";
-
 /**
  * IMPORTANT:
  * - This proxy runs before pages load (prevents login "flash")

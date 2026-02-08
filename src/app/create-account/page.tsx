@@ -91,24 +91,25 @@ export default function CreateAccount() {
       }
 
       const createProfile = async (attempt = 1): Promise<any> => {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: authData.user.id,
-            username: formData.username.toLowerCase(),
-            full_name: formData.full_name,
-            role: selectedRoles.join(', '),
-            avatar_url: finalFileName,
-            onboarding_complete: true
-          });
+      const { error: profileError } = await supabase
+     .from('profiles')
+    .upsert({
+      // ADD THE EXCLAMATION MARK HERE:
+      id: authData.user!.id, 
+      username: formData.username.toLowerCase(),
+      full_name: formData.full_name,
+      role: selectedRoles.join(', '),
+      avatar_url: finalFileName,
+      onboarding_complete: true
+    });
 
-        if (profileError && attempt < 3) {
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          return createProfile(attempt + 1);
-        }
-        return profileError;
-      };
-
+  if (profileError && attempt < 3) {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    return createProfile(attempt + 1);
+  }
+  return profileError;
+};
+      
       await createProfile();
     }
     setLoading(false);

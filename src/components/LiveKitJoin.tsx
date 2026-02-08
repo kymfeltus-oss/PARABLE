@@ -1,16 +1,18 @@
-'use client'; // This must be a client component
+"use client"; // This must be a client component
 
-import { useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useState } from "react";
+import { createClient } from "@/utils/supabase/client";
 
 export default function LiveKitJoin() {
   const [token, setToken] = useState<string | null>(null);
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   const handleJoin = async () => {
     // 1. Get the JWT from your Supabase session
-    const { data: { session } } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     if (!session) {
       alert("Please log in first!");
       return;
@@ -22,7 +24,7 @@ export default function LiveKitJoin() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ room: "parable-live" }),
       });
@@ -32,7 +34,7 @@ export default function LiveKitJoin() {
       const data = await resp.json();
       console.log("Token received:", data.token);
       setToken(data.token);
-      
+
       // Now you can pass this token to <LiveKitRoom />
     } catch (err) {
       console.error(err);

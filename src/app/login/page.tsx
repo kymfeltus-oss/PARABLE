@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
@@ -14,87 +14,101 @@ function prand(seed: number) {
   // deterministic pseudo-random (SSR-safe)
   return frac(Math.sin(seed * 9999.123) * 10000);
 }
+function pct(n01: number, digits = 4) {
+  return `${(n01 * 100).toFixed(digits)}%`;
+}
+function f(n: number, digits = 4) {
+  return Number(n.toFixed(digits));
+}
+function s(n: number, digits = 4) {
+  return n.toFixed(digits);
+}
 
+/** Optimized Canvas Matrix Rain (client-only animation) */
 function MatrixRain() {
-  const [mounted, setMounted] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-  // deterministic (index-based), so no hydration weirdness
-  const columns = useMemo(() => {
-    const count = 28; // visual density
-    return Array.from({ length: count }).map((_, i) => {
-      const left = (i / count) * 100;
-      const delay = (i % 7) * 0.55;
-      const duration = 6.5 + (i % 9) * 0.6;
-      const fontSize = 10 + (i % 6) * 2;
-      const opacity = 0.10 + (i % 6) * 0.02;
-      const blur = (i % 5) * 0.25;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-      return { i, left, delay, duration, fontSize, opacity, blur };
-    });
+    // Responsive Canvas Size
+    const resizeCanvas = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    // Characters & Animation State
+    const glyphs = "アカサタナハマヤラワ0123456789PARABLE✦✧◇◆•";
+    const fontSize = 14;
+
+    let columns = Math.floor(canvas.width / fontSize);
+    let rainDrops = Array(columns).fill(0);
+
+    const redrawStateForResize = () => {
+      columns = Math.floor(canvas.width / fontSize);
+      rainDrops = Array(columns).fill(0);
+    };
+
+    const onResize = () => {
+      resizeCanvas();
+      redrawStateForResize();
+    };
+
+    window.removeEventListener("resize", resizeCanvas);
+    window.addEventListener("resize", onResize);
+
+    const draw = () => {
+      // Fading trail
+      ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.font = `${fontSize}px monospace`;
+
+      for (let i = 0; i < rainDrops.length; i++) {
+        const text = glyphs[Math.floor(Math.random() * glyphs.length)];
+
+        const isHot = Math.random() > 0.96;
+        ctx.fillStyle = isHot ? "#00f2fe" : "rgba(255, 255, 255, 0.35)";
+
+        if (isHot) {
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = "#00f2fe";
+        }
+
+        const x = i * fontSize;
+        const y = rainDrops[i] * fontSize;
+
+        ctx.fillText(text, x, y);
+
+        ctx.shadowBlur = 0;
+
+        if (y > canvas.height && Math.random() > 0.975) {
+          rainDrops[i] = 0;
+        }
+        rainDrops[i]++;
+      }
+    };
+
+    const interval = setInterval(draw, 33); // ~30fps
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("resize", onResize);
+    };
   }, []);
 
-  const glyphs = useMemo(
-    () => "アカサタナハマヤラワ0123456789PARABLE✦✧◇◆•",
-    []
-  );
-
-  if (!mounted) return null;
-
   return (
-    <div className="pointer-events-none absolute inset-0 z-[2] overflow-hidden">
-      {/* subtle tint wash */}
-      <div className="absolute inset-0 opacity-[0.18] bg-[radial-gradient(circle_at_40%_30%,rgba(0,242,254,0.18),transparent_55%),radial-gradient(circle_at_70%_70%,rgba(0,242,254,0.10),transparent_60%)]" />
-
-      {columns.map((c) => (
-        <div
-          key={c.i}
-          className="absolute top-[-30%] h-[160%] select-none"
-          style={{
-            left: `${c.left}%`,
-            width: "3.6%",
-            filter: `blur(${c.blur}px)`,
-            opacity: c.opacity,
-          }}
-        >
-          <div
-            className="matrix-fall"
-            style={{
-              animationDelay: `${c.delay}s`,
-              animationDuration: `${c.duration}s`,
-              fontSize: `${c.fontSize}px`,
-            }}
-          >
-            {/* repeat a deterministic pattern (no randomness) */}
-            <div className="leading-[1.15]">
-              {Array.from({ length: 60 }).map((_, r) => {
-                const ch = glyphs[(c.i * 7 + r * 3) % glyphs.length];
-                const isHot = r % 11 === 0;
-                return (
-                  <div
-                    key={r}
-                    className={
-                      isHot
-                        ? "text-[#00f2fe] drop-shadow-[0_0_10px_rgba(0,242,254,0.65)]"
-                        : "text-white/70"
-                    }
-                    style={{
-                      opacity: isHot ? 0.95 : 0.42,
-                    }}
-                  >
-                    {ch}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      ))}
-
-      {/* vignette so it stays premium, not noisy */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_0%,rgba(0,0,0,0.45)_58%,rgba(0,0,0,0.78)_100%)]" />
-    </div>
+    <canvas
+      ref={canvasRef}
+      className="pointer-events-none absolute inset-0 z-[2] opacity-[0.25]"
+      style={{ filter: "blur(0.5px)" }}
+    />
   );
 }
 
@@ -157,32 +171,28 @@ export default function LoginPage() {
     setInfo("Password reset email sent.");
   };
 
-  // ✅ FIX: deterministic shards (no Math.random = no delay + no hydration mismatch)
-  const shards = useMemo(
-    () =>
-      Array.from({ length: 14 }).map((_, i) => {
-        const r1 = prand(i + 1);
-        const r2 = prand(i + 101);
-        const r3 = prand(i + 1001);
-        const r4 = prand(i + 10001);
-        const r5 = prand(i + 50001);
-        const r6 = prand(i + 90001);
-        const r7 = prand(i + 130001);
-        const r8 = prand(i + 170001);
+  // ✅ deterministic shards (NO Math.random) + fixed formatting (NO hydration diffs)
+  const shards = useMemo(() => {
+    return Array.from({ length: 14 }).map((_, i) => {
+      const r1 = prand(i + 11);
+      const r2 = prand(i + 111);
+      const r3 = prand(i + 1111);
+      const r4 = prand(i + 2222);
+      const r5 = prand(i + 3333);
+      const r6 = prand(i + 4444);
+      const r7 = prand(i + 5555);
 
-        return {
-          id: i,
-          left: `${r1 * 100}%`,
-          top: `${r2 * 100}%`,
-          delay: r3 * 1.8,
-          dur: 8 + r4 * 8,
-          rot: -20 + r5 * 40,
-          scale: 0.7 + r6 * 0.8,
-          opacity: 0.10 + r7 * 0.18,
-        };
-      }),
-    []
-  );
+      const left = pct(r1, 4);
+      const top = pct(r2, 4);
+      const delay = f(r3 * 1.8, 6);
+      const dur = f(8 + r4 * 8, 6);
+      const rot = f(-20 + r5 * 40, 6);
+      const scale = f(0.7 + r6 * 0.8, 6);
+      const opacity = f(0.10 + r7 * 0.18, 6);
+
+      return { id: i, left, top, delay, dur, rot, scale, opacity };
+    });
+  }, []);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-black text-white">
@@ -205,17 +215,15 @@ export default function LoginPage() {
           <div
             key={s.id}
             className="absolute pointer-events-none rounded-[28px] border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-[0_0_60px_rgba(0,242,254,0.12)]"
-            style={
-              {
-                left: s.left,
-                top: s.top,
-                width: "210px",
-                height: "120px",
-                transform: `rotate(${s.rot}deg) scale(${s.scale})`,
-                opacity: s.opacity,
-                animation: `shard ${s.dur}s ease-in-out ${s.delay}s infinite`,
-              } as any
-            }
+            style={{
+              left: s.left,
+              top: s.top,
+              width: "210px",
+              height: "120px",
+              transform: `rotate(${s.rot}deg) scale(${s.scale})`,
+              opacity: s.opacity,
+              animation: `shard ${s.dur}s ease-in-out ${s.delay}s infinite`,
+            }}
           />
         ))}
 
@@ -223,7 +231,7 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_0%,rgba(0,0,0,0.72)_58%,rgba(0,0,0,0.96)_100%)]" />
       </div>
 
-      {/* NEW: Matrix Rain layer */}
+      {/* Matrix Rain layer */}
       <MatrixRain />
 
       {/* Sparkles */}
@@ -442,28 +450,10 @@ export default function LoginPage() {
         @keyframes shard {
           0%,
           100% {
-            transform: translate3d(0, 0, 0) rotate(var(--r, 0deg)) scale(1);
+            transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
           }
           50% {
-            transform: translate3d(22px, -18px, 0)
-              rotate(calc(var(--r, 0deg) + 8deg))
-              scale(1.05);
-          }
-        }
-        @keyframes matrixFall {
-          0% {
-            transform: translate3d(0, -18%, 0);
-            opacity: 0;
-          }
-          10% {
-            opacity: 0.9;
-          }
-          75% {
-            opacity: 0.55;
-          }
-          100% {
-            transform: translate3d(0, 18%, 0);
-            opacity: 0;
+            transform: translate3d(22px, -18px, 0) rotate(8deg) scale(1.05);
           }
         }
         @keyframes sheen {
@@ -479,14 +469,6 @@ export default function LoginPage() {
             transform: translateX(180%) rotate(12deg);
             opacity: 0;
           }
-        }
-        .matrix-fall {
-          animation-name: matrixFall;
-          animation-timing-function: linear;
-          animation-iteration-count: infinite;
-          will-change: transform, opacity;
-          filter: drop-shadow(0 0 10px rgba(0, 242, 254, 0.25));
-          mix-blend-mode: screen;
         }
       `}</style>
     </div>

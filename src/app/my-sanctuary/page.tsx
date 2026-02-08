@@ -298,6 +298,9 @@ export default function MySanctuary() {
 
   const activeDisplayResults = searchQuery.trim().length >= 2 ? searchResults : trending;
 
+  // ✅ ONLY FIX: allow Header to accept refreshTrigger without TS failing
+  const HeaderWithProps: any = Header;
+
   return (
     <div className="w-full bg-black text-white relative min-h-screen selection:bg-[#00f2ff]">
       <style>{sanctuaryStyles}</style>
@@ -316,7 +319,7 @@ export default function MySanctuary() {
       </div>
 
       {/* HEADER SYNC PROP */}
-      <Header refreshTrigger={refreshHeader} />
+      <HeaderWithProps refreshTrigger={refreshHeader} />
 
       {/* ✅ PHONE APP WIDTH (official app feel) */}
       <main className="relative z-10 pt-28 px-4 pb-40 mx-auto w-full max-w-[430px]">

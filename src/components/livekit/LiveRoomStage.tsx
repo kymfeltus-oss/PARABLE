@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Track } from "livekit-client";
+import { isTrackReference } from "@livekit/components-core";
 import {
   RoomAudioRenderer,
   VideoTrack,
   useLocalParticipant,
   useTracks,
-  type TrackReferenceOrPlaceholder,
 } from "@livekit/components-react";
 
 function LocalCameraView({ showDebug = false }: { showDebug?: boolean }) {
@@ -40,10 +40,28 @@ function LocalCameraView({ showDebug = false }: { showDebug?: boolean }) {
 
   return (
     <div className="absolute inset-0">
-      <VideoTrack
-        trackRef={cam as TrackReferenceOrPlaceholder}
-        className="w-full h-full object-cover"
-      />
+      {isTrackReference(cam) ? (
+        <VideoTrack
+          trackRef={cam}
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center opacity-90">
+            <div className="text-[10px] font-black uppercase tracking-[6px] text-white/60">
+              Camera initializing
+            </div>
+            <div className="text-sm font-bold italic text-white/70 mt-1">
+              Waiting for camera stream…
+            </div>
+            {showDebug && (
+              <div className="mt-2 text-[10px] text-white/50">
+                Placeholder track (not yet published/subscribed).
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
