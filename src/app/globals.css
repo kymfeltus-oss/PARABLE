@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cyber-cyan: #00f2ff;
+  --font-parable: "Inter", system-ui, sans-serif;
+}
+
+:root {
+  background-color: black;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: black;
+  /* This prevents that white background scroll on phones */
+  overflow: hidden; 
+  height: 100dvh;
+  width: 100vw;
+}
+
+/* Custom Black-Weight Italic for your Logo */
+.parable-logo-text {
+  font-family: var(--font-parable);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+}
