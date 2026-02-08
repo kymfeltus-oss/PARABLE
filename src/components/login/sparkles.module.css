@@ -1,0 +1,26 @@
+.sparkleLayer {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 15% 25%, rgba(255,255,255,0.9), transparent),
+    radial-gradient(1px 1px at 30% 80%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 55% 40%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 75% 70%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1px 1px at 90% 20%, rgba(255,255,255,0.9), transparent);
+  animation: floatUp 35s linear infinite;
+  opacity: 0.55;
+}
+
+.delay {
+  animation-delay: -18s;
+  opacity: 0.35;
+}
+
+@keyframes floatUp {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-220px);
+  }
+}
