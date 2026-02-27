@@ -1,29 +1,55 @@
 @import "tailwindcss";
 
 @theme {
-  --color-cyber-cyan: #00f2ff;
+  --color-sanctuary: #010101;
+  --color-cyber: #00f2ff;
   --font-parable: "Inter", system-ui, sans-serif;
 }
 
 :root {
-  background-color: black;
+  background-color: var(--color-sanctuary);
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: black;
-  /* This prevents that white background scroll on phones */
-  overflow: hidden; 
-  height: 100dvh;
+  background-color: var(--color-sanctuary);
+  color: white;
+  overflow-y: auto; 
+  overflow-x: hidden;
+  min-height: 100vh;
   width: 100vw;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Custom Black-Weight Italic for your Logo */
-.parable-logo-text {
+/* --- PARABLE IDENTITY RULES --- */
+.parable-header {
   font-family: var(--font-parable);
   font-weight: 900;
   font-style: italic;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.08em;
   text-transform: uppercase;
+  color: var(--color-cyber);
 }
+
+.parable-sublabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 10px;
+  color: rgba(0, 242, 255, 0.6);
+}
+
+/* --- 3D INTERACTIVE CARDS --- */
+.flip-card { perspective: 1500px; }
+.flip-card-inner {
+  transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); 
+  transform-style: preserve-3d;
+}
+.flip-card:hover .flip-card-inner { transform: rotateY(180deg); }
+.flip-card-front, .flip-card-back {
+  backface-visibility: hidden;
+  position: absolute;
+  inset: 0;
+  border-radius: 2.5rem; 
+}
+.flip-card-back { transform: rotateY(180deg); }

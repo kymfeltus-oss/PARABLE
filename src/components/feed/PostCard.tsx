@@ -7,11 +7,11 @@ interface PostCardProps {
   id: string;
   content: string;
   media_url?: string;
-  author: {
+  author?: {
     id: string;
-    name: string;
+    full_name?: string;
     avatar_url?: string;
-  };
+  } | null;
   created_at: string;
 }
 
@@ -25,38 +25,39 @@ export default function PostCard({
   const [liked, setLiked] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
 
+  const authorName = author?.full_name || "Anonymous";
+  const authorAvatar = author?.avatar_url;
+
   const handleLike = () => {
     setLiked(!liked);
-    // TODO: Call supabase to toggle like in post_likes table
   };
 
   const handleBookmark = () => {
     setBookmarked(!bookmarked);
-    // TODO: Call supabase to toggle bookmark in bookmarks table
   };
 
   const handleComment = () => {
-    // TODO: Open comment modal or expand comment section
+    console.log("Comment on post:", id);
   };
 
   const handleShare = () => {
-    // TODO: Show share modal or copy link
+    console.log("Share post:", id);
   };
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl p-4 shadow-sm hover:bg-white/10 transition">
       <div className="flex items-center gap-3 mb-3">
-        {author.avatar_url ? (
+        {authorAvatar ? (
           <img
-            src={author.avatar_url}
-            alt={author.name}
+            src={authorAvatar}
+            alt={authorName}
             className="w-10 h-10 rounded-full object-cover border border-[#00f2ff]/20"
           />
         ) : (
-          <div className="w-10 h-10 rounded-full bg-gray-700" />
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500" />
         )}
         <div>
-          <p className="font-semibold text-white">{author.name}</p>
+          <p className="font-semibold text-white">{authorName}</p>
           <p className="text-xs text-gray-400">
             {new Date(created_at).toLocaleString()}
           </p>

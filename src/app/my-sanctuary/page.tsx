@@ -1,166 +1,83 @@
 'use client';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { Header } from '@/components/layout/Header';
+import { ParableSparkleSystem } from '@/components/effects/ParableSparkleSystem';
 
-import { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@/utils/supabase/client';
-import PostCard from '@/components/PostCard';
-import FeedTabs from '@/components/FeedTabs';
+export default function MySanctuaryPage() {
+  const router = useRouter();
+  const { userProfile, avatarUrl, loading } = useAuth();
 
-const POSTS_PER_PAGE = 10;
-
-export default function MySanctuary() {
-  const supabase = createClient();
-
-  const [dbPosts, setDbPosts] = useState<any[]>([]);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [lastPostTimestamp, setLastPostTimestamp] = useState<string | null>(null);
-  const [feedType, setFeedType] = useState<'all' | 'following' | 'trending'>('all');
-
-  const fetchInitialPosts = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    try {
-      let query = supabase
-        .from('posts')
-        .select('*, likes(count), comments(id, content, created_at, profiles(full_name, avatar_url)), profiles(id, full_name, avatar_url)')
-        .order('created_at', { ascending: false })
-        .limit(POSTS_PER_PAGE);
-
-      if (feedType === 'following') {
-        const { data: followedUsers } = await supabase
-          .from('follows')
-          .select('followee_id')
-          .eq('follower_id', user.id);
-
-        const followeeIds = followedUsers?.map(f => f.followee_id) || [];
-        if (followeeIds.length === 0) {
-          setDbPosts([]);
-          setHasMore(false);
-          return;
-        }
-        query = query.in('profile_id', followeeIds);
-      }
-
-      const { data: posts } = await query;
-
-      if (posts && posts.length > 0) {
-        const formattedPosts = posts.map((p: any) => ({
-          ...p,
-          likes_count: p.likes?.[0]?.count ?? 0,
-          comments_count: p.comments?.length ?? 0,
-        }));
-
-        setDbPosts(formattedPosts);
-        setLastPostTimestamp(posts[posts.length - 1].created_at);
-        setHasMore(posts.length === POSTS_PER_PAGE);
-      } else {
-        setDbPosts([]);
-        setHasMore(false);
-      }
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-    }
-  }, [supabase, feedType]);
-
-  const loadMorePosts = useCallback(async () => {
-    if (!lastPostTimestamp || isLoadingMore || !hasMore) return;
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    setIsLoadingMore(true);
-    try {
-      let query = supabase
-        .from('posts')
-        .select('*, likes(count), comments(id, content, created_at, profiles(full_name, avatar_url)), profiles(id, full_name, avatar_url)')
-        .lt('created_at', lastPostTimestamp)
-        .order('created_at', { ascending: false })
-        .limit(POSTS_PER_PAGE);
-
-      if (feedType === 'following') {
-        const { data: followedUsers } = await supabase
-          .from('follows')
-          .select('followee_id')
-          .eq('follower_id', user.id);
-
-        const followeeIds = followedUsers?.map(f => f.followee_id) || [];
-        if (followeeIds.length === 0) {
-          setHasMore(false);
-          return;
-        }
-        query = query.in('profile_id', followeeIds);
-      }
-
-      const { data: newPosts } = await query;
-
-      if (newPosts && newPosts.length > 0) {
-        const formattedPosts = newPosts.map((p: any) => ({
-          ...p,
-          likes_count: p.likes?.[0]?.count ?? 0,
-          comments_count: p.comments?.length ?? 0,
-        }));
-
-        setDbPosts(prev => [...prev, ...formattedPosts]);
-        setLastPostTimestamp(newPosts[newPosts.length - 1].created_at);
-        setHasMore(newPosts.length === POSTS_PER_PAGE);
-      } else {
-        setHasMore(false);
-      }
-    } catch (error) {
-      console.error('Error loading more posts:', error);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [supabase, lastPostTimestamp, isLoadingMore, hasMore, feedType]);
-
-  useEffect(() => {
-    fetchInitialPosts();
-  }, [fetchInitialPosts]);
-
-  useEffect(() => {
-    setDbPosts([]);
-    setLastPostTimestamp(null);
-    setHasMore(true);
-    fetchInitialPosts();
-  }, [feedType, fetchInitialPosts]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
-        loadMorePosts();
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [loadMorePosts]);
+  if (loading) return <div className="min-h-screen bg-[#010101]" />;
 
   return (
-    <div className="w-full bg-black text-white min-h-screen px-4 py-8">
-      <div className="max-w-2xl mx-auto">
-        <FeedTabs activeTab={feedType} onTabChange={setFeedType} />
+    <main className="min-h-screen bg-[#010101] text-white relative">
+      
+      {/* 1. SPARKLES */}
+      <ParableSparkleSystem />
 
-        {dbPosts.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-400 text-lg">No posts yet. Be the first to share!</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {dbPosts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onComment={(postId) => console.log('Comment:', postId)}
-                onShare={(postId) => console.log('Share:', postId)}
-              />
-            ))}
-          </div>
-        )}
+      <div className="relative z-10 pb-40">
+        <Header title="MY SANCTUARY" />
 
-        {isLoadingMore && <div className="text-center py-8"><p className="text-gray-400">Loading...</p></div>}
-        {!hasMore && dbPosts.length > 0 && <div className="text-center py-8"><p className="text-gray-500">No more posts</p></div>}
+        {/* HUD CARDS */}
+        <section className="max-w-7xl mx-auto px-10 py-16 grid grid-cols-1 md:grid-cols-4 gap-8">
+          {[
+            { label: 'TOTAL_REVENUE', value: '$24,580.00', route: '/wallet' },
+            { label: 'GLOBAL_RANK', value: 'TOP 12', route: '/leaderboard' },
+            { label: 'MULTIPLIER', value: '2.5X', route: '/perks' },
+            { label: 'SYNC_STATUS', value: 'ONLINE', route: '/settings' }
+          ].map((stat, i) => (
+            <div key={i} className="flip-card h-36 cursor-pointer group" onClick={() => router.push(stat.route)}>
+              <div className="relative w-full h-full flip-card-inner">
+                <div className="flip-card-front border-2 border-[#00f2ff]/20 bg-black/90 flex flex-col justify-center px-8 backdrop-blur-xl rounded-[2rem]">
+                  <p className="parable-sublabel text-[8px] mb-2">{stat.label}</p>
+                  <p className="parable-header text-3xl text-white">{stat.value}</p>
+                </div>
+                <div className="flip-card-back bg-[#00f2ff] flex flex-col justify-center items-center rounded-[2rem] shadow-[0_0_30px_#00f2ff]">
+                  <p className="text-[#010101] font-black italic uppercase text-xl">VIEW_INTEL</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        {/* FEED CONTENT */}
+        <div className="max-w-7xl mx-auto px-10 grid grid-cols-1 lg:grid-cols-12 gap-12">
+          <aside className="lg:col-span-3">
+            <div className="border border-[#00f2ff]/30 bg-black/60 rounded-[3.5rem] p-10 text-center backdrop-blur-2xl">
+              <div className="relative w-44 h-44 mx-auto mb-8 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full border-2 border-[#00f2ff] animate-ping opacity-10"></div>
+                <img src={avatarUrl || '/logo.svg'} className="w-40 h-40 rounded-full border-2 border-[#00f2ff]/50 object-cover bg-black" alt="CEO" />
+              </div>
+              <h2 className="parable-header text-2xl">{userProfile?.username || "KYM THE CEO"}</h2>
+            </div>
+          </aside>
+
+          <section className="lg:col-span-9 space-y-12">
+            <div className="flex items-center justify-between border-b border-[#00f2ff]/20 pb-8">
+              <div className="flex gap-10">
+                <button onClick={() => router.push('/my-sanctuary')} className="text-[#00f2ff] text-2xl font-black italic uppercase tracking-[-0.08em] border-b-4 border-[#00f2ff] pb-2">
+                  TIMELINE
+                </button>
+                <button onClick={() => router.push('/replays')} className="text-white/30 text-2xl font-black italic uppercase tracking-[-0.08em] hover:text-[#00f2ff] transition-all">
+                  REPLAYS
+                </button>
+              </div>
+              <button onClick={() => router.push('/testify')} className="bg-[#00f2ff] text-[#010101] px-14 py-4 rounded-full font-black italic uppercase tracking-tighter shadow-[0_0_30px_#00f2ff]/50 hover:scale-105 active:scale-95 transition-all">
+                TESTIFY +
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-10">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="aspect-[4/5] border border-[#00f2ff]/10 bg-zinc-900/40 rounded-[3rem] flex items-center justify-center group hover:border-[#00f2ff]/40 transition-all cursor-pointer">
+                   <span className="text-[10px] uppercase tracking-[12px] text-white/5 group-hover:text-[#00f2ff]/40 transition-all">DATA_STREAM</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -1,10 +1,14 @@
+const path = require('path');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Fixes the "Unrecognized key" error by moving turbopack to the top level
+  // Forces Next.js 16 to ONLY look inside the project folder
   turbopack: {
-    root: '.', 
+    resolveAlias: {
+      'tailwindcss': path.join(__dirname, 'node_modules', 'tailwindcss'),
+    },
   },
-  reactStrictMode: false, // Keeps the Master Header loop-free
+  // Essential for Supabase & AWS images
   images: {
     remotePatterns: [
       {
@@ -15,6 +19,7 @@ const nextConfig = {
       },
     ],
   },
+  reactStrictMode: false,
 };
 
 module.exports = nextConfig;
