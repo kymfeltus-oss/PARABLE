@@ -6,9 +6,23 @@ import { createClient } from "@/utils/supabase/client";
 
 const POSTS_PER_PAGE = 20;
 
+type FeedAuthor = {
+  id: any;
+  full_name: any;
+  avatar_url: any;
+};
+
+type FeedPost = {
+  id: any;
+  content: any;
+  media_url: any;
+  created_at: any;
+  author: FeedAuthor[];
+};
+
 export default function Feed() {
   const supabase = createClient();
-  const [posts, setPosts] = useState([]);
+  const [posts, setPosts] = useState<FeedPost[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -24,10 +38,17 @@ export default function Feed() {
         .limit(POSTS_PER_PAGE);
 
       if (error) throw error;
-      if (data?.length) {
-        setPosts(data);
-        setCursor(data[data.length - 1].created_at);
-        setHasMore(data.length === POSTS_PER_PAGE);
+
+      const rows = (data ?? []) as FeedPost[];
+
+      if (rows.length) {
+        setPosts(rows);
+        setCursor(rows[rows.length - 1].created_at as any);
+        setHasMore(rows.length === POSTS_PER_PAGE);
+      } else {
+        setPosts([]);
+        setCursor(null);
+        setHasMore(false);
       }
     } catch (err) {
       console.error("Error loading posts:", err);
@@ -48,10 +69,13 @@ export default function Feed() {
         .limit(POSTS_PER_PAGE);
 
       if (error) throw error;
-      if (data?.length) {
-        setPosts((prev) => [...prev, ...data]);
-        setCursor(data[data.length - 1].created_at);
-        setHasMore(data.length === POSTS_PER_PAGE);
+
+      const rows = (data ?? []) as FeedPost[];
+
+      if (rows.length) {
+        setPosts((prev) => [...prev, ...rows]);
+        setCursor(rows[rows.length - 1].created_at as any);
+        setHasMore(rows.length === POSTS_PER_PAGE);
       } else {
         setHasMore(false);
       }
@@ -88,7 +112,7 @@ export default function Feed() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "posts" },
         (payload: any) => {
-          setPosts((prev) => [payload.new, ...prev]);
+          setPosts((prev) => [payload.new as FeedPost, ...prev]);
         }
       )
       .subscribe();
@@ -104,7 +128,7 @@ export default function Feed() {
         <p className="text-gray-400 text-center mt-10">No posts yet. Be the first to share!</p>
       )}
       {posts.map((post) => (
-        <PostCard key={post.id} {...post} />
+        <PostCard key={post.id} {...(post as any)} />
       ))}
       <div ref={sentinelRef} className="h-4" />
       {isLoading && (
