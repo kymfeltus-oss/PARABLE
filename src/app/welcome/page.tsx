@@ -83,14 +83,14 @@ function ComputingStatus() {
   }, [messages.length]);
 
   return (
-    <div className="mx-auto mt-3 w-full max-w-[22rem] rounded-sm border border-[#00f2ff]/18 bg-black/45 px-3 py-3 overflow-hidden">
+    <div className="mx-auto mt-4 md:mt-6 w-full max-w-md rounded-sm border border-[#00f2ff]/18 bg-black/45 px-4 py-3.5 overflow-hidden">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-[#00f2ff] shadow-[0_0_10px_#00f2ff]" />
-          <span className="text-[10px] font-black uppercase tracking-[6px] text-white/55">
+          <span className="text-[10px] md:text-[11px] font-black uppercase tracking-[6px] text-white/55">
             STATUS
           </span>
-          <span className="text-[10px] font-black uppercase tracking-[6px] text-[#00f2ff] drop-shadow-[0_0_10px_#00f2ff]">
+          <span className="text-[10px] md:text-[11px] font-black uppercase tracking-[6px] text-[#00f2ff] drop-shadow-[0_0_10px_#00f2ff]">
             READY
           </span>
         </div>
@@ -111,11 +111,11 @@ function ComputingStatus() {
       </div>
 
       <div className="mt-2 flex items-center justify-between gap-3">
-        <div className="text-[10px] font-black uppercase tracking-[5px] text-white/40">
+        <div className="text-[10px] md:text-[11px] font-black uppercase tracking-[5px] text-white/40">
           {messages[idx]}
         </div>
         <div
-          className="text-[10px] font-black uppercase tracking-[5px] text-white/25"
+          className="text-[10px] md:text-[11px] font-black uppercase tracking-[5px] text-white/25"
           style={{ animation: "softFlicker 1.6s ease-in-out infinite" }}
         >
           LIVE
@@ -206,21 +206,21 @@ export default function WelcomePage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_40%,black_100%)] opacity-90" />
       </div>
 
-      <div className="relative z-10 mx-auto min-h-screen w-full max-w-[430px] px-4 py-10 flex items-center">
+      <div className="relative z-10 mx-auto min-h-screen w-full max-w-[480px] sm:max-w-3xl lg:max-w-5xl px-4 sm:px-6 md:px-8 py-12 md:py-16 flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="w-full"
+          className="w-full max-w-2xl mx-auto"
         >
           <div
-            className="relative overflow-hidden border border-[#00f2ff]/22 bg-black/55 backdrop-blur-md rounded-sm"
+            className="relative overflow-hidden border border-[#00f2ff]/22 bg-black/55 backdrop-blur-md rounded-lg md:rounded-xl"
             style={{ animation: "borderPulse 5s ease-in-out infinite" }}
           >
-            <div className="absolute left-0 top-0 h-5 w-5 border-l-2 border-t-2 border-[#00f2ff]" />
-            <div className="absolute right-0 top-0 h-5 w-5 border-r-2 border-t-2 border-[#00f2ff]" />
-            <div className="absolute left-0 bottom-0 h-5 w-5 border-l-2 border-b-2 border-[#00f2ff]" />
-            <div className="absolute right-0 bottom-0 h-5 w-5 border-r-2 border-b-2 border-[#00f2ff]" />
+            <div className="absolute left-0 top-0 h-6 w-6 md:h-8 md:w-8 border-l-2 border-t-2 border-[#00f2ff]" />
+            <div className="absolute right-0 top-0 h-6 w-6 md:h-8 md:w-8 border-r-2 border-t-2 border-[#00f2ff]" />
+            <div className="absolute left-0 bottom-0 h-6 w-6 md:h-8 md:w-8 border-l-2 border-b-2 border-[#00f2ff]" />
+            <div className="absolute right-0 bottom-0 h-6 w-6 md:h-8 md:w-8 border-r-2 border-b-2 border-[#00f2ff]" />
 
             <div className="absolute inset-0 pointer-events-none">
               <div
@@ -230,16 +230,16 @@ export default function WelcomePage() {
             </div>
 
             <div className="pointer-events-none absolute left-1/2 top-[45%] -translate-x-1/2 -translate-y-1/2">
-              <div className="h-[240px] w-[240px] rounded-full bg-[#00f2ff]/10 blur-[85px]" />
-              <div className="absolute inset-0 h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2 rounded-full bg-[#00f2ff]/5 blur-[140px]" />
+              <div className="h-[240px] w-[240px] md:h-[320px] md:w-[320px] rounded-full bg-[#00f2ff]/10 blur-[85px]" />
+              <div className="absolute inset-0 h-[360px] w-[360px] md:h-[480px] md:w-[480px] -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2 rounded-full bg-[#00f2ff]/5 blur-[140px]" />
             </div>
 
-            <div className="relative px-6 py-10">
+            <div className="relative px-6 py-10 sm:px-8 sm:py-12 md:px-12 md:py-16">
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.05 }}
-                className="relative mx-auto mb-8 h-[72px] w-[230px]"
+                className="relative mx-auto mb-8 md:mb-10 h-[80px] w-[260px] sm:h-[88px] sm:w-[280px] md:h-[96px] md:w-[300px]"
                 style={{ animation: "glowSweep 4s ease-in-out infinite" }}
               >
                 <Image
@@ -251,49 +251,50 @@ export default function WelcomePage() {
                 />
               </motion.div>
 
-              <div className="text-center space-y-7">
-                <div className="space-y-3">
-                  <h1 className="text-2xl font-light text-white/40 uppercase tracking-[10px]">
-                    The Premier
-                  </h1>
+              <div className="space-y-8 md:space-y-10">
+                <div className="text-center md:text-left space-y-4 md:space-y-5">
+                  <p className="text-[11px] sm:text-xs md:text-sm font-black text-[#00f2ff] uppercase tracking-[8px]">
+                    Faith • Streaming • Gaming
+                  </p>
 
-                  <h2 className="text-4xl sm:text-5xl font-black text-[#00f2ff] italic uppercase tracking-tighter drop-shadow-[0_0_28px_rgba(0,242,255,0.45)]">
-                    Streaming & Gaming
+                  <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight">
+                    The premier{" "}
+                    <span className="text-[#00f2ff]">
+                      faith‑tech ecosystem
+                    </span>{" "}
+                    for the Black Church.
                   </h2>
 
-                  <h1 className="text-2xl font-light text-white/40 uppercase tracking-[10px]">
-                    Ecosystem For Ministry.
-                  </h1>
+                  <p className="text-sm sm:text-base md:text-lg text-white/60 max-w-2xl mx-auto md:mx-0 font-medium leading-relaxed">
+                    Stream sermons, host live conversations, play with your community, and
+                    monetize your calling without giving away ownership of the sanctuary.
+                  </p>
                 </div>
 
-                <p className="text-base text-white/60 max-w-[22rem] mx-auto font-medium tracking-wide leading-relaxed">
-                  Own your fellowship, unlock your{" "}
-                  <span className="text-white border-b border-[#00f2ff]/50">
-                    Digital Offering Vault
-                  </span>
-                  , and turn your content into an eternal legacy.
-                </p>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                  <div className="flex items-center justify-center md:justify-start gap-6 sm:gap-8">
+                    {["STREAM", "PLAY", "PROSPER"].map((text) => (
+                      <span
+                        key={text}
+                        className="text-[10px] sm:text-[11px] font-black text-white/35 tracking-[6px] hover:text-[#00f2ff] transition-colors cursor-default"
+                      >
+                        {text}
+                      </span>
+                    ))}
+                  </div>
 
-                <div className="flex items-center justify-center gap-8 pt-1">
-                  {["STREAM", "MONETIZE", "BELIEVE"].map((text) => (
-                    <span
-                      key={text}
-                      className="text-[10px] font-black text-white/30 tracking-[6px] hover:text-[#00f2ff] transition-colors cursor-default"
-                    >
-                      {text}
-                    </span>
-                  ))}
+                  <div className="md:w-72">
+                    <ComputingStatus />
+                  </div>
                 </div>
 
-                <ComputingStatus />
-
-                <div className="pt-5">
+                <div className="pt-4 md:pt-6">
                   <button
                     onClick={handleEnter}
                     disabled={entering}
-                    className="group relative w-full rounded-sm border border-[#00f2ff]/30 bg-black/75 px-5 py-4 active:scale-[0.99] transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="group relative w-full max-w-md mx-auto rounded-sm border border-[#00f2ff]/30 bg-black/75 px-6 py-4 sm:px-8 sm:py-5 md:px-10 md:py-6 active:scale-[0.99] transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed block"
                   >
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity rounded-sm">
                       <div className="absolute inset-0 bg-[#00f2ff]/10 blur-[18px]" />
                     </div>
                     <div className="absolute inset-0 overflow-hidden rounded-sm">
@@ -303,16 +304,16 @@ export default function WelcomePage() {
                       />
                     </div>
 
-                    <span className="relative z-10 block text-[#00f2ff] group-hover:text-white font-black text-xl uppercase tracking-[12px] transition-colors">
+                    <span className="relative z-10 block text-[#00f2ff] group-hover:text-white font-black text-lg sm:text-xl md:text-2xl uppercase tracking-[10px] sm:tracking-[12px] transition-colors">
                       {entering ? "Entering..." : "Enter Sanctuary"}
                     </span>
 
-                    <span className="relative z-10 mt-2 block text-[10px] text-white/25 uppercase tracking-[4px]">
+                    <span className="relative z-10 mt-2 block text-[10px] sm:text-[11px] text-white/25 uppercase tracking-[4px]">
                       New users create an account • Returning users go to My Sanctuary
                     </span>
                   </button>
 
-                  <div className="relative mx-auto mt-4 w-64 h-[2px] bg-white/10 overflow-hidden">
+                  <div className="relative mx-auto mt-6 w-48 sm:w-64 h-[2px] bg-white/10 overflow-hidden">
                     <div
                       className="absolute inset-0 bg-gradient-to-r from-transparent via-[#00f2ff] to-transparent opacity-70"
                       style={{
@@ -325,17 +326,22 @@ export default function WelcomePage() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => router.push("/create-account")}
-                  className="pt-6 mx-auto block text-[10px] font-black uppercase tracking-[6px] text-white/20 hover:text-[#00f2ff] transition-colors"
-                >
-                  Create Account
-                </button>
+                <div className="flex items-center justify-center md:justify-between pt-4 md:pt-6 text-[10px] sm:text-[11px] text-white/30">
+                  <button
+                    onClick={() => router.push("/create-account")}
+                    className="font-black uppercase tracking-[6px] hover:text-[#00f2ff] transition-colors"
+                  >
+                    Create Account
+                  </button>
+                  <span className="hidden md:inline">
+                    Already have an account? You’ll go straight to My Sanctuary.
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_35%,black_100%)] opacity-80" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_35%,black_100%)] opacity-80 rounded-lg md:rounded-xl" />
         </motion.div>
       </div>
     </div>
