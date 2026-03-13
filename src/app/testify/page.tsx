@@ -155,7 +155,7 @@ export default function TestifyPage() {
 
   useEffect(() => {
     return () => {
-      if (selectedMediaUrl) {
+      if (selectedMediaUrl && selectedMediaUrl.startsWith('blob:')) {
         URL.revokeObjectURL(selectedMediaUrl);
       }
     };
@@ -377,22 +377,29 @@ export default function TestifyPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (selectedMediaUrl) {
+    if (selectedMediaUrl && selectedMediaUrl.startsWith('blob:')) {
       URL.revokeObjectURL(selectedMediaUrl);
     }
 
-    const objectUrl = URL.createObjectURL(file);
     const mediaType = file.type.startsWith('image/')
       ? 'image'
       : file.type.startsWith('video/')
       ? 'video'
       : null;
 
-    setSelectedFileName(file.name);
-    setSelectedMediaUrl(objectUrl);
-    setSelectedMediaType(mediaType);
-    setStatusMessage(`${typeLabel} ATTACHED`);
-    focusComposer();
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result;
+      if (typeof result !== 'string') return;
+
+      setSelectedFileName(file.name);
+      setSelectedMediaUrl(result);
+      setSelectedMediaType(mediaType);
+      setStatusMessage(`${typeLabel} ATTACHED`);
+      focusComposer();
+    };
+
+    reader.readAsDataURL(file);
 
     event.target.value = '';
   };
