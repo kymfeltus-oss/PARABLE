@@ -32,7 +32,8 @@ export default function RootLayout({
     "/create-account"  // Create Account Page
   ];
 
-  const shouldHideNav = entryPages.includes(pathname);
+  const shouldHideNav = entryPages.includes(pathname ?? "");
+  const useAppShell = !shouldHideNav;
 
   useEffect(() => {
     document.title = APP_TITLE;
@@ -46,8 +47,23 @@ export default function RootLayout({
         className={`${inter.className} bg-black text-white antialiased ${isStudyAI ? "variant-study-ai" : "selection:bg-[#00f2ff] selection:text-black"}`}
       >
         <AuthProvider>
-          {children}
-          {!shouldHideNav && <BottomNav />}
+          {useAppShell ? (
+            <>
+              <div className="flex min-h-screen justify-center bg-[#070708]">
+                <div
+                  className="relative w-full min-w-0 max-w-[430px] min-h-screen border-x border-white/[0.07] bg-[#050506] shadow-[0_0_80px_rgba(0,0,0,0.55)] md:max-w-[480px]"
+                  data-parable-app-shell
+                >
+                  {children}
+                </div>
+              </div>
+              <BottomNav />
+            </>
+          ) : (
+            <>
+              {children}
+            </>
+          )}
         </AuthProvider>
       </body>
     </html>

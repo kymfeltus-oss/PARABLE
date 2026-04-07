@@ -50,7 +50,7 @@ export default function MySanctuaryDashboard() {
       </section>
 
       {/* 4. TELEMETRY / STATS GRID */}
-      <section className="relative z-20 grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
+      <section className="relative z-20 mx-auto grid w-full min-w-0 max-w-full grid-cols-1 gap-6 md:grid-cols-2">
         <div className="bg-white/[0.03] border border-white/5 p-6 rounded-sm flex items-center justify-between hover:border-[#00f2ff]/30 transition-all">
           <div>
             <p className="text-[9px] uppercase tracking-[2px] text-white/30 mb-1">Live_Status</p>

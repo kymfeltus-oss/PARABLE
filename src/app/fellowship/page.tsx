@@ -456,7 +456,7 @@ export default function FellowshipPage() {
 
       <SparklesBackground />
 
-      <div className="relative z-10 mx-auto max-w-[1450px] px-4 pb-28 pt-10">
+      <div className="relative z-10 mx-auto w-full min-w-0 max-w-full px-4 pb-28 pt-10">
         <div className="overflow-hidden rounded-[26px] border border-white/10 bg-white/[0.04] backdrop-blur-2xl">
           <div
             className="flex min-w-max gap-4 px-4 py-3"
@@ -479,8 +479,8 @@ export default function FellowshipPage() {
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-12">
-          <div className="xl:col-span-8">
+        <div className="mt-8 grid grid-cols-1 gap-6">
+          <div className="">
             <div className="relative overflow-hidden rounded-[34px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-2xl shadow-[0_0_140px_rgba(0,242,254,0.12)]">
               <div className="pointer-events-none absolute inset-0 opacity-[0.22] bg-[radial-gradient(circle_at_20%_20%,rgba(0,242,254,0.18),transparent_55%),radial-gradient(circle_at_85%_80%,rgba(255,255,255,0.08),transparent_60%)]" />
 
@@ -524,7 +524,7 @@ export default function FellowshipPage() {
             </div>
           </div>
 
-          <div className="xl:col-span-4 grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <StatCard label="Active Rooms" value="24" icon={<MessageCircle size={18} />} />
             <StatCard label="In Fellowship" value="318" icon={<Users size={18} />} />
             <StatCard label="Prayer Circles" value="9" icon={<HeartHandshake size={18} />} />
@@ -532,7 +532,7 @@ export default function FellowshipPage() {
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-4">
+        <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2">
           <CategoryWorld
             title="Prayer Rooms"
             subtitle="Open rooms for covering, agreement, healing, and peace."
@@ -559,8 +559,8 @@ export default function FellowshipPage() {
           />
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-4 xl:grid-cols-12 xl:items-center">
-          <div className="xl:col-span-7">
+        <div className="mt-8 grid grid-cols-1 gap-4">
+          <div className="">
             <div className="rounded-[28px] border border-white/10 bg-black/55 px-6 py-4 backdrop-blur-2xl shadow-[0_0_110px_rgba(0,242,254,0.10)]">
               <div className="flex items-center gap-3">
                 <Search size={18} className="text-white/35" />
@@ -574,7 +574,7 @@ export default function FellowshipPage() {
             </div>
           </div>
 
-          <div className="xl:col-span-5 flex flex-wrap gap-2 xl:justify-end">
+          <div className="flex flex-wrap gap-2 justify-start">
             {CATEGORIES.map((x) => (
               <Pill key={x} active={category === x} onClick={() => setCategory(x)}>
                 {x}
@@ -583,8 +583,8 @@ export default function FellowshipPage() {
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-12">
-          <div className="xl:col-span-8">
+        <div className="mt-8 grid grid-cols-1 gap-6">
+          <div className="">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               {filteredRooms.map((room) => (
                 <RoomCard key={room.id} room={room} />
@@ -592,7 +592,7 @@ export default function FellowshipPage() {
             </div>
           </div>
 
-          <div className="xl:col-span-4 space-y-6">
+          <div className="space-y-6">
             <div className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-2xl shadow-[0_0_120px_rgba(0,242,254,0.10)]">
               <div className="flex items-center gap-2">
                 <Flame size={18} className="text-[#00f2fe]" />

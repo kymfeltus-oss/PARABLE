@@ -1,14 +1,12 @@
-# PARABLE Study AI
+# PARABLE
 
-**The Intelligence Behind the Word.**
-
-Bridging biblical consumption and deep, communal, AI-powered study.
+Main PARABLE web app (feed, sanctuary, play launcher, streamers, and more). Optional **Study AI** layout is available when `NEXT_PUBLIC_APP_VARIANT=parable-study-ai` is set.
 
 ---
 
 ## Run locally (while you register the domain)
 
-**Important:** This app is **PARABLE Study AI** (not the other app “PARABLE”). It uses **port 3003** so it doesn’t conflict with PARABLE on 3001. Open **only** this project’s folder in Cursor (File → Open Folder → the PARABLE Study AI folder) so you don’t run the wrong app.
+**Port:** **3003** (see `package.json` scripts). Open this repo’s folder in your editor so you run the right project.
 
 1. **Install and env**
    ```bash
@@ -20,9 +18,9 @@ Bridging biblical consumption and deep, communal, AI-powered study.
    - `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (auth + The Table)
    - `OPENAI_API_KEY` (AI Scholar: Theory Solver, De-Coder, Steel Man)
 
-2. **Start PARABLE only**
-   - In Cursor: **File → Open Folder** and choose **only** the PARABLE project folder (e.g. `...\Downloads\PARABLE` or `...\Projects\PARABLE`).
-   - In the terminal, confirm you’re in PARABLE Study AI: `Get-Content package.json | Select-String "name"` should show `"name": "parable-study-ai"`.
+2. **Start the app**
+   - Open this repo folder (e.g. `...\Downloads\PARABLE`).
+   - Confirm package name: `Get-Content package.json | Select-String "name"` should show `"name": "parable"`.
    - Then run:
    ```bash
    npm run dev
@@ -81,7 +79,7 @@ All scholar routes use **OpenAI** (`gpt-4o-mini`) and require **`OPENAI_API_KEY`
 1. **Push to GitHub** (if not already):
    ```bash
    git add .
-   git commit -m "PARABLE Study AI – Sanctuary, Table, Lab, scholar APIs"
+   git commit -m "PARABLE – update"
    git push origin main
    ```
 

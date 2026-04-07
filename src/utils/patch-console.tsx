@@ -62,7 +62,7 @@ export default function StreamerHub() {
     <div className="relative min-h-screen w-full bg-[#050505] text-white overflow-hidden">
       <div className="fixed inset-0 z-0 opacity-40"><HubBackground /></div>
       <Header />
-      <main className="relative z-10 pt-32 px-6 max-w-[1600px] mx-auto grid grid-cols-12 gap-6 pb-20">
+      <main className="relative z-10 mx-auto grid w-full min-w-0 max-w-full grid-cols-1 gap-6 px-4 pb-20 pt-parable-header md:grid-cols-12 md:px-6">
         <div className="col-span-12 lg:col-span-6 lg:col-start-4 flex flex-col items-center">
           <motion.div initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full flex justify-between items-center mb-6 bg-white/[0.02] border border-white/5 p-4 rounded-3xl backdrop-blur-md">
             <div className="flex items-center gap-4">

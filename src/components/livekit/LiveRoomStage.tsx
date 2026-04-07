@@ -1,67 +1,71 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Track } from "livekit-client";
-import { isTrackReference } from "@livekit/components-core";
-import {
-  RoomAudioRenderer,
-  VideoTrack,
-  useLocalParticipant,
-  useTracks,
-} from "@livekit/components-react";
+import { useEffect, useRef, useState } from "react";
+import { ConnectionState } from "livekit-client";
+import { RoomAudioRenderer, useConnectionState, useLocalParticipant } from "@livekit/components-react";
 
-function LocalCameraView({ showDebug = false }: { showDebug?: boolean }) {
-  const tracks = useTracks(
-    [{ source: Track.Source.Camera, withPlaceholder: true }],
-    { onlySubscribed: false }
-  );
+function LocalCameraView({ camOn }: { camOn: boolean }) {
+  const { cameraTrack, lastCameraError } = useLocalParticipant();
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-  const cam = tracks.find((t) => t.source === Track.Source.Camera);
+  useEffect(() => {
+    const el = videoRef.current;
+    const vt = cameraTrack?.videoTrack;
+    if (!camOn || !el || !vt) return;
+    vt.attach(el);
+    el.muted = true;
+    return () => {
+      vt.detach(el);
+    };
+  }, [camOn, cameraTrack]);
 
-  if (!cam) {
+  if (!camOn) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="text-center opacity-90">
-          <div className="text-[10px] font-black uppercase tracking-[6px] text-white/60">
-            Camera not ready
-          </div>
-          <div className="text-sm font-bold italic text-white/70 mt-1">
-            Check permissions + device
-          </div>
-          {showDebug && (
-            <div className="mt-2 text-[10px] text-white/50">
-              No camera track found yet.
-            </div>
-          )}
+      <div className="absolute inset-0 z-[1] flex items-center justify-center bg-black/80">
+        <div className="text-center opacity-90 px-4">
+          <div className="text-[10px] font-black uppercase tracking-[6px] text-white/50">Camera off</div>
+          <div className="text-sm font-bold italic text-white/65 mt-1">Tap Cam to show your feed</div>
         </div>
       </div>
     );
   }
 
+  if (lastCameraError) {
+    return (
+      <div className="absolute inset-0 z-[1] flex items-center justify-center px-4">
+        <div className="text-center max-w-[280px]">
+          <div className="text-[10px] font-black uppercase tracking-[6px] text-red-300/90">Camera error</div>
+          <p className="text-sm font-bold italic text-white/75 mt-2">{lastCameraError.message}</p>
+          <p className="text-[11px] text-white/45 mt-2 leading-relaxed">
+            Check site permissions (lock icon) and that no other app is using the camera.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const hasVideo = Boolean(cameraTrack?.videoTrack);
+
   return (
-    <div className="absolute inset-0">
-      {isTrackReference(cam) ? (
-        <VideoTrack
-          trackRef={cam}
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center opacity-90">
+    <div className="absolute inset-0 z-[1] bg-black">
+      <video
+        ref={videoRef}
+        playsInline
+        muted
+        className={`h-full w-full object-cover ${hasVideo ? "opacity-100" : "opacity-0"}`}
+      />
+      {!hasVideo ? (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="text-center opacity-90 px-4">
             <div className="text-[10px] font-black uppercase tracking-[6px] text-white/60">
-              Camera initializing
+              Starting camera…
             </div>
             <div className="text-sm font-bold italic text-white/70 mt-1">
-              Waiting for camera stream…
+              Allow access if the browser asks
             </div>
-            {showDebug && (
-              <div className="mt-2 text-[10px] text-white/50">
-                Placeholder track (not yet published/subscribed).
-              </div>
-            )}
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -76,29 +80,30 @@ export default function LiveRoomStage({
   onError?: (msg: string) => void;
 }) {
   const { localParticipant } = useLocalParticipant();
+  const connectionState = useConnectionState();
   const [permissionHint, setPermissionHint] = useState<string | null>(null);
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
 
-  // Turn on/off camera + mic (this is the missing piece)
+  // Single path for mic/camera: LiveKitRoom uses audio={false} video={false} so SignalConnected does not fight this.
   useEffect(() => {
+    if (connectionState !== ConnectionState.Connected) return;
+
     let cancelled = false;
 
     const enableMedia = async () => {
       try {
         setPermissionHint(null);
-
-        // Camera
         await localParticipant.setCameraEnabled(camOn);
-
-        // Mic
         await localParticipant.setMicrophoneEnabled(micOn);
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (cancelled) return;
 
         const msg =
-          e?.message ||
-          "Media start failed. Check camera/mic permissions in the browser.";
+          e instanceof Error
+            ? e.message
+            : "Media start failed. Check camera/mic permissions in the browser.";
 
-        // Helpful hint for common permission failures
         if (
           typeof msg === "string" &&
           (msg.toLowerCase().includes("permission") ||
@@ -110,34 +115,30 @@ export default function LiveRoomStage({
           );
         }
 
-        onError?.(msg);
+        onErrorRef.current?.(msg);
         console.error("LiveRoomStage media error:", e);
       }
     };
 
-    enableMedia();
+    void enableMedia();
 
     return () => {
       cancelled = true;
     };
-  }, [camOn, micOn, localParticipant, onError]);
+  }, [camOn, micOn, connectionState, localParticipant]);
 
   return (
     <>
       <RoomAudioRenderer />
 
-      <LocalCameraView />
+      <LocalCameraView camOn={camOn} />
 
-      {permissionHint && (
-        <div className="absolute left-3 right-3 bottom-3 rounded-sm border border-red-500/30 bg-red-500/10 p-3">
-          <div className="text-[10px] font-black uppercase tracking-[4px] text-red-200">
-            Permissions
-          </div>
-          <div className="text-sm font-bold italic text-white/75 mt-1">
-            {permissionHint}
-          </div>
+      {permissionHint ? (
+        <div className="absolute left-3 right-3 bottom-3 z-20 rounded-sm border border-red-500/30 bg-red-500/10 p-3">
+          <div className="text-[10px] font-black uppercase tracking-[4px] text-red-200">Permissions</div>
+          <div className="text-sm font-bold italic text-white/75 mt-1">{permissionHint}</div>
         </div>
-      )}
+      ) : null}
     </>
   );
 }

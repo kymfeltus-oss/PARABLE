@@ -1,0 +1,36 @@
+# PARABLE Gaming Standards
+
+These rules apply when building or extending **PARABLE game modules** (The Narrow Road, Kingdom Hoops, Gridiron Glory, Sanctuary 3D, engine lab). For non-game UI (feed, auth, settings), standard Next.js/React patterns apply.
+
+## Rendering (GPU-first)
+
+- **Do not** add new **2D Canvas** or **HTML/CSS-driven game logic** (simulation loop, collision resolution, scoring) for PARABLE games. Use the **3D engine path** instead.
+- **Always use** `@react-three/fiber` and `@react-three/drei` for new 3D scenes and helpers.
+- **Prefer WebGPU** via the existing bootstrap (`src/components/engine/createParableRenderer.ts` + `three/webgpu`); **fallback** to WebGL when init fails.
+- Use **PBR-style materials** (`MeshStandardMaterial` / `MeshPhysicalMaterial`, roughness/metalness, env lighting) so metal, skin, and fabric read as high-fidelity—not flat `MeshBasicMaterial` unless debug-only.
+
+## Physics
+
+- **Use Rapier** via `@react-three/rapier` for **new** 3D gameplay (gravity, rigid bodies, collisions). Wire the physics world to the same frame loop as R3F (`useFrame` / fixed timestep pattern).
+- Outcomes that should feel “real” (ball, rim, tackles, shields) must come from **physics contact**, not timer bars alone.
+
+## Characters & assets
+
+- **Characters are rigged 3D meshes** loaded as **GLB/glTF** (`useGLTF` / GLTFLoader), not 2D sprites or CSS shapes.
+- Avatar/loadout data is sourced from **Supabase** (see `supabase/schema-gaming-2026.sql`: `imago_inventory`, `world_influence`, etc.) and hydrated into the scene.
+
+## Input
+
+- Implement **Pro-Stick–style analog logic** for sports and action: accumulate **gamepad + pointer** samples per frame; map to direction, magnitude, and release windows (2K/Madden-style), not only `onClick` for core mechanics.
+
+## Multiplayer & state
+
+- **Game state** that must sync across clients (presence, inventory, session scores, world position) should use **Supabase Realtime** (and/or authoritative writes via Edge/RPC for anti-cheat). Do not rely on client-only `localStorage` for competitive truth.
+
+## Legacy exception (until migrated)
+
+- Existing **2D canvas prototypes** under `src/components/games/*` and `/gaming/play/*` remain until explicitly rebuilt in 3D. **Do not extend** them with new mechanics; **prefer** new work in `src/components/engine/` and routes under `/play/engine` (or successor 3D routes).
+
+## “Hard reset” migration direction
+
+When rewriting a module from 2D to AAA 3D: **Scene + PerspectiveCamera**, **Rapier world**, **third-person follow camera**, **Pointer Lock** where appropriate for look, **3DPlayer** loading GLB from Supabase—not a colored `fillRect` grid.

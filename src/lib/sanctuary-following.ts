@@ -112,6 +112,11 @@ export function loadNotifChannelIds(): string[] {
 
 export function saveFollowingIds(ids: string[]) {
   window.localStorage.setItem(FOLLOWING_STORAGE_KEY, JSON.stringify(ids));
+  try {
+    window.dispatchEvent(new Event('parable:following-updated'));
+  } catch {
+    /* ignore */
+  }
 }
 
 export function saveCustomChannels(channels: SanctuaryChannel[]) {

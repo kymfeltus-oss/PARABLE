@@ -125,7 +125,7 @@ export default function TestifyPostPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_0%,rgba(0,0,0,0.74)_58%,rgba(0,0,0,0.96)_100%)]" />
       </div>
 
-      <div className="mx-auto max-w-[900px] px-4 pb-24 pt-8">
+      <div className="mx-auto w-full min-w-0 max-w-full px-4 pb-24 pt-8">
         <div className="text-[11px] font-black uppercase tracking-[4px] text-white/60">
           Testify
         </div>

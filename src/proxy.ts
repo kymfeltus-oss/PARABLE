@@ -25,6 +25,7 @@ function isPublic(pathname: string) {
   // public routes
   if (pathname === "/") return true;
   if (pathname.startsWith("/login")) return true;
+  if (pathname.startsWith("/auth/callback")) return true;
   if (pathname.startsWith("/create-account")) return true;
   if (pathname.startsWith("/welcome")) return true;
   if (pathname.startsWith("/logout")) return true;
@@ -55,13 +56,17 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Create response we can attach cookies to
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  if (!url || !anon) {
+    // Avoid throwing in middleware (would surface as Internal Server Error)
+    return NextResponse.next();
+  }
+
   let res = NextResponse.next();
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  try {
+    const supabase = createServerClient(url, anon, {
       cookies: {
         get(name: string) {
           return req.cookies.get(name)?.value;
@@ -73,24 +78,25 @@ export default async function proxy(req: NextRequest) {
           res.cookies.set({ name, value: "", ...options, maxAge: 0 });
         },
       },
+    });
+
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      return NextResponse.redirect(buildLoginRedirect(req));
     }
-  );
 
-  // If no valid user, send to login BEFORE page loads (no flash)
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.redirect(buildLoginRedirect(req));
-  }
-
-  // Logged-in users should not be on /login
-  if (pathname.startsWith("/login")) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/my-sanctuary";
-    url.search = "";
-    return NextResponse.redirect(url);
+    if (pathname.startsWith("/login")) {
+      const nextUrl = req.nextUrl.clone();
+      nextUrl.pathname = "/my-sanctuary";
+      nextUrl.search = "";
+      return NextResponse.redirect(nextUrl);
+    }
+  } catch {
+    return NextResponse.next();
   }
 
   return res;

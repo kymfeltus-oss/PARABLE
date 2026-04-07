@@ -11,6 +11,8 @@ const MAX_BYTES = 4 * 1024 * 1024; // ~4MB to stay under typical 5MB limit
 export type TestimonyPostStored = {
   id: number;
   user: string;
+  /** Supabase auth user id — used for Following feed */
+  authorId?: string;
   time: string;
   tag: string;
   text: string;

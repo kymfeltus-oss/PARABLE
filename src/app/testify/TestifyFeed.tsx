@@ -13,10 +13,10 @@ export default function TestifyFeed() {
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_20%_10%,rgba(0,242,255,0.12),transparent_40%),radial-gradient(circle_at_80%_90%,rgba(0,242,255,0.08),transparent_45%)]" />
 
       {/* PAGE GRID */}
-      <div className="mx-auto grid max-w-7xl grid-cols-12 gap-6 px-6 py-8">
+      <div className="mx-auto grid w-full min-w-0 max-w-full grid-cols-1 gap-6 px-4 py-8">
 
-        {/* LEFT — ONLINE */}
-        <aside className="col-span-3 hidden lg:block">
+        {/* LEFT — ONLINE (hidden in app column; use main Testify for rails) */}
+        <aside className="hidden" aria-hidden>
           <div className="rounded-2xl border border-cyan-400/10 bg-black/80 p-4 backdrop-blur">
             <h3 className="mb-4 text-xs tracking-widest text-cyan-300 uppercase">
               Online Now
@@ -61,7 +61,7 @@ export default function TestifyFeed() {
         </main>
 
         {/* RIGHT — SUGGESTED */}
-        <aside className="col-span-3 hidden lg:block">
+        <aside className="hidden" aria-hidden>
           <div className="rounded-2xl border border-cyan-400/10 bg-black/80 p-4 backdrop-blur">
             <h3 className="mb-4 text-xs tracking-widest text-cyan-300 uppercase">
               Discover

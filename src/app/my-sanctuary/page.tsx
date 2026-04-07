@@ -1,24 +1,21 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Activity, Radio, Users, Settings } from 'lucide-react';
+import { Activity, Radio } from 'lucide-react';
 import SparkleOverlay from '@/components/SparkleOverlay';
 import { useAuth } from '@/hooks/useAuth';
-import { fallbackAvatarOnError } from '@/lib/avatar-display';
 import { loadAllTestimonies, saveTestimonies, TESTIMONY_STORAGE_KEY } from '@/lib/testimony-storage';
-import {
-  BASE_SANCTUARY_CHANNELS,
-  RECOMMENDED_SANCTUARY_CHANNELS,
-  loadCustomChannels,
-  loadFollowingIds,
-  saveCustomChannels,
-  saveFollowingIds,
-  type SanctuaryChannel,
-} from '@/lib/sanctuary-following';
+import { RECOMMENDED_SANCTUARY_CHANNELS, type SanctuaryChannel } from '@/lib/sanctuary-following';
 import { SanctuaryFollowingPanel } from '@/components/sanctuary/SanctuaryFollowingPanel';
 import { useRegisteredProfileSuggestions } from '@/hooks/useRegisteredProfileSuggestions';
+import { useSanctuaryFollowGraph } from '@/hooks/useSanctuaryFollowGraph';
+import SanctuaryCommandHeader from '@/components/sanctuary/SanctuaryCommandHeader';
+import SanctuaryBioModule from '@/components/sanctuary/SanctuaryBioModule';
+import SanctuaryCategoryUtility from '@/components/sanctuary/SanctuaryCategoryUtility';
+import SanctuaryTestimonyWall from '@/components/sanctuary/SanctuaryTestimonyWall';
+import SanctuaryLiveStatusCard from '@/components/sanctuary/SanctuaryLiveStatusCard';
 
 type TestimonyPost = {
   id: number;
@@ -42,18 +39,15 @@ type TestimonyPost = {
   reactions?: Record<string, number>;
 };
 
-const REACTION_EMOJIS = ['🙏', '❤️', '👏', '🙌', '😭', '🔥'] as const;
+const REACTION_EMOJIS = ['🙏', '❤️', '👏'] as const;
 
 function formatRelativeTime(createdAt: number) {
   const diffMs = Date.now() - createdAt;
   const minutes = Math.max(0, Math.floor(diffMs / 60000));
-
   if (minutes < 1) return 'now';
   if (minutes < 60) return `${minutes}m`;
-
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h`;
-
   const days = Math.floor(hours / 24);
   return `${days}d`;
 }
@@ -62,20 +56,14 @@ function loadMyTestimonies(username?: string | null) {
   try {
     const raw = window.localStorage.getItem(TESTIMONY_STORAGE_KEY);
     if (!raw) return [];
-
     const parsed = JSON.parse(raw) as TestimonyPost[];
     if (!Array.isArray(parsed)) return [];
-
     const targetNames = [username]
       .filter(Boolean)
       .map((value) => String(value).trim().toUpperCase());
-
     return parsed
-      .filter((post) =>
-        targetNames.includes(String(post.user).trim().toUpperCase())
-      )
+      .filter((post) => targetNames.includes(String(post.user).trim().toUpperCase()))
       .map((post) => {
-        // Clean up legacy media URLs that are just filenames so they don't break the image
         if (
           post.mediaUrl &&
           !post.mediaUrl.startsWith('data:') &&
@@ -91,16 +79,7 @@ function loadMyTestimonies(username?: string | null) {
   }
 }
 
-const featuredStreams: {
-  id: number;
-  title: string;
-  streamer: string;
-  viewers: string;
-  category: string;
-  isLive: boolean;
-}[] = [];
-
-const categories = [
+const BROWSE_TAGS = [
   'Faith & Prayer',
   'Testimonies',
   'Youth Ministry',
@@ -178,32 +157,30 @@ const LIVE_CHURCH_CATEGORIES: LiveCategory[] = [
   },
 ];
 
-type TabKey = 'featured' | 'following' | 'categories';
-
 export default function MySanctuaryPage() {
   const router = useRouter();
   const { userProfile, avatarUrl, loading } = useAuth();
   const { registeredChannels, registeredLoading, registeredError } = useRegisteredProfileSuggestions();
+  const {
+    followingIds,
+    updateFollowingIds,
+    customFollowers,
+    updateCustomFollowers,
+    allFollowers,
+  } = useSanctuaryFollowGraph(registeredChannels);
   const displayName = userProfile?.username || userProfile?.full_name || 'Your Sanctuary';
 
   const [testimonies, setTestimonies] = useState<TestimonyPost[]>([]);
-  const [activeTab, setActiveTab] = useState<TabKey>('featured');
-  const [followingIds, setFollowingIds] = useState<string[]>([]);
-  const [customFollowers, setCustomFollowers] = useState<SanctuaryChannel[]>([]);
 
   useEffect(() => {
     if (loading) return;
-
     const refresh = () => {
       const username = userProfile?.username || null;
       setTestimonies(loadMyTestimonies(username));
     };
-
     refresh();
-
     window.addEventListener('focus', refresh);
     window.addEventListener('parable:testimonies-updated', refresh as EventListener);
-
     return () => {
       window.removeEventListener('focus', refresh);
       window.removeEventListener('parable:testimonies-updated', refresh as EventListener);
@@ -212,52 +189,16 @@ export default function MySanctuaryPage() {
 
   useEffect(() => {
     if (loading) return;
-    if (!userProfile) {
-      router.replace('/login?next=/my-sanctuary');
-    }
+    if (!userProfile) router.replace('/login?next=/my-sanctuary');
   }, [loading, userProfile, router]);
 
-  useEffect(() => {
-    setFollowingIds(loadFollowingIds());
-    setCustomFollowers(loadCustomChannels());
-  }, []);
-
-  const recommendedAsChannels = useMemo(
-    () =>
-      RECOMMENDED_SANCTUARY_CHANNELS.map((r) => ({
-        id: r.id,
-        name: r.name,
-        handle: `@${r.id.replace(/-/g, '')}`,
-        avatarLabel: r.avatarLabel,
-        isLive: false,
-        viewers: r.viewers,
-        tagline: r.tagline,
-        source: 'curated' as const,
-      })),
-    []
-  );
-
-  const allFollowers = useMemo(() => {
-    const merged = new Map<string, SanctuaryChannel>();
-    for (const c of BASE_SANCTUARY_CHANNELS) merged.set(c.id, c);
-    for (const c of recommendedAsChannels) merged.set(c.id, c);
-    for (const c of registeredChannels) merged.set(c.id, c);
-    for (const c of customFollowers) merged.set(c.id, c);
-    return Array.from(merged.values());
-  }, [recommendedAsChannels, registeredChannels, customFollowers]);
   const followedAccounts = allFollowers.filter((f) => followingIds.includes(f.id));
   const liveFollowed = followedAccounts.filter((f) => f.isLive);
 
   const handleToggleFollow = (id: string) => {
-    setFollowingIds((current) => {
-      const next = current.includes(id) ? current.filter((fId) => fId !== id) : [...current, id];
-      try {
-        saveFollowingIds(next);
-      } catch {
-        // ignore
-      }
-      return next;
-    });
+    updateFollowingIds((current) =>
+      current.includes(id) ? current.filter((fId) => fId !== id) : [...current, id]
+    );
   };
 
   const handleAddCustom = (name: string, handle: string) => {
@@ -268,7 +209,6 @@ export default function MySanctuaryPage() {
       .join('')
       .slice(0, 2)
       .toUpperCase();
-
     const follower: SanctuaryChannel = {
       id,
       name,
@@ -277,44 +217,14 @@ export default function MySanctuaryPage() {
       isLive: false,
       viewers: '0',
     };
-
-    const nextCustom = [...customFollowers, follower];
-    setCustomFollowers(nextCustom);
-    try {
-      saveCustomChannels(nextCustom);
-    } catch {
-      // ignore
-    }
-
-    setFollowingIds((current) => {
-      const next = [...current, id];
-      try {
-        saveFollowingIds(next);
-      } catch {
-        // ignore
-      }
-      return next;
-    });
+    updateCustomFollowers([...customFollowers, follower]);
+    updateFollowingIds((current) => [...current, id]);
   };
 
   const handleRemoveCustomChannel = (id: string) => {
     if (!id.startsWith('custom-')) return;
-    const nextCustom = customFollowers.filter((c) => c.id !== id);
-    setCustomFollowers(nextCustom);
-    try {
-      saveCustomChannels(nextCustom);
-    } catch {
-      // ignore
-    }
-    setFollowingIds((current) => {
-      const next = current.filter((x) => x !== id);
-      try {
-        saveFollowingIds(next);
-      } catch {
-        // ignore
-      }
-      return next;
-    });
+    updateCustomFollowers(customFollowers.filter((c) => c.id !== id));
+    updateFollowingIds((current) => current.filter((x) => x !== id));
   };
 
   const handleTestimonyReaction = (postId: number, emoji: string) => {
@@ -326,336 +236,144 @@ export default function MySanctuaryPage() {
       return { ...p, reactions };
     });
     if (saveTestimonies(updated)) {
-      const username = userProfile?.username || null;
-      setTestimonies(loadMyTestimonies(username));
+      setTestimonies(loadMyTestimonies(userProfile?.username || null));
     }
   };
 
-  if (loading) {
+  if (loading || !userProfile) {
     return <div className="min-h-screen bg-[#010101]" />;
   }
 
-  if (!userProfile) {
-    return <div className="min-h-screen bg-[#010101]" />;
-  }
+  const role = userProfile?.role as string | undefined;
+  const bioText = (userProfile as { bio?: string | null })?.bio ?? null;
 
   return (
-    <div className="min-h-screen bg-[#010101] text-white relative overflow-hidden font-sans">
+    <div className="min-h-[100dvh] bg-[#010101] font-sans text-white relative overflow-x-hidden pb-parable-bottom">
       <SparkleOverlay />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,242,255,0.06)_0%,transparent_70%)] pointer-events-none" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,242,255,0.08)_0%,transparent_55%)]" />
 
-      <div className="relative z-10 flex min-h-screen">
-        {/* LEFT RAIL */}
-        <aside className="hidden lg:flex w-64 flex-col border-r border-white/5 bg-black/40 backdrop-blur-md">
-          <div className="px-4 pt-4 pb-3 flex items-center justify-between">
-            <button onClick={() => router.push('/home')} className="flex items-center gap-2">
-              <div className="relative h-7 w-24">
-                <Image
-                  src="/fonts/parable-logo.svg"
-                  alt="Parable"
-                  fill
-                  className="object-contain drop-shadow-[0_0_14px_rgba(0,242,255,0.7)]"
-                />
-              </div>
-            </button>
+      <main className="relative z-10 mx-auto min-w-0 max-w-full space-y-5 px-4 py-6">
+        <div className="flex items-center justify-between gap-3">
+          <div className="relative h-8 w-28 shrink-0">
+            <Image
+              src="/fonts/parable-logo.svg"
+              alt="Parable"
+              fill
+              className="object-contain object-left drop-shadow-[0_0_14px_rgba(0,242,255,0.75)]"
+              priority
+            />
           </div>
-
-          <div className="px-4 pb-3">
+          <div className="flex flex-wrap justify-end gap-1.5">
             <button
-              onClick={() => router.push('/profile')}
-              className="flex items-center gap-3 rounded-lg bg-white/5 border border-white/10 px-3 py-2 hover:border-[#00f2ff]/60 w-full text-left"
+              type="button"
+              onClick={() => router.push('/sanctuary-reader')}
+              className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1.5 text-[10px] font-semibold text-white/80"
             >
-              <div className="w-9 h-9 rounded-full overflow-hidden border border-white/20">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={avatarUrl || '/logo.svg'}
-                  alt={userProfile?.username || 'Profile'}
-                  className="w-full h-full object-cover"
-                  onError={fallbackAvatarOnError}
-                />
-              </div>
-              <div className="flex flex-col leading-tight">
-                <span className="text-sm font-semibold truncate">
-                  {userProfile?.username || 'Guest'}
-                </span>
-                <span className="text-[11px] text-white/40 truncate">View sanctuary profile</span>
-              </div>
+              <Activity className="h-3.5 w-3.5 text-[#00f2ff]" />
+              Reader
             </button>
-          </div>
-
-          <nav className="px-2 pb-3 space-y-1 text-sm">
             <button
+              type="button"
               onClick={() => router.push('/testify')}
-              className="flex items-center gap-3 w-full px-3 py-2 rounded-lg bg-white/10 text-white font-medium"
+              className="inline-flex items-center gap-1 rounded-full bg-[#00f2ff] px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide text-black"
             >
-              <span className="w-5 text-center">🏠</span>
-              <span>Testify</span>
+              Testify
             </button>
             <button
-              onClick={() => router.push('/browse')}
-              className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-white/70 hover:bg-white/5 hover:text-white"
+              type="button"
+              onClick={() => router.push('/live-studio')}
+              className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1.5 text-[10px] font-medium text-white/75"
             >
-              <span className="w-5 text-center">🎥</span>
-              <span>Browse</span>
+              <Radio className="h-3.5 w-3.5 text-emerald-400" />
+              Studio
             </button>
-            <button
-              onClick={() => router.push('/following')}
-              className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-white/70 hover:bg-white/5 hover:text-white"
+            <a
+              href="/logout"
+              className="inline-flex items-center rounded-full border border-red-400/25 bg-red-500/10 px-2.5 py-1.5 text-[10px] text-red-200"
             >
-              <span className="w-5 text-center">❤️</span>
-              <span>Following</span>
-            </button>
-          </nav>
+              Out
+            </a>
+          </div>
+        </div>
 
-          <div className="mt-1 border-t border-white/10" />
+        <SanctuaryCommandHeader
+          displayName={displayName}
+          role={role}
+          avatarUrl={avatarUrl}
+          followingCount={followingIds.length}
+          testimonyCount={testimonies.length}
+        />
 
-          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2 text-sm">
-            <p className="text-[11px] uppercase tracking-[3px] text-white/40 px-1">Recommended</p>
-            {RECOMMENDED_SANCTUARY_CHANNELS.map((channel) => (
-              <button
-                key={channel.id}
-                className="flex items-center justify-between w-full px-2 py-1.5 rounded-lg hover:bg-white/5 text-left"
-                onClick={() => router.push('/streamers')}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-black uppercase tracking-[1px]">
-                    {channel.avatarLabel}
-                  </div>
-                  <div className="flex flex-col leading-tight">
-                    <span className="text-xs font-semibold text-white truncate">
-                      {channel.name}
-                    </span>
-                    <span className="text-[11px] text-white/45 truncate">
-                      {channel.tagline}
-                    </span>
-                  </div>
+        <SanctuaryBioModule role={role} bioText={bioText} fullName={userProfile?.full_name} />
+
+        <SanctuaryLiveStatusCard liveFollowed={liveFollowed} isLiveMock={false} />
+
+        <SanctuaryCategoryUtility role={role} router={router} />
+
+        <SanctuaryTestimonyWall posts={testimonies} formatRelativeTime={formatRelativeTime} />
+
+        {testimonies.length > 0 && (
+          <section className="rounded-[20px] border border-white/[0.08] bg-black/40 px-4 py-3">
+            <p className="text-[9px] font-black uppercase tracking-widest text-white/35">Quick react</p>
+            <p className="mt-1 text-[11px] text-white/45">Tap to add emoji reactions on your latest archive pieces (syncs with Testify storage).</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {testimonies.slice(0, 4).map((post) => (
+                <div key={post.id} className="flex flex-wrap items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-2 py-2">
+                  <span className="text-[10px] text-white/50">#{post.id}</span>
+                  {REACTION_EMOJIS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => handleTestimonyReaction(post.id, emoji)}
+                      className="rounded-lg px-1.5 py-0.5 text-sm hover:bg-white/10"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
                 </div>
-                <div className="flex items-center gap-1 text-[11px] text-emerald-400">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                  <span>{channel.viewers}</span>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">Live church lanes</h3>
+            <button type="button" onClick={() => router.push('/streamers')} className="text-[11px] text-[#00f2ff] hover:underline">
+              View all
+            </button>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:thin]">
+            {LIVE_CHURCH_CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => router.push('/streamers')}
+                className="relative w-[168px] min-h-[168px] shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black text-left shadow-lg"
+              >
+                <div
+                  className={`absolute inset-0 bg-cover bg-center bg-no-repeat ${!cat.imageSrc ? `bg-gradient-to-br ${cat.gradient}` : ''}`}
+                  style={cat.imageSrc ? { backgroundImage: `url('${cat.imageSrc}')` } : undefined}
+                />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/20" />
+                <div className="relative z-10 flex min-h-[168px] flex-col justify-end gap-2 p-3">
+                  <p className="text-[9px] font-semibold uppercase tracking-wider text-[#00f2ff]/90">{cat.subtitle}</p>
+                  <p className="text-sm font-bold leading-snug text-white line-clamp-2">{cat.title}</p>
+                  <p className="text-[11px] tabular-nums text-white/80">{cat.viewers}</p>
                 </div>
               </button>
             ))}
           </div>
+        </section>
 
-          <div className="mt-auto px-3 py-3 border-t border-white/10 flex items-center justify-between text-[11px] text-white/40">
-            <button
-              onClick={() => router.push('/settings')}
-              className="inline-flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-white/5"
-            >
-              <Settings className="w-4 h-4 text-[#00f2ff]" />
-              <span>Settings</span>
-            </button>
-            <a
-              href="/logout"
-              className="px-2 py-1 rounded-lg hover:bg-white/5 text-white/50 hover:text-white transition-colors"
-            >
-              Log out
-            </a>
-          </div>
-        </aside>
-
-        {/* CENTER COLUMN (header + hero + feed summary only for brevity) */}
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 xl:px-10 py-6 space-y-6">
-          <header className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="relative h-10 w-40 sm:h-12 sm:w-52">
-                <Image
-                  src="/fonts/parable-logo.svg"
-                  alt="Parable"
-                  fill
-                  className="object-contain drop-shadow-[0_0_18px_rgba(0,242,255,0.85)]"
-                  priority
-                />
-              </div>
-              <div>
-                <p className="text-[9px] font-mono tracking-[4px] uppercase text-[#00f2ff]/70">
-                  Sanctuary // Live_Feed
-                </p>
-                <h1 className="mt-1 text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
-                  My Sanctuary
-                </h1>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => router.push('/sanctuary-reader')}
-                className="hidden sm:inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-white/80 hover:border-[#00f2ff]/60 hover:text-white"
-              >
-                <Activity className="w-4 h-4 text-[#00f2ff]" />
-                Open Sanctuary Reader
-              </button>
-              <button
-                onClick={() => router.push('/testify')}
-                className="inline-flex items-center gap-2 rounded-full bg-[#00f2ff] px-4 py-2 text-xs font-black uppercase tracking-[2px] text-black shadow-[0_0_25px_rgba(0,242,255,0.7)] hover:bg-[#4df7ff]"
-              >
-                <span className="inline-flex h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                Go Live
-              </button>
-              <button
-                onClick={() => router.push('/live-studio')}
-                className="hidden sm:inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-white/70 hover:border-[#00f2ff]/50"
-              >
-                <Radio className="w-4 h-4 text-emerald-400" />
-                Studio
-              </button>
-              <a
-                href="/logout"
-                className="inline-flex items-center gap-2 rounded-full border border-red-400/30 bg-red-500/10 px-4 py-2 text-xs font-medium text-red-200 hover:bg-red-500/20"
-              >
-                Log out
-              </a>
-            </div>
-          </header>
-
-          {/* Simple hero */}
-          <section className="rounded-xl border border-white/10 bg-gradient-to-r from-black via-black to-[#020b12] overflow-hidden relative">
-            <button
-              onClick={() => router.push('/testify')}
-              className="group relative block w-full h-64 sm:h-72 lg:h-80 text-left"
-            >
-              <div
-                className="absolute inset-0 w-full h-full bg-cover bg-center"
-                style={{
-                  backgroundImage:
-                    "url('https://img.youtube.com/vi/mV-8ihJnwUc/maxresdefault.jpg')",
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent pointer-events-none" />
-              <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.06] mix-blend-soft-light pointer-events-none" />
-
-              <div className="absolute top-4 left-4 flex items-center gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[3px] shadow-[0_0_20px_rgba(248,113,113,0.9)]">
-                  <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
-                  Live
-                </span>
-                <span className="rounded-full bg-black/60 px-3 py-1 text-[10px] font-mono uppercase tracking-[3px] text-white/70 border border-white/10">
-                  1,234 viewing
-                </span>
-              </div>
-
-              <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-1">
-                <p className="text-[10px] uppercase tracking-[4px] text-[#00f2ff]/80 font-black">
-                  Welcome // Build Your Sanctuary
-                </p>
-                <h2 className="text-xl sm:text-2xl font-black tracking-tight">
-                  {displayName}'s Sanctuary
-                </h2>
-              </div>
-            </button>
-          </section>
-
-          {/* TABS – LIKE IG / FB FILTERS */}
-          <section className="flex items-center justify-between gap-4">
-            <div className="inline-flex items-center rounded-full bg-white/5 p-1 border border-white/10">
-              {(['featured', 'following', 'categories'] as TabKey[]).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all ${
-                    activeTab === tab
-                      ? 'bg-[#00f2ff] text-black shadow-[0_0_15px_rgba(0,242,255,0.6)]'
-                      : 'text-white/60 hover:text-white'
-                  }`}
-                >
-                  {tab === 'featured' && 'Featured'}
-                  {tab === 'following' && 'Following'}
-                  {tab === 'categories' && 'Categories'}
-                </button>
-              ))}
-            </div>
-
-            <div className="hidden sm:flex items-center gap-3 text-[11px] text-white/40">
-              <div className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Sanctuary status: Active</span>
-              </div>
-            </div>
-          </section>
-
-          {/* FEATURED / FOLLOWING / CATEGORIES ROW – KICK-LIKE CARDS WITH VIDEO PLACEHOLDERS */}
-          {activeTab === 'featured' && (
-            <section className="grid gap-4 md:grid-cols-3">
-              {featuredStreams.map((stream) => (
-                <article
-                  key={stream.id}
-                  className="group rounded-xl border border-white/10 bg-white/[0.03] p-4 flex flex-col justify-between hover:border-[#00f2ff]/60 hover:bg-white/[0.05] transition-all"
-                >
-                  <div>
-                    <div className="relative mb-3 overflow-hidden rounded-lg border border-white/10 bg-black/60 aspect-video">
-                      <iframe
-                        className="absolute inset-0 w-full h-full"
-                        src={
-                          stream.id === 1
-                            ? 'https://www.youtube.com/embed/rkDk0n3bbPU?autoplay=1&mute=1&controls=0&playsinline=1&loop=1&playlist=rkDk0n3bbPU'
-                            : stream.id === 2
-                            ? 'https://www.youtube.com/embed/Z8SPwT3nQZ8?autoplay=1&mute=1&controls=0&playsinline=1&loop=1&playlist=Z8SPwT3nQZ8'
-                            : 'https://www.youtube.com/embed/e_bEpQH0VTQ?autoplay=1&mute=1&controls=0&playsinline=1&loop=1&playlist=e_bEpQH0VTQ'
-                        }
-                        title={stream.title}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        referrerPolicy="strict-origin-when-cross-origin"
-                        allowFullScreen
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
-                    </div>
-
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-mono uppercase tracking-[2px] text-[#00f2ff]/80">
-                        {stream.category}
-                      </span>
-                      {stream.isLive && (
-                        <span className="flex items-center gap-1 text-[10px] text-red-400">
-                          <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                          Live
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="font-semibold text-sm mb-1">{stream.title}</h3>
-                    <p className="text-[11px] text-white/60 mb-2">
-                      with <span className="font-medium text-white">{stream.streamer}</span>
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-white/40 mt-2">
-                    <span>{stream.viewers} watching</span>
-                    <button
-                      onClick={() => router.push('/testify')}
-                      className="text-[#00f2ff] font-semibold hover:underline"
-                    >
-                      Join stream
-                    </button>
-                  </div>
-                </article>
-              ))}
-              {featuredStreams.length === 0 && (
-                <div className="md:col-span-3 rounded-xl border border-dashed border-[#00f2ff]/30 bg-[#00f2ff]/5 p-6">
-                  <p className="text-[11px] uppercase tracking-[4px] text-[#00f2ff] font-semibold">
-                    No featured streams yet
-                  </p>
-                  <p className="text-sm text-white/70 mt-2">
-                    Your sanctuary is clean and ready. Post your first testimony or go live to begin customizing your feed.
-                  </p>
-                  <div className="mt-4 flex items-center gap-3">
-                    <button
-                      onClick={() => router.push('/testify')}
-                      className="rounded-full bg-[#00f2ff] px-4 py-2 text-[11px] font-black uppercase tracking-[2px] text-black"
-                    >
-                      Create First Post
-                    </button>
-                    <button
-                      onClick={() => router.push('/profile')}
-                      className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-[11px] font-semibold text-white/80"
-                    >
-                      Edit Profile
-                    </button>
-                  </div>
-                </div>
-              )}
-            </section>
-          )}
-
-          {activeTab === 'following' && (
+        <details className="group rounded-[22px] border border-white/10 bg-white/[0.04] backdrop-blur-md">
+          <summary className="cursor-pointer list-none px-4 py-4 text-sm font-semibold text-white [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center justify-between gap-2">
+              Network · follows & discover
+              <span className="text-[11px] font-normal text-[#00f2ff] group-open:rotate-0">▼</span>
+            </span>
+          </summary>
+          <div className="border-t border-white/[0.06] px-2 pb-4 pt-2">
             <SanctuaryFollowingPanel
               allChannels={allFollowers}
               followingIds={followingIds}
@@ -667,205 +385,39 @@ export default function MySanctuaryPage() {
               onRemoveCustomChannel={handleRemoveCustomChannel}
               onOpenStreamers={() => router.push('/streamers')}
             />
-          )}
-
-          {activeTab === 'categories' && (
-            <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5 space-y-4">
-              <h3 className="text-sm font-semibold">Browse by category</h3>
-              <div className="flex flex-wrap gap-2">
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    className="px-4 py-1.5 rounded-full bg-black/60 border border-white/10 text-xs text-white/70 hover:border-[#00f2ff]/60 hover:text-white transition-colors"
+            <div className="mt-4 px-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/35">Tags</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {BROWSE_TAGS.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full border border-white/10 bg-black/50 px-3 py-1 text-[10px] text-white/55"
                   >
-                    {category}
-                  </button>
+                    {tag}
+                  </span>
                 ))}
               </div>
-            </section>
-          )}
-
-          {/* TOP LIVE CATEGORIES – COLORFUL BLACK CHURCH SECTION */}
-          <section className="mt-2 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold">Top Live Church Categories</h3>
-              <button
-                onClick={() => router.push('/streamers')}
-                className="text-[11px] text-[#00f2ff] hover:underline"
-              >
-                View all
-              </button>
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-2 -mx-2 px-2">
-              {LIVE_CHURCH_CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => router.push('/streamers')}
-                  className="relative min-w-[170px] max-w-[190px] h-40 rounded-xl text-left shadow-[0_0_25px_rgba(0,0,0,0.5)] overflow-hidden bg-black"
-                >
-                  <div
-                    className={`absolute inset-0 bg-cover bg-center bg-no-repeat ${
-                      !cat.imageSrc ? `bg-gradient-to-br ${cat.gradient}` : ''
-                    }`}
-                    style={
-                      cat.imageSrc
-                        ? { backgroundImage: `url('${cat.imageSrc}')` }
-                        : undefined
-                    }
-                  />
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(0,0,0,0.45),transparent_60%)]" />
-                  <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-soft-light" />
-                  <div className="relative h-full w-full flex flex-col justify-between p-3">
-                    <div>
-                      <p className="text-[10px] text-white/80 uppercase tracking-[3px]">
-                        {cat.subtitle}
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-white leading-snug line-clamp-2">
-                        {cat.title}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap gap-1">
-                        {cat.badges.map((badge) => (
-                          <span
-                            key={badge}
-                            className="px-2 py-0.5 rounded-full bg-black/40 text-[10px] text-white/85 uppercase tracking-[2px]"
-                          >
-                            {badge}
-                          </span>
-                        ))}
-                      </div>
-                      <p className="text-[11px] text-white/90">{cat.viewers}</p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          {/* My testimonies summary */}
-          <section className="space-y-4 pt-2 pb-10">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">My testimonies</h2>
-              <button
-                onClick={() => router.push('/testify')}
-                className="text-[11px] font-semibold text-[#00f2ff] hover:underline"
-              >
-                Share a testimony
-              </button>
-            </div>
-
-            {testimonies.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-white/15 bg-black/40 p-6 text-center text-xs text-white/50">
-                When you go live and testify, your testimony replays, clips, and highlights will
-                show up here in your personal Sanctuary feed.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {testimonies.map((post) => (
-                  <article
-                    key={post.id}
-                    className="rounded-xl border border-white/10 bg-black/60 p-4 space-y-3"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[11px] font-black uppercase tracking-[2px]">
-                          {String(post.user).slice(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold leading-tight">{post.user}</p>
-                          <p className="text-[11px] text-white/40">
-                            {formatRelativeTime(post.createdAt)} • {post.tag}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="text-sm text-white/90">{post.text}</p>
-
-                    {post.mediaUrl && (
-                      <div className="mt-1">
-                        {post.mediaType === 'image' ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={post.mediaUrl}
-                            alt={post.mediaName || 'Testimony media'}
-                            className="rounded-lg max-h-72 w-full object-cover border border-white/10"
-                            onError={(e) => {
-                              // If the stored URL is bad, hide the broken image instead of showing the filename
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
-                        ) : post.mediaType === 'video' ? (
-                          <video
-                            src={post.mediaUrl}
-                            controls
-                            className="rounded-lg max-h-72 w-full object-cover border border-white/10"
-                          />
-                        ) : null}
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2 flex-wrap pt-1">
-                      {REACTION_EMOJIS.map((emoji) => (
-                        <button
-                          key={emoji}
-                          type="button"
-                          onClick={() => handleTestimonyReaction(post.id, emoji)}
-                          className="text-base p-1.5 rounded-full hover:bg-white/10 transition-colors"
-                          title={`React with ${emoji}`}
-                        >
-                          {emoji}
-                          {((post.reactions ?? {})[emoji] ?? 0) > 0 && (
-                            <span className="ml-0.5 text-[10px] text-white/70">
-                              {post.reactions![emoji]}
-                            </span>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between pt-1 text-[11px] text-white/40">
-                      <div className="flex items-center gap-4">
-                        <span>🙌 {post.stats.amens}</span>
-                        <span>💬 {post.stats.comments}</span>
-                        <span>📣 {post.stats.shares}</span>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-        </main>
-
-        {/* RIGHT RAIL (simplified) */}
-        <aside className="hidden xl:block w-72 border-l border-white/5 bg-black/40 backdrop-blur-md px-4 py-6 space-y-6">
-          <div>
-            <p className="text-[10px] font-mono uppercase tracking-[3px] text-white/40 mb-2">
-              Friends_Online
-            </p>
-            <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3 space-y-2 text-[11px] text:white/60">
-              {liveFollowed.length === 0 ? (
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-gray-500" />
-                  <span>No followed channels live yet. Follow a few to see them here.</span>
-                </div>
-              ) : (
-                liveFollowed.map((account) => (
-                  <div key={account.id} className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>{account.name}</span>
-                    </div>
-                    <span className="text-[10px] text-white/50">{account.viewers} watching</span>
-                  </div>
-                ))
-              )}
             </div>
           </div>
-        </aside>
-      </div>
+        </details>
+
+        <section className="rounded-xl border border-white/10 bg-black/30 px-4 py-4">
+          <p className="text-[10px] font-black uppercase tracking-widest text-white/35">Curated</p>
+          <div className="mt-3 space-y-2">
+            {RECOMMENDED_SANCTUARY_CHANNELS.slice(0, 4).map((channel) => (
+              <button
+                key={channel.id}
+                type="button"
+                onClick={() => router.push('/streamers')}
+                className="flex w-full items-center justify-between gap-2 rounded-lg border border-transparent px-2 py-2 text-left hover:border-white/10 hover:bg-white/[0.04]"
+              >
+                <span className="text-xs font-medium text-white">{channel.name}</span>
+                <span className="text-[10px] text-emerald-400">{channel.viewers}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
-

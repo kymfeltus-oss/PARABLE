@@ -72,7 +72,7 @@ export default function BrowsePage() {
       <SparkleOverlay />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,242,255,0.06)_0%,transparent_70%)] pointer-events-none" />
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-8 space-y-6">
+      <div className="relative z-10 mx-auto w-full min-w-0 max-w-full space-y-6 px-4 py-8 sm:px-4">
         <header className="flex items-center justify-between gap-4">
           <div>
             <p className="text-[10px] uppercase tracking-[6px] text-[#00f2ff]/70">

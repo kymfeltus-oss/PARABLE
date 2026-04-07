@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import "@livekit/components-styles";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -24,8 +26,9 @@ import Header from "@/components/Header";
 import { createClient } from "@/utils/supabase/client";
 
 // LiveKit (client-side)
-import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
+import { LiveKitRoom } from "@livekit/components-react";
 import type { RoomOptions } from "livekit-client";
+import LiveRoomStage from "@/components/livekit/LiveRoomStage";
 
 const liveStyles = `
   @keyframes techScan {
@@ -89,7 +92,7 @@ export default function LiveStudioPage() {
   const makeId = () => `${Date.now()}-${++idSeed.current}`;
 
   const phoneShell =
-    "mx-auto w-full max-w-[430px] px-4 pt-24 pb-28 relative z-10";
+    "relative z-10 mx-auto w-full min-w-0 max-w-full px-4 pb-28 pt-parable-header";
 
   useEffect(() => {
     setMounted(true);
@@ -117,6 +120,10 @@ export default function LiveStudioPage() {
     ]);
     setChatInput("");
   };
+
+  const reportLiveKitMediaError = useCallback((msg: string) => {
+    setLkError(msg);
+  }, []);
 
   const sendGift = (amount: number, emoji: string) => {
     setTotalOfferings((v) => v + amount);
@@ -218,6 +225,17 @@ export default function LiveStudioPage() {
 
       <Header />
 
+      {!mounted ? (
+        <main className={phoneShell} aria-busy="true">
+          <div className="flex min-h-[55vh] flex-col items-center justify-center gap-4 rounded-sm border border-white/[0.08] bg-black/40 px-6 py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-[#00f2ff]/55" aria-hidden />
+            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-white/45">
+              Live Studio
+            </p>
+            <p className="text-center text-xs text-white/35">Preparing the studio…</p>
+          </div>
+        </main>
+      ) : (
       <main className={phoneShell}>
         {/* Top bar */}
         <div className="flex items-center justify-between mb-3">
@@ -320,14 +338,15 @@ export default function LiveStudioPage() {
               </div>
 
               {/* ✅ Mount-gated LiveKit (prevents hydration mismatch) */}
-              {mounted && isLive && lkToken && lkUrl ? (
+              {isLive && lkToken && lkUrl ? (
                 <LiveKitRoom
+                  data-lk-theme="default"
                   token={lkToken}
                   serverUrl={lkUrl}
                   options={roomOptions}
                   connect={true}
-                  audio={micOn}
-                  video={camOn}
+                  audio={false}
+                  video={false}
                   onDisconnected={() => {
                     setIsLive(false);
                     setLkToken(null);
@@ -337,27 +356,25 @@ export default function LiveStudioPage() {
                     console.error("LiveKit error:", err);
                     setLkError(err?.message || "LiveKit connection error.");
                   }}
-                  className="absolute inset-0"
+                  className="absolute inset-0 relative z-0 h-full w-full min-h-0 min-w-0"
                 >
-                  {/* You can add a real camera preview component later.
-                      For now, this keeps the room connected and audio rendered. */}
-                  <RoomAudioRenderer />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center opacity-90">
-                      <div className="text-[10px] font-black uppercase tracking-[6px] text-white/60">
-                        Connected
-                      </div>
-                      <div className="text-sm font-bold italic text-white/70 mt-1">
-                        Room: {lkRoom}
-                      </div>
-                    </div>
+                  <LiveRoomStage
+                    camOn={camOn}
+                    micOn={micOn}
+                    onError={reportLiveKitMediaError}
+                  />
+                  <div className="absolute top-2 left-2 z-10 pointer-events-none rounded-sm border border-white/10 bg-black/55 px-2 py-1 backdrop-blur-sm">
+                    <p className="text-[9px] font-black uppercase tracking-[4px] text-[#00f2ff]/90">
+                      Live
+                    </p>
+                    <p className="text-[10px] font-bold italic text-white/70">{lkRoom}</p>
                   </div>
                 </LiveKitRoom>
               ) : (
                 <div className="opacity-25 flex flex-col items-center">
                   <Video size={64} className="text-[#00f2ff]" />
                   <div className="mt-2 text-[9px] font-black uppercase tracking-[5px] text-white/45">
-                    {mounted ? "Camera Preview Placeholder" : "Loading…"}
+                    Camera Preview Placeholder
                   </div>
                 </div>
               )}
@@ -394,7 +411,7 @@ export default function LiveStudioPage() {
               {!isLive ? (
                 <button
                   onClick={startLive}
-                  disabled={goingLive || !mounted}
+                  disabled={goingLive}
                   className="px-3 py-3 rounded-sm bg-[#00f2ff] text-black text-[9px] font-black uppercase tracking-[4px] disabled:opacity-60"
                 >
                   {goingLive ? (
@@ -562,6 +579,7 @@ export default function LiveStudioPage() {
           }
         `}</style>
       </main>
+      )}
     </div>
   );
 }

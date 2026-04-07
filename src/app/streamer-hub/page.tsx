@@ -269,7 +269,7 @@ export default function StreamerHub() {
       <Header />
 
       {/* ✅ OFFICIAL PHONE APP SPEC (single-column, 430px max) */}
-      <main className="relative z-10 pt-24 pb-28 mx-auto w-full max-w-[430px] px-4">
+      <main className="relative z-10 mx-auto w-full min-w-0 max-w-full px-4 pb-28 pt-parable-header">
         {/* TOP: Identity */}
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
           <div
@@ -676,7 +676,7 @@ export default function StreamerHub() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 26, stiffness: 220 }}
-              className="w-full max-w-lg h-full bg-zinc-950 border-l border-white/10 shadow-2xl flex flex-col"
+              className="flex h-full w-full max-w-full min-w-0 flex-col border-l border-white/10 bg-zinc-950 shadow-2xl"
             >
               <div className="p-5 border-b border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-2">

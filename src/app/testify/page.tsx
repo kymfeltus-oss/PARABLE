@@ -1,17 +1,34 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Cropper from 'react-easy-crop';
 import type { Area } from 'react-easy-crop';
 import 'react-easy-crop/react-easy-crop.css';
-import { Header } from '@/components/layout/Header';
+import { Sparkles, Home, Users } from 'lucide-react';
 import { saveTestimonies } from '@/lib/testimony-storage';
+import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/utils/supabase/client';
+import { useRegisteredProfileSuggestions } from '@/hooks/useRegisteredProfileSuggestions';
+import { useSanctuaryFollowGraph } from '@/hooks/useSanctuaryFollowGraph';
+import { ChannelAvatar } from '@/components/sanctuary/SanctuaryDiscoverSection';
+import type { SanctuaryChannel } from '@/lib/sanctuary-following';
+import { TestifyLivePortalFeed } from '@/components/testify/TestifyLivePortalFeed';
+import { LivePersonnelRail } from '@/components/testify/LivePersonnelRail';
+import { ActivityPulseDrawer } from '@/components/testify/ActivityPulseDrawer';
+import { useActivityPulse, type PresenceActivity } from '@/hooks/useActivityPulse';
+import {
+  recordTestifyVisit,
+  getTestifyGems,
+  addTestifyGems,
+  getPipPrefs,
+  setPipPrefs,
+} from '@/lib/testify-portal-storage';
 
 type TestimonyPost = {
   id: number;
   user: string;
+  authorId?: string;
   time: string;
   tag: string;
   text: string;
@@ -32,8 +49,6 @@ type TestimonyPost = {
 };
 
 const TESTIMONY_STORAGE_KEY = 'parable:testimonies';
-
-const REACTION_EMOJIS = ['🙏', '❤️', '👏', '🙌', '😭', '🔥'] as const;
 
 const DEFAULT_FEED: TestimonyPost[] = [];
 
@@ -106,13 +121,35 @@ async function getCroppedImageDataUrl(
   return canvas.toDataURL('image/jpeg', 0.9);
 }
 
+function postMatchesFollowing(
+  post: TestimonyPost,
+  followingIds: string[],
+  currentUserId: string | null,
+  followedAccounts: SanctuaryChannel[]
+): boolean {
+  if (currentUserId && post.authorId && post.authorId === currentUserId) return true;
+  if (post.authorId && followingIds.includes(post.authorId)) return true;
+  const u = String(post.user).trim().toLowerCase();
+  for (const c of followedAccounts) {
+    if (!followingIds.includes(c.id)) continue;
+    const name = c.name.trim().toLowerCase();
+    const handle = c.handle.replace(/^@/, '').trim().toLowerCase();
+    if (u === name || u === handle) return true;
+    if (name.split(/\s+/).some((w) => w && u === w)) return true;
+  }
+  return false;
+}
+
 export default function TestifyPage() {
   const router = useRouter();
+  const { avatarUrl: myAvatarUrl } = useAuth();
+  const { registeredChannels } = useRegisteredProfileSuggestions();
+  const { followingIds, allFollowers } = useSanctuaryFollowGraph(registeredChannels);
 
   const [isMounted, setIsMounted] = useState(false);
   const [postText, setPostText] = useState('');
   const [selectedTag, setSelectedTag] = useState('BREAKTHROUGH');
-  const [feedFilter, setFeedFilter] = useState('FOR YOU');
+  const [feedFilter, setFeedFilter] = useState<'FOR YOU' | 'FOLLOWING' | 'LIVE'>('FOR YOU');
   const [statusMessage, setStatusMessage] = useState('READY TO TESTIFY');
   const [selectedFileName, setSelectedFileName] = useState('');
   const [selectedMediaUrl, setSelectedMediaUrl] = useState('');
@@ -121,12 +158,22 @@ export default function TestifyPage() {
   const [musicPulsePostId, setMusicPulsePostId] = useState<number | null>(null);
   const [feed, setFeed] = useState<TestimonyPost[]>(DEFAULT_FEED);
   const [currentUsername, setCurrentUsername] = useState('Guest');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [cropModalImageUrl, setCropModalImageUrl] = useState<string | null>(null);
   const [cropModalFileName, setCropModalFileName] = useState('');
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [cropBusy, setCropBusy] = useState(false);
   const croppedAreaPixelsRef = useRef<Area | null>(null);
+
+  const [portalSection, setPortalSection] = useState<'pulse' | 'archive'>('pulse');
+  const [streakDays, setStreakDays] = useState(0);
+  const [faithfulUnlocked, setFaithfulUnlocked] = useState(false);
+  const [gemsBalance, setGemsBalance] = useState(0);
+  const [pipMediaUrl, setPipMediaUrl] = useState<string | null>(null);
+  const [pipLabel, setPipLabel] = useState<string | null>(null);
+  const [pulseOpen, setPulseOpen] = useState(false);
+  const [pipSeekSeconds, setPipSeekSeconds] = useState<number | null>(null);
 
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
@@ -145,7 +192,10 @@ export default function TestifyPage() {
         data: { session },
       } = await supabase.auth.getSession();
       const user = session?.user;
-      if (!user) return;
+      if (!user) {
+        setCurrentUserId(null);
+        return;
+      }
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -161,10 +211,22 @@ export default function TestifyPage() {
         user.email?.split('@')[0] ||
         'Guest';
       setCurrentUsername(String(name));
+      setCurrentUserId(user.id);
     };
 
     loadCurrentUser();
   }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    const v = recordTestifyVisit();
+    setStreakDays(v.streak);
+    setFaithfulUnlocked(v.faithfulUnlocked);
+    setGemsBalance(getTestifyGems());
+    const pip = getPipPrefs();
+    setPipMediaUrl(pip.url);
+    setPipLabel(pip.title);
+  }, [isMounted]);
 
   useEffect(() => {
     if (!isMounted) return;
@@ -179,13 +241,17 @@ export default function TestifyPage() {
       }
     };
 
+    const onFollowing = () => refreshFeed();
+
     window.addEventListener('focus', refreshFeed);
     window.addEventListener('parable:testimonies-updated', refreshFeed);
+    window.addEventListener('parable:following-updated', onFollowing);
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       window.removeEventListener('focus', refreshFeed);
       window.removeEventListener('parable:testimonies-updated', refreshFeed);
+      window.removeEventListener('parable:following-updated', onFollowing);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [isMounted]);
@@ -211,6 +277,139 @@ export default function TestifyPage() {
   const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
     croppedAreaPixelsRef.current = croppedAreaPixels;
   }, []);
+
+  const followedAccounts = useMemo(
+    () => allFollowers.filter((c) => followingIds.includes(c.id)),
+    [allFollowers, followingIds]
+  );
+
+  const storyRingPeople = useMemo(() => {
+    const me: SanctuaryChannel = {
+      id: 'me',
+      name: currentUsername,
+      handle: '@you',
+      avatarLabel: String(currentUsername || 'U')
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((p) => p[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase(),
+      isLive: false,
+      viewers: 'You',
+      avatarUrl: myAvatarUrl && myAvatarUrl !== '/logo.svg' ? myAvatarUrl : undefined,
+    };
+    return [me, ...followedAccounts.slice(0, 24)];
+  }, [currentUsername, followedAccounts, myAvatarUrl]);
+
+  const filteredFeed = useMemo(() => {
+    const sorted = [...feed].sort((a, b) => b.createdAt - a.createdAt);
+    if (feedFilter === 'LIVE') {
+      return sorted.filter(
+        (post) =>
+          post.tag === 'WORSHIP' || post.tag === 'BREAKTHROUGH' || post.tag === 'PRAYER'
+      );
+    }
+    if (feedFilter === 'FOLLOWING') {
+      return sorted.filter((post) =>
+        postMatchesFollowing(post, followingIds, currentUserId, followedAccounts)
+      );
+    }
+    return sorted;
+  }, [feed, feedFilter, followingIds, currentUserId, followedAccounts]);
+
+  const gridPosts = useMemo(() => {
+    const base = filteredFeed;
+    if (portalSection === 'pulse') {
+      return [...base].sort(
+        (a, b) =>
+          b.stats.amens +
+          b.stats.comments +
+          (b.mediaType === 'video' ? 3 : 0) -
+          (a.stats.amens + a.stats.comments + (a.mediaType === 'video' ? 3 : 0))
+      );
+    }
+    return [...base].sort((a, b) => a.createdAt - b.createdAt);
+  }, [filteredFeed, portalSection]);
+
+  const activityPostSummaries = useMemo(
+    () =>
+      gridPosts.map((p) => ({
+        id: p.id,
+        tag: p.tag,
+        text: p.text,
+        stats: { amens: p.stats.amens, comments: p.stats.comments },
+      })),
+    [gridPosts]
+  );
+
+  const activityFirstVideoUrl = useMemo(
+    () => gridPosts.find((p) => p.mediaType === 'video' && p.mediaUrl)?.mediaUrl ?? null,
+    [gridPosts]
+  );
+
+  const friendActivityNames = useMemo(
+    () => followedAccounts.map((c) => c.name),
+    [followedAccounts]
+  );
+
+  const {
+    vibeDisplay,
+    vibeFillPercent,
+    presence,
+    personnelClusters,
+    topicCloud,
+    rippleByPostId,
+    toasts,
+    dismissToast,
+    congratulateToast,
+  } = useActivityPulse(friendActivityNames, activityPostSummaries, activityFirstVideoUrl);
+
+  const handleSetPip = useCallback((url: string | null, title: string | null) => {
+    setPipPrefs(url, title);
+    setPipMediaUrl(url);
+    setPipLabel(title);
+  }, []);
+
+  const handleSpendGems = useCallback((amount: number) => {
+    const next = addTestifyGems(-amount);
+    setGemsBalance(next);
+  }, []);
+
+  const handleJoinPresence = useCallback(
+    (row: PresenceActivity) => {
+      if (row.kind === 'huddle') {
+        setStatusMessage('Joining huddle — voice lobby (LiveKit / Daily) ships next.');
+        setPulseOpen(false);
+        return;
+      }
+      if (row.kind === 'browsing') {
+        setStatusMessage(`${row.displayName} is browsing — wave when DMs land.`);
+        setPulseOpen(false);
+        return;
+      }
+      if (row.joinMediaUrl) {
+        handleSetPip(row.joinMediaUrl, `${row.displayName} · ${row.target}`);
+        setPipSeekSeconds(row.seekSeconds);
+      } else {
+        setStatusMessage('No shared stream URL yet — go live or attach a video post.');
+      }
+      setPulseOpen(false);
+    },
+    [handleSetPip]
+  );
+
+  const handlePipSeekConsumed = useCallback(() => {
+    setPipSeekSeconds(null);
+  }, []);
+
+  const avatarInitials = String(currentUsername || 'U')
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   if (!isMounted) {
     return <div className="min-h-screen bg-[#010101]" />;
@@ -256,6 +455,7 @@ export default function TestifyPage() {
     const newPost: TestimonyPost = {
       id: createdAt,
       user: currentUsername,
+      authorId: currentUserId ?? undefined,
       time: 'JUST NOW',
       tag: selectedTag,
       text: trimmed || 'A new testimony has been shared.',
@@ -504,24 +704,8 @@ export default function TestifyPage() {
     }
   };
 
-  const filteredFeed =
-    feedFilter === 'LIVE'
-      ? feed.filter((post) => post.tag === 'WORSHIP' || post.tag === 'BREAKTHROUGH' || post.tag === 'PRAYER')
-      : feedFilter === 'FOLLOWING'
-      ? feed.filter((post) => String(post.user).toUpperCase() === String(currentUsername).toUpperCase())
-      : feed;
-  const avatarInitials = String(currentUsername || 'U')
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-
   return (
-    <main className="min-h-screen bg-[#010101] text-white selection:bg-[#00f2ff]/30">
-      <Header title="TESTIFY" />
-
+    <main className="min-h-screen bg-gradient-to-b from-[#06060a] via-[#050508] to-[#020204] text-white selection:bg-[#00f2ff]/30 pb-24">
       {/* Image crop modal */}
       {cropModalImageUrl ? (
         <div className="fixed inset-0 z-50 flex flex-col bg-[#010101]">
@@ -599,9 +783,48 @@ export default function TestifyPage() {
         onChange={(e) => handleMediaSelect(e, 'VIDEO')}
       />
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-10">
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-          <aside className="xl:col-span-3 space-y-6">
+      <div className="mx-auto flex w-full min-w-0 max-w-full flex-col gap-5 px-3 pt-1 pb-28 sm:px-4 sm:pb-32">
+        <aside className="order-2 z-20 w-full shrink-0">
+          <LivePersonnelRail
+            variant="sidebar"
+            clusters={personnelClusters}
+            onJoinMember={handleJoinPresence}
+            onOpenFullPulse={() => setPulseOpen(true)}
+            onlineCount={presence.length}
+            streakFlame={streakDays}
+          />
+        </aside>
+
+        <div className="order-1 mx-auto min-w-0 w-full max-w-full flex-1">
+        <header className="sticky top-0 z-30 mb-2 flex items-center justify-between gap-2 rounded-b-2xl border-b border-white/10 bg-black/80 px-3 py-3 backdrop-blur-xl sm:gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-black uppercase tracking-[0.25em] text-[#00f2ff]">Testify</p>
+            <p className="text-[11px] text-white/45 truncate">
+              Feed + portal · <span className="text-white/70">{followingIds.length} following</span>
+            </p>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => router.push('/my-sanctuary')}
+              className="p-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:border-[#00f2ff]/40 hover:text-[#00f2ff] transition-colors"
+              title="My Sanctuary"
+            >
+              <Home className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push('/following')}
+              className="p-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:border-[#00f2ff]/40 hover:text-[#00f2ff] transition-colors"
+              title="Following"
+            >
+              <Users className="h-4 w-4" />
+            </button>
+          </div>
+        </header>
+
+        <div className="flex flex-col gap-4">
+          <aside className="hidden space-y-6" aria-hidden>
             <section className="border border-[#00f2ff]/15 bg-black/60 rounded-[2rem] p-6 backdrop-blur-xl">
               <p className="text-[10px] text-[#00f2ff]/60 uppercase tracking-[10px] mb-4">
                 LIVE SIGNAL
@@ -670,25 +893,60 @@ export default function TestifyPage() {
             </section>
           </aside>
 
-          <section className="xl:col-span-6 space-y-6">
-            <section className="border border-[#00f2ff]/15 bg-black/70 rounded-[2.25rem] p-5 md:p-6 backdrop-blur-2xl shadow-[0_0_30px_rgba(0,242,255,0.06)]">
-              <p className="text-[10px] text-[#00f2ff]/60 uppercase tracking-[10px] mb-4">
-                RELEASE A TESTIMONY
-              </p>
+          <section className="space-y-4 w-full">
+            <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:thin]">
+              {storyRingPeople.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => (c.id === 'me' ? focusComposer() : undefined)}
+                  className="flex flex-col items-center gap-1.5 shrink-0 w-[72px] group"
+                >
+                  <div
+                    className={`rounded-full p-[2.5px] transition-transform group-active:scale-95 ${
+                      c.isLive
+                        ? 'bg-gradient-to-tr from-fuchsia-500 via-orange-400 to-[#00f2ff]'
+                        : 'bg-gradient-to-tr from-white/30 to-white/10'
+                    }`}
+                  >
+                    <div className="rounded-full bg-[#0a0a0f] p-[3px]">
+                      <ChannelAvatar c={c} className="h-[52px] w-[52px] rounded-full border-0" />
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-medium text-white/75 truncate w-full text-center leading-tight">
+                    {c.id === 'me' ? 'Your story' : c.name}
+                  </span>
+                  {c.id !== 'me' ? (
+                    <span className="text-[9px] text-white/40 truncate w-full text-center">
+                      {c.handle}
+                    </span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
 
-              <div className="border border-[#00f2ff]/10 rounded-[1.75rem] bg-white/[0.02] p-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full border border-[#00f2ff]/25 bg-[#00f2ff]/10 flex items-center justify-center text-[#00f2ff] font-black italic text-sm shrink-0">
+            <section className="rounded-2xl border border-white/10 bg-black/50 backdrop-blur-md shadow-[0_8px_40px_rgba(0,0,0,0.45)] overflow-hidden">
+              <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-[#00f2ff]/10 to-transparent">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-[#00f2ff]/90 flex items-center gap-2">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  New post
+                </p>
+                <span className="text-[10px] text-white/35">{statusMessage}</span>
+              </div>
+
+              <div className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full border border-[#00f2ff]/30 bg-gradient-to-br from-[#00f2ff]/20 to-purple-500/10 flex items-center justify-center text-xs font-bold text-[#00f2ff] shrink-0">
                     {avatarInitials}
                   </div>
 
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <textarea
                       ref={composerRef}
                       value={postText}
                       onChange={(e) => setPostText(e.target.value)}
-                      placeholder="Share what God has done. Post a praise report, a written testimony, a live moment, or a witness for the community."
-                      className="w-full min-h-[140px] rounded-[1.5rem] border border-[#00f2ff]/10 bg-black/40 px-5 py-4 text-white placeholder:text-white/35 text-sm leading-7 resize-none outline-none focus:border-[#00f2ff]/30"
+                      placeholder="What’s God doing in your life?"
+                      className="w-full min-h-[100px] rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-[15px] text-white placeholder:text-white/35 leading-relaxed resize-none outline-none focus:border-[#00f2ff]/40 focus:ring-1 focus:ring-[#00f2ff]/20"
                     />
 
                     {selectedMediaUrl ? (
@@ -768,267 +1026,43 @@ export default function TestifyPage() {
               </div>
             </section>
 
-            <section className="flex items-center justify-between gap-4 flex-wrap">
-              <p className="text-[10px] text-[#00f2ff]/60 uppercase tracking-[10px]">
-                LATEST TESTIMONIES
-              </p>
-
-              <div className="flex items-center gap-3 flex-wrap">
-                {['FOR YOU', 'FOLLOWING', 'LIVE'].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setFeedFilter(tab)}
-                    className={`px-4 py-2 rounded-full border text-[10px] font-black uppercase tracking-[6px] transition-all ${
-                      feedFilter === tab
-                        ? 'border-[#00f2ff]/25 bg-[#00f2ff]/10 text-[#00f2ff]'
-                        : 'border-white/10 bg-white/[0.03] text-white/45 hover:text-white/70'
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            <div className="space-y-6">
-              {filteredFeed.map((post) => (
-                <article
-                  key={post.id}
-                  className="relative border border-[#00f2ff]/12 bg-black/70 rounded-[2.25rem] overflow-hidden backdrop-blur-xl hover:border-[#00f2ff]/25 transition-all"
-                >
-                  {praiseBurstPostId === post.id ? (
-                    <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden">
-                      <div className="absolute inset-0 bg-[#00f2ff]/10 animate-pulse" />
-                      <div className="absolute inset-x-0 top-6 flex items-center justify-center">
-                        <div className="rounded-full border border-[#00f2ff]/30 bg-black/70 px-6 py-3 shadow-[0_0_30px_rgba(0,242,255,0.25)]">
-                          <span className="text-[#00f2ff] font-black italic uppercase tracking-[0.25em] text-sm">
-                            PRAISEBREAK
-                          </span>
-                        </div>
-                      </div>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="grid grid-cols-3 gap-6 opacity-80">
-                          {Array.from({ length: 9 }).map((_, index) => (
-                            <span
-                              key={index}
-                              className="text-[#00f2ff] text-xl font-black animate-bounce"
-                              style={{ animationDelay: `${index * 0.05}s` }}
-                            >
-                              ✦
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <div className="p-5 md:p-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-full border border-[#00f2ff]/20 bg-[#00f2ff]/10 flex items-center justify-center text-[#00f2ff] font-black italic text-sm shrink-0">
-                          {post.user
-                            .split(' ')
-                            .map((part) => part[0])
-                            .join('')
-                            .slice(0, 2)}
-                        </div>
-
-                        <div>
-                          <h3 className="text-white text-lg font-black italic uppercase tracking-[-0.08em]">
-                            {post.user}
-                          </h3>
-                          <div className="flex items-center gap-3 mt-1">
-                            <p className="text-[10px] text-white/35 uppercase tracking-[6px]">
-                              {formatRelativeTime(post.createdAt)}
-                            </p>
-                            <span className="text-[10px] text-[#00f2ff] uppercase tracking-[6px]">
-                              {post.tag}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => handleOpenMenu(post.user)}
-                        className="text-white/30 hover:text-[#00f2ff] text-xl transition-colors"
-                      >
-                        •••
-                      </button>
-                    </div>
-
-                    <p className="text-white/78 text-[15px] leading-8 mt-5 whitespace-pre-line">
-                      {post.text}
-                    </p>
-
-                    {post.mediaUrl ? (
-                      <div className="mt-5 rounded-[1.75rem] border border-[#00f2ff]/10 bg-gradient-to-b from-[#00f2ff]/10 to-transparent overflow-hidden">
-                        {post.mediaType === 'image' ? (
-                          <div className="relative w-full bg-black/40">
-                            <img
-                              src={post.mediaUrl}
-                              alt={post.mediaName || 'Uploaded testimony image'}
-                              className="w-full max-h-[520px] object-cover"
-                            />
-                          </div>
-                        ) : post.mediaType === 'video' ? (
-                          <video
-                            src={post.mediaUrl}
-                            controls
-                            className="w-full max-h-[520px] bg-black/40"
-                          />
-                        ) : (
-                          <div className="aspect-[16/10] bg-[radial-gradient(circle_at_top,rgba(0,242,255,0.12),transparent_55%)] flex items-center justify-center">
-                            <div className="text-center px-6">
-                              <p className="text-[#00f2ff] text-3xl font-black italic uppercase tracking-[-0.08em] opacity-85">
-                                FILE ATTACHED
-                              </p>
-                              <p className="text-[10px] text-white/30 uppercase tracking-[8px] mt-3">
-                                {post.mediaName || 'MEDIA READY'}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="mt-5 rounded-[1.75rem] border border-[#00f2ff]/10 bg-gradient-to-b from-[#00f2ff]/10 to-transparent overflow-hidden">
-                        <div className="aspect-[16/10] bg-[radial-gradient(circle_at_top,rgba(0,242,255,0.12),transparent_55%)] flex items-center justify-center">
-                          <div className="text-center px-6">
-                            <p className="text-[#00f2ff] text-3xl font-black italic uppercase tracking-[-0.08em] opacity-85">
-                              TESTIMONY STREAM
-                            </p>
-                            <p className="text-[10px] text-white/30 uppercase tracking-[8px] mt-3">
-                              LIVE FEED PREVIEW
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="mt-5 rounded-[1.25rem] border border-[#00f2ff]/10 bg-white/[0.02] px-4 py-4">
-                      <div className="flex items-center justify-between flex-wrap gap-3">
-                        <p className="text-[10px] text-[#00f2ff] uppercase tracking-[6px]">
-                          PRAISEBREAK ENERGY
-                        </p>
-                        <p className="text-[10px] text-white/45 uppercase tracking-[6px]">
-                          MUSIC • DRUMS • DANCE
-                        </p>
-                      </div>
-
-                      <div className="mt-3 h-3 rounded-full bg-black/50 overflow-hidden border border-[#00f2ff]/10">
-                        <div
-                          className={`h-full bg-gradient-to-r from-[#00f2ff] via-cyan-300 to-white transition-all duration-500 ${
-                            musicPulsePostId === post.id ? 'animate-pulse' : ''
-                          }`}
-                          style={{
-                            width: `${Math.min(
-                              100,
-                              (post.stats.praiseBreaks + post.stats.claps + post.stats.dances + post.stats.shouts) * 4
-                            )}%`,
-                          }}
-                        />
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-4 gap-2">
-                        <button
-                          onClick={() => handlePraiseBreak(post.id)}
-                          className="px-3 py-3 rounded-[1rem] border border-[#00f2ff]/20 bg-[#00f2ff]/10 text-[10px] font-black uppercase tracking-[4px] text-[#00f2ff] hover:text-white transition-all"
-                        >
-                          PraiseBreak {post.stats.praiseBreaks}
-                        </button>
-                        <button
-                          onClick={() => handlePraiseAction(post.id, 'CLAP')}
-                          className="px-3 py-3 rounded-[1rem] border border-white/10 bg-white/[0.03] text-[10px] font-black uppercase tracking-[4px] text-white/70 hover:text-[#00f2ff] transition-all"
-                        >
-                          Clap {post.stats.claps}
-                        </button>
-                        <button
-                          onClick={() => handlePraiseAction(post.id, 'DANCE')}
-                          className="px-3 py-3 rounded-[1rem] border border-white/10 bg-white/[0.03] text-[10px] font-black uppercase tracking-[4px] text-white/70 hover:text-[#00f2ff] transition-all"
-                        >
-                          Dance {post.stats.dances}
-                        </button>
-                        <button
-                          onClick={() => handlePraiseAction(post.id, 'SHOUT')}
-                          className="px-3 py-3 rounded-[1rem] border border-white/10 bg-white/[0.03] text-[10px] font-black uppercase tracking-[4px] text-white/70 hover:text-[#00f2ff] transition-all"
-                        >
-                          Shout {post.stats.shouts}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 flex items-center gap-2 flex-wrap">
-                      {REACTION_EMOJIS.map((emoji) => (
-                        <button
-                          key={emoji}
-                          type="button"
-                          onClick={() => handleReaction(post.id, emoji)}
-                          className="text-lg p-1.5 rounded-full hover:bg-white/10 transition-colors"
-                          title={`React with ${emoji}`}
-                        >
-                          {emoji}
-                          {(post.reactions?.[emoji] ?? 0) > 0 && (
-                            <span className="ml-0.5 text-[10px] text-white/70">
-                              {post.reactions![emoji]}
-                            </span>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="mt-5 flex items-center justify-between flex-wrap gap-4 border-t border-[#00f2ff]/10 pt-4">
-                      <div className="flex items-center gap-5 flex-wrap">
-                        <button
-                          onClick={() => handleAmen(post.id)}
-                          className="text-[10px] text-white/60 uppercase tracking-[6px] hover:text-[#00f2ff] transition-colors"
-                        >
-                          Amen {post.stats.amens}
-                        </button>
-                        <button
-                          onClick={() => handleComment(post.id)}
-                          className="text-[10px] text-white/60 uppercase tracking-[6px] hover:text-[#00f2ff] transition-colors"
-                        >
-                          Comments {post.stats.comments}
-                        </button>
-                        <button
-                          onClick={() => handleShare(post.id)}
-                          className="text-[10px] text-white/60 uppercase tracking-[6px] hover:text-[#00f2ff] transition-colors"
-                        >
-                          Share {post.stats.shares}
-                        </button>
-                      </div>
-
-                      <button
-                        onClick={() => handleSupport(post.id)}
-                        className="px-4 py-2 rounded-full border border-[#00f2ff]/20 bg-[#00f2ff]/5 text-[10px] font-black uppercase tracking-[6px] text-[#00f2ff] hover:bg-[#00f2ff]/10 transition-all"
-                      >
-                        Support
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              ))}
-              {filteredFeed.length === 0 && (
-                <article className="rounded-[1.75rem] border border-dashed border-[#00f2ff]/30 bg-[#00f2ff]/5 p-6">
-                  <p className="text-[10px] text-[#00f2ff] uppercase tracking-[6px] font-black">
-                    {feedFilter} feed is empty
-                  </p>
-                  <p className="mt-2 text-sm text-white/70">
-                    No testimonies here yet. Start by posting your first testimony, photo, or video.
-                  </p>
-                  <button
-                    onClick={() => {
-                      focusComposer();
-                      setStatusMessage('COMPOSER READY');
-                    }}
-                    className="mt-4 px-4 py-2 rounded-full bg-[#00f2ff] text-black text-[11px] font-black uppercase tracking-[2px]"
-                  >
-                    Create testimony
-                  </button>
-                </article>
-              )}
-            </div>
+            <TestifyLivePortalFeed
+              posts={gridPosts}
+              feedFilter={feedFilter}
+              onFeedFilterChange={setFeedFilter}
+              portalSection={portalSection}
+              onPortalSectionChange={setPortalSection}
+              streak={streakDays}
+              faithfulUnlocked={faithfulUnlocked}
+              gems={gemsBalance}
+              onSpendGems={handleSpendGems}
+              pipUrl={pipMediaUrl}
+              pipTitle={pipLabel}
+              onSetPip={handleSetPip}
+              praiseBurstPostId={praiseBurstPostId}
+              musicPulsePostId={musicPulsePostId}
+              formatRelativeTime={formatRelativeTime}
+              onAmen={handleAmen}
+              onComment={handleComment}
+              onShare={handleShare}
+              onPraiseBreak={handlePraiseBreak}
+              onReaction={handleReaction}
+              onPraiseAction={handlePraiseAction}
+              onOpenMenu={handleOpenMenu}
+              onStatusMessage={setStatusMessage}
+              emptyFeedFilter={feedFilter}
+              onFocusComposer={focusComposer}
+              onFindPeople={() => router.push('/following')}
+              rippleByPostId={rippleByPostId}
+              pipSeekSeconds={pipSeekSeconds}
+              onPipSeekConsumed={handlePipSeekConsumed}
+              toasts={toasts}
+              dismissToast={dismissToast}
+              congratulateToast={congratulateToast}
+            />
           </section>
 
-          <aside className="xl:col-span-3 space-y-6">
+          <aside className="hidden space-y-6" aria-hidden>
             <section className="border border-[#00f2ff]/15 bg-black/60 rounded-[2rem] p-6 backdrop-blur-xl">
               <p className="text-[10px] text-[#00f2ff]/60 uppercase tracking-[10px] mb-5">
                 START HERE
@@ -1133,17 +1167,31 @@ export default function TestifyPage() {
             </section>
           </aside>
         </div>
+        </div>
       </div>
 
+      <ActivityPulseDrawer
+        open={pulseOpen}
+        onClose={() => setPulseOpen(false)}
+        vibeDisplay={vibeDisplay}
+        vibeFillPercent={vibeFillPercent}
+        presence={presence}
+        topicCloud={topicCloud}
+        onJoin={handleJoinPresence}
+        onStatusMessage={setStatusMessage}
+      />
+
       <button
+        type="button"
         onClick={() => {
           focusComposer();
           setStatusMessage('COMPOSER READY');
         }}
-        className="fixed bottom-8 right-8 w-16 h-16 bg-[#00f2ff] rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(0,242,255,0.4)] hover:scale-110 active:scale-95 transition-all z-50"
+        className="fixed bottom-20 right-4 sm:right-6 w-14 h-14 sm:w-16 sm:h-16 bg-[#00f2ff] rounded-full flex items-center justify-center shadow-[0_0_24px_rgba(0,242,255,0.45)] hover:scale-105 active:scale-95 transition-all z-40 border-2 border-black/20"
       >
-        <span className="text-[#010101] font-black italic text-xl tracking-tighter">+</span>
+        <span className="text-black font-black text-2xl leading-none">+</span>
       </button>
+
     </main>
   );
 }

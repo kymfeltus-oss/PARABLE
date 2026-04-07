@@ -1,18 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import SparkleOverlay from '@/components/SparkleOverlay';
-import {
-  BASE_SANCTUARY_CHANNELS,
-  RECOMMENDED_SANCTUARY_CHANNELS,
-  loadCustomChannels,
-  loadFollowingIds,
-  saveCustomChannels,
-  saveFollowingIds,
-  type SanctuaryChannel,
-} from '@/lib/sanctuary-following';
+import type { SanctuaryChannel } from '@/lib/sanctuary-following';
 import { useRegisteredProfileSuggestions } from '@/hooks/useRegisteredProfileSuggestions';
+import { useSanctuaryFollowGraph } from '@/hooks/useSanctuaryFollowGraph';
 import { SanctuaryDiscoverSection } from '@/components/sanctuary/SanctuaryDiscoverSection';
 
 type FollowingPageTab = 'browse' | 'discover';
@@ -20,39 +13,17 @@ type FollowingPageTab = 'browse' | 'discover';
 export default function FollowingPage() {
   const router = useRouter();
   const { registeredChannels, registeredLoading, registeredError } = useRegisteredProfileSuggestions();
-  const [followingIds, setFollowingIds] = useState<string[]>([]);
-  const [customFollowers, setCustomFollowers] = useState<SanctuaryChannel[]>([]);
+  const {
+    followingIds,
+    updateFollowingIds,
+    customFollowers,
+    updateCustomFollowers,
+    allFollowers,
+  } = useSanctuaryFollowGraph(registeredChannels);
   const [newFollowerName, setNewFollowerName] = useState('');
   const [newFollowerHandle, setNewFollowerHandle] = useState('');
   const [search, setSearch] = useState('');
   const [pageTab, setPageTab] = useState<FollowingPageTab>('browse');
-
-  useEffect(() => {
-    setFollowingIds(loadFollowingIds());
-    setCustomFollowers(loadCustomChannels());
-  }, []);
-
-  const recommendedAsChannels = useMemo(
-    () =>
-      RECOMMENDED_SANCTUARY_CHANNELS.map((r) => ({
-        id: r.id,
-        name: r.name,
-        handle: `@${r.id.replace(/-/g, '')}`,
-        avatarLabel: r.avatarLabel,
-        isLive: false,
-        viewers: r.viewers,
-      })),
-    []
-  );
-
-  const allFollowers = useMemo(() => {
-    const merged = new Map<string, SanctuaryChannel>();
-    for (const c of BASE_SANCTUARY_CHANNELS) merged.set(c.id, c);
-    for (const c of recommendedAsChannels) merged.set(c.id, c);
-    for (const c of registeredChannels) merged.set(c.id, c);
-    for (const c of customFollowers) merged.set(c.id, c);
-    return Array.from(merged.values());
-  }, [recommendedAsChannels, registeredChannels, customFollowers]);
 
   const filteredFollowers = useMemo(
     () =>
@@ -68,27 +39,10 @@ export default function FollowingPage() {
     [allFollowers, search]
   );
 
-  const saveFollowing = (ids: string[]) => {
-    setFollowingIds(ids);
-    try {
-      saveFollowingIds(ids);
-    } catch {
-      // ignore
-    }
-  };
-
   const handleToggleFollow = (id: string) => {
-    setFollowingIds((current) => {
-      const next = current.includes(id)
-        ? current.filter((fId) => fId !== id)
-        : [...current, id];
-      try {
-        saveFollowingIds(next);
-      } catch {
-        // ignore
-      }
-      return next;
-    });
+    updateFollowingIds((current) =>
+      current.includes(id) ? current.filter((fId) => fId !== id) : [...current, id]
+    );
   };
 
   const handleAddFollower = () => {
@@ -114,16 +68,11 @@ export default function FollowingPage() {
     };
 
     const nextCustom = [...customFollowers, follower];
-    setCustomFollowers(nextCustom);
-    try {
-      saveCustomChannels(nextCustom);
-    } catch {
-      // ignore
-    }
+    updateCustomFollowers(nextCustom);
 
     setNewFollowerName('');
     setNewFollowerHandle('');
-    saveFollowing([...followingIds, id]);
+    updateFollowingIds((cur) => [...cur, id]);
   };
 
   return (
@@ -131,7 +80,7 @@ export default function FollowingPage() {
       <SparkleOverlay />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,242,255,0.06)_0%,transparent_70%)] pointer-events-none" />
 
-      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-10 py-8 space-y-6">
+      <div className="relative z-10 mx-auto w-full min-w-0 max-w-full space-y-6 px-4 py-8 sm:px-4">
         <header className="flex items-center justify-between gap-4">
           <div>
             <p className="text-[10px] uppercase tracking-[6px] text-[#00f2ff]/70">

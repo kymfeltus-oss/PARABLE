@@ -105,7 +105,7 @@ export default function TablePage() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(0,242,255,0.06),transparent_65%),radial-gradient(circle_at_bottom,rgba(180,83,9,0.12),transparent_70%)]" />
       <div className="pointer-events-none absolute inset-0 bg-[url('/noise.png')] opacity-[0.12] mix-blend-soft-light" />
 
-      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-6">
+      <div className="relative z-10 mx-auto flex w-full min-w-0 max-w-full flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8">
         <header className="flex items-center justify-between gap-4">
           <button
             onClick={() => router.push("/my-sanctuary")}

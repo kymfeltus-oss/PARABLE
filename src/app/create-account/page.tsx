@@ -136,7 +136,7 @@ export default function CreateAccount() {
           username: formData.username.toLowerCase()
         },
         // Exchange auth code through callback first, then land in sanctuary.
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/my-sanctuary`
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/my-sanctuary')}`
       }
     });
 

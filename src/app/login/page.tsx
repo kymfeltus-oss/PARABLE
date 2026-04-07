@@ -112,6 +112,12 @@ function MatrixRain() {
   );
 }
 
+/** Supabase must redirect to this route so ?code= / token_hash / hash tokens become a session. */
+function emailConfirmRedirectUrl(nextPath: string) {
+  const next = nextPath.startsWith("/") ? nextPath : `/${nextPath}`;
+  return `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+}
+
 function LoginInner() {
   const supabase = createClient();
   const router = useRouter();
@@ -125,6 +131,11 @@ function LoginInner() {
   const [showPw, setShowPw] = useState(false);
 
   const nextPath = searchParams.get("next") || "/my-sanctuary";
+
+  useEffect(() => {
+    const q = searchParams.get("error");
+    if (q) setErr(q);
+  }, [searchParams]);
 
   const signIn = async () => {
     const configErr = getSupabaseConfigError();
@@ -163,7 +174,7 @@ function LoginInner() {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}${nextPath}`,
+          emailRedirectTo: emailConfirmRedirectUrl(nextPath),
         },
       });
       setLoading(false);
@@ -193,7 +204,7 @@ function LoginInner() {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}${nextPath}`,
+        redirectTo: emailConfirmRedirectUrl(nextPath),
       });
       setLoading(false);
       if (error) return setErr(error.message);

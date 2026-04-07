@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import type { RecommendedSanctuary, SanctuaryChannel } from '@/lib/sanctuary-following';
 import { RECOMMENDED_SANCTUARY_CHANNELS } from '@/lib/sanctuary-following';
-
 /** For stats badges (e.g. My Sanctuary Discover count). */
 export function getDiscoverSuggestionCount(
   followingIds: string[],
@@ -15,6 +14,22 @@ export function getDiscoverSuggestionCount(
   return curated + people;
 }
 
+/** Full URL, data URL, or Storage object path in `avatars` (no browser client — safe for SSR). */
+function resolveAvatarDisplayUrl(raw: string | null | undefined): string {
+  if (raw == null || raw === '') return '';
+  const s = String(raw).trim();
+  if (s.startsWith('http://') || s.startsWith('https://') || s.startsWith('data:')) return s;
+  const path = s.replace(/^\/+/, '').split('?')[0];
+  if (!path || path.includes('://')) return s;
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '');
+  if (!base) return '';
+  const encoded = path
+    .split('/')
+    .map((seg) => encodeURIComponent(seg))
+    .join('/');
+  return `${base}/storage/v1/object/public/avatars/${encoded}`;
+}
+
 export function ChannelAvatar({
   c,
   className = 'h-12 w-12 rounded-xl',
@@ -23,15 +38,15 @@ export function ChannelAvatar({
   className?: string;
 }) {
   const [imgOk, setImgOk] = useState(true);
-  const url = c.avatarUrl ?? '';
-  const showImg = Boolean(url && (url.startsWith('http') || url.startsWith('data:')));
+  const resolved = useMemo(() => resolveAvatarDisplayUrl(c.avatarUrl), [c.avatarUrl]);
+  const showImg = Boolean(resolved && (resolved.startsWith('http') || resolved.startsWith('data:')));
 
   return (
     <div className={`overflow-hidden border border-white/10 shrink-0 bg-black ${className}`}>
       {showImg && imgOk ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={url as string}
+          src={resolved}
           alt=""
           className="h-full w-full object-cover"
           onError={() => setImgOk(false)}

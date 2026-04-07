@@ -200,8 +200,8 @@ function SignalCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur-2xl">
-      <div className="flex items-center justify-between">
+    <div className="min-w-0 rounded-[24px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur-2xl">
+      <div className="flex items-center justify-between gap-2">
         <span className="text-white/40">{icon}</span>
         <span className="text-[9px] font-black uppercase tracking-[3px] text-white/35">
           Story Signal
@@ -229,17 +229,20 @@ function StoryWorldCard({
   return (
     <motion.div
       whileHover={{ y: -2, scale: 1.01 }}
-      className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-2xl shadow-[0_0_80px_rgba(0,242,254,0.10)]"
+      className="min-w-0 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-2xl shadow-[0_0_80px_rgba(0,242,254,0.10)]"
     >
-      <div className="flex items-center justify-between">
-        <span className="text-[#00f2fe]">{icon}</span>
-        <span className="text-[9px] font-black uppercase tracking-[3px] text-white/35">
+      <div className="flex items-center justify-between gap-2">
+        <span className="shrink-0 text-[#00f2fe]">{icon}</span>
+        <span className="min-w-0 truncate text-right text-[9px] font-black uppercase tracking-[3px] text-white/35">
           {value}
         </span>
       </div>
-      <h3 className="mt-5 text-[18px] font-black text-white">{title}</h3>
-      <p className="mt-2 text-sm text-white/55 leading-relaxed">{subtitle}</p>
-      <button className="mt-5 rounded-[18px] border border-[#00f2fe]/25 bg-[#00f2fe]/12 px-4 py-3 text-[10px] font-black uppercase tracking-[4px] text-[#00f2fe]">
+      <h3 className="mt-5 break-words text-lg font-black text-white sm:text-[18px]">{title}</h3>
+      <p className="mt-2 break-words text-sm leading-relaxed text-white/55">{subtitle}</p>
+      <button
+        type="button"
+        className="mt-5 w-full rounded-[18px] border border-[#00f2fe]/25 bg-[#00f2fe]/12 px-4 py-3 text-center text-[10px] font-black uppercase tracking-[4px] text-[#00f2fe]"
+      >
         Explore
       </button>
     </motion.div>
@@ -251,34 +254,30 @@ function EpisodeCard({ item }: { item: StoryCard }) {
     <motion.div
       whileHover={{ y: -2, scale: 1.01 }}
       transition={{ type: "spring", stiffness: 240, damping: 22 }}
-      className="relative overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.04] backdrop-blur-2xl shadow-[0_0_90px_rgba(0,242,254,0.08)]"
+      className="relative min-w-0 overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.04] backdrop-blur-2xl shadow-[0_0_90px_rgba(0,242,254,0.08)]"
       style={item.featured ? { animation: "reelGlow 5.4s ease-in-out infinite" } : undefined}
     >
       <div className="pointer-events-none absolute inset-0 opacity-[0.20] bg-[radial-gradient(circle_at_18%_18%,rgba(0,242,254,0.18),transparent_52%),radial-gradient(circle_at_85%_80%,rgba(255,255,255,0.08),transparent_60%)]" />
 
-      <div className="relative p-5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/45 px-3 py-2">
+      <div className="relative min-w-0 p-4 sm:p-5">
+        <div className="flex flex-col gap-3">
+          <div className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-full border border-white/10 bg-black/45 px-3 py-2">
             <span
-              className={`h-2 w-2 rounded-full ${item.isNew ? "bg-red-500" : "bg-[#00f2fe]"}`}
+              className={`h-2 w-2 shrink-0 rounded-full ${item.isNew ? "bg-red-500" : "bg-[#00f2fe]"}`}
               style={item.isNew ? { animation: "pulseDot 1.15s ease-in-out infinite" } : undefined}
             />
-            <span className="text-[10px] font-black uppercase tracking-[4px] text-white/65">
+            <span className="min-w-0 break-words text-[9px] font-black uppercase leading-snug tracking-[0.2em] text-white/65 sm:text-[10px] sm:tracking-[4px]">
               {item.tag}
             </span>
           </div>
 
-          <div className="text-right">
-            <p className="text-[10px] font-black uppercase tracking-[4px] text-[#00f2fe]">
-              {item.type}
-            </p>
-            <p className="mt-1 text-[10px] font-black uppercase tracking-[3px] text-white/35">
-              {item.runtime}
-            </p>
+          <div className="shrink-0 text-left">
+            <p className="text-[10px] font-black uppercase tracking-[4px] text-[#00f2fe]">{item.type}</p>
+            <p className="mt-1 text-[10px] font-black uppercase tracking-[3px] text-white/35">{item.runtime}</p>
           </div>
         </div>
 
-        <div className="mt-4 h-[170px] rounded-[22px] border border-[#00f2fe]/14 bg-black/45 flex items-center justify-center relative overflow-hidden">
+        <div className="relative mt-4 flex h-[140px] items-center justify-center overflow-hidden rounded-[22px] border border-[#00f2fe]/14 bg-black/45 sm:h-[170px]">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,242,254,0.14),transparent_58%)]" />
           <Film className="relative z-10 text-[#00f2fe]/60" size={42} />
           {item.isNew && (
@@ -290,22 +289,25 @@ function EpisodeCard({ item }: { item: StoryCard }) {
           )}
         </div>
 
-        <h3 className="mt-4 text-[18px] font-black tracking-tight text-white">
+        <h3 className="mt-4 break-words text-[17px] font-black tracking-tight text-white sm:text-[18px]">
           {item.title}
         </h3>
-        <p className="mt-2 text-sm text-white/60 leading-relaxed">{item.subtitle}</p>
+        <p className="mt-2 break-words text-sm leading-relaxed text-white/60">{item.subtitle}</p>
 
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <div>
+        <div className="mt-4 flex flex-col gap-3">
+          <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-[3px] text-white/35">
               {item.episode || "Feature"}
             </p>
-            <p className="mt-1 text-[10px] font-black uppercase tracking-[3px] text-[#00f2fe]">
+            <p className="mt-1 break-words text-[10px] font-black uppercase tracking-[3px] text-[#00f2fe]">
               {item.category}
             </p>
           </div>
 
-          <button className="rounded-[16px] border border-[#00f2fe]/25 bg-[#00f2fe]/12 px-4 py-3 text-[10px] font-black uppercase tracking-[4px] text-[#00f2fe]">
+          <button
+            type="button"
+            className="w-full shrink-0 rounded-[16px] border border-[#00f2fe]/25 bg-[#00f2fe]/12 px-4 py-3 text-center text-[10px] font-black uppercase tracking-[4px] text-[#00f2fe]"
+          >
             Watch
           </button>
         </div>
@@ -521,7 +523,7 @@ export default function ParablePage() {
   );
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-black text-white">
+    <div className="relative min-h-screen overflow-x-hidden bg-black text-white pb-parable-bottom">
       <div className="absolute inset-0">
         <div className="absolute inset-[-30%] opacity-[0.20] blur-[92px] animate-[cinemaOcean_18s_ease-in-out_infinite] bg-[radial-gradient(circle_at_18%_18%,rgba(0,242,254,0.34),transparent_55%),radial-gradient(circle_at_75%_68%,rgba(255,255,255,0.12),transparent_60%),radial-gradient(circle_at_46%_82%,rgba(0,242,254,0.18),transparent_55%)]" />
         <div className="absolute inset-0 opacity-[0.10] [background:linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:92px_92px]" />
@@ -530,7 +532,7 @@ export default function ParablePage() {
 
       <CinemaSparkles />
 
-      <div className="relative z-10 mx-auto max-w-[1500px] px-4 pb-28 pt-10">
+      <div className="relative z-10 mx-auto w-full min-w-0 max-w-full px-4 pb-28 pt-10">
         <div className="overflow-hidden rounded-[26px] border border-white/10 bg-white/[0.04] backdrop-blur-2xl">
           <div
             className="flex min-w-max gap-4 px-4 py-3"
@@ -553,8 +555,8 @@ export default function ParablePage() {
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-12">
-          <div className="xl:col-span-8">
+        <div className="mt-8 grid grid-cols-1 gap-6">
+          <div className="">
             <div className="relative overflow-hidden rounded-[34px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-2xl shadow-[0_0_140px_rgba(0,242,254,0.12)]">
               <div className="pointer-events-none absolute inset-0 opacity-[0.22] bg-[radial-gradient(circle_at_18%_18%,rgba(0,242,254,0.18),transparent_55%),radial-gradient(circle_at_85%_80%,rgba(255,255,255,0.08),transparent_60%)]" />
 
@@ -566,9 +568,9 @@ export default function ParablePage() {
                   </span>
                 </div>
 
-                <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+                <div className="mt-6 grid grid-cols-1 gap-6">
                   <div>
-                    <h1 className="text-[38px] sm:text-[54px] font-black leading-[0.98] tracking-tight">
+                    <h1 className="break-words text-[28px] font-black leading-[1.05] tracking-tight sm:text-[36px]">
                       The{" "}
                       <span className="relative inline-block">
                         <span className="absolute -inset-2 blur-2xl opacity-60 bg-[radial-gradient(circle_at_30%_40%,rgba(0,242,254,0.42),transparent_60%)]" />
@@ -643,7 +645,7 @@ export default function ParablePage() {
             </div>
           </div>
 
-          <div className="xl:col-span-4 grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <SignalCard label="Originals Live" value="18" icon={<Film size={18} />} />
             <SignalCard label="Episodes This Week" value="42" icon={<Clapperboard size={18} />} />
             <SignalCard label="Saved Watchlist" value="27" icon={<Star size={18} />} />
@@ -651,7 +653,7 @@ export default function ParablePage() {
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-4">
+        <div className="mt-8 flex flex-col gap-4">
           <StoryWorldCard
             title="Redemption"
             subtitle="Stories of return, rebuilding, mercy, and the long road back."
@@ -678,8 +680,8 @@ export default function ParablePage() {
           />
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-4 xl:grid-cols-12 xl:items-center">
-          <div className="xl:col-span-7">
+        <div className="mt-8 grid grid-cols-1 gap-4">
+          <div className="">
             <div className="rounded-[28px] border border-white/10 bg-black/55 px-6 py-4 backdrop-blur-2xl shadow-[0_0_110px_rgba(0,242,254,0.10)]">
               <div className="flex items-center gap-3">
                 <Search size={18} className="text-white/35" />
@@ -693,7 +695,7 @@ export default function ParablePage() {
             </div>
           </div>
 
-          <div className="xl:col-span-5 flex flex-wrap gap-2 xl:justify-end">
+          <div className="flex flex-wrap gap-2 justify-start">
             {CATEGORIES.map((x) => (
               <Pill key={x} active={category === x} onClick={() => setCategory(x)}>
                 {x}
@@ -702,11 +704,16 @@ export default function ParablePage() {
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-12">
-          <div className="xl:col-span-9 space-y-8">
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="mt-8 grid grid-cols-1 gap-6">
+          <div className="space-y-8">
+            <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-2 [scrollbar-width:thin] snap-x snap-mandatory">
               {filtered.slice(0, 6).map((item) => (
-                <EpisodeCard key={item.id} item={item} />
+                <div
+                  key={item.id}
+                  className="w-[min(100%,320px)] min-w-[min(100%,280px)] max-w-full shrink-0 snap-start"
+                >
+                  <EpisodeCard item={item} />
+                </div>
               ))}
             </div>
 
@@ -715,29 +722,37 @@ export default function ParablePage() {
                 key={row.title}
                 className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-2xl shadow-[0_0_120px_rgba(0,242,254,0.10)]"
               >
-                <div className="mb-5 flex items-center justify-between">
-                  <div>
+                <div className="mb-5 flex min-w-0 flex-col gap-3">
+                  <div className="min-w-0">
                     <p className="text-[10px] font-black uppercase tracking-[4px] text-white/45">
                       Story Row
                     </p>
-                    <h2 className="mt-1 text-[24px] font-black text-white">{row.title}</h2>
+                    <h2 className="mt-1 break-words text-xl font-black text-white sm:text-2xl">{row.title}</h2>
                   </div>
 
-                  <button className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[4px] text-[#00f2fe]">
+                  <button
+                    type="button"
+                    className="inline-flex w-fit shrink-0 items-center gap-2 text-[10px] font-black uppercase tracking-[4px] text-[#00f2fe]"
+                  >
                     View All <ArrowRight size={14} />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-2 [scrollbar-width:thin] snap-x snap-mandatory">
                   {row.items.slice(0, 3).map((item) => (
-                    <EpisodeCard key={`${row.title}-${item.id}`} item={item} />
+                    <div
+                      key={`${row.title}-${item.id}`}
+                      className="w-[min(100%,320px)] min-w-[min(100%,280px)] max-w-full shrink-0 snap-start"
+                    >
+                      <EpisodeCard item={item} />
+                    </div>
                   ))}
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="xl:col-span-3 space-y-6">
+          <div className="space-y-6">
             <div className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-2xl shadow-[0_0_120px_rgba(0,242,254,0.10)]">
               <div className="flex items-center gap-2">
                 <Wand2 size={18} className="text-[#00f2fe]" />

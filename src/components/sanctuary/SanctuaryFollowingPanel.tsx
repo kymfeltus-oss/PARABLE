@@ -151,8 +151,11 @@ export function SanctuaryFollowingPanel({
                     </span>
                   )}
                 </div>
-                <span className="text-[10px] font-semibold text-white/80 truncate max-w-[72px] group-hover:text-[#00f2ff] transition-colors">
-                  {c.name.split(' ')[0]}
+                <span className="text-[10px] font-semibold text-white/80 truncate max-w-[76px] group-hover:text-[#00f2ff] transition-colors text-center leading-tight">
+                  {c.name}
+                </span>
+                <span className="text-[9px] text-white/40 truncate max-w-[76px] text-center">
+                  {c.handle}
                 </span>
               </button>
             ))}
