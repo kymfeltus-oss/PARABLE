@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Cropper from 'react-easy-crop';
 import type { Area } from 'react-easy-crop';
 import 'react-easy-crop/react-easy-crop.css';
-import { Sparkles, Home, Users } from 'lucide-react';
+import { Sparkles, Home, Users, LayoutGrid, Smartphone } from 'lucide-react';
 import { saveTestimonies } from '@/lib/testimony-storage';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/utils/supabase/client';
@@ -14,6 +14,7 @@ import { useSanctuaryFollowGraph } from '@/hooks/useSanctuaryFollowGraph';
 import { ChannelAvatar } from '@/components/sanctuary/SanctuaryDiscoverSection';
 import type { SanctuaryChannel } from '@/lib/sanctuary-following';
 import { TestifyLivePortalFeed } from '@/components/testify/TestifyLivePortalFeed';
+import { TestifyTikTokFeed } from '@/components/testify/TestifyTikTokFeed';
 import { LivePersonnelRail } from '@/components/testify/LivePersonnelRail';
 import { ActivityPulseDrawer } from '@/components/testify/ActivityPulseDrawer';
 import { useActivityPulse, type PresenceActivity } from '@/hooks/useActivityPulse';
@@ -24,6 +25,14 @@ import {
   getPipPrefs,
   setPipPrefs,
 } from '@/lib/testify-portal-storage';
+import { fetchCommunityTestifyPosts } from '@/lib/testify-supabase-feed';
+import {
+  createDemoTestifyPosts,
+  shouldIncludeDemoFeed,
+  isDemoPostId,
+} from '@/lib/testify-demo-feed';
+import { toggleLike } from '@/lib/feed';
+import type { PortalPost } from '@/components/testify/TestifyLivePortalFeed';
 
 type TestimonyPost = {
   id: number;
@@ -122,7 +131,7 @@ async function getCroppedImageDataUrl(
 }
 
 function postMatchesFollowing(
-  post: TestimonyPost,
+  post: Pick<TestimonyPost, 'user' | 'authorId'>,
   followingIds: string[],
   currentUserId: string | null,
   followedAccounts: SanctuaryChannel[]
@@ -154,8 +163,13 @@ export default function TestifyPage() {
   const [selectedFileName, setSelectedFileName] = useState('');
   const [selectedMediaUrl, setSelectedMediaUrl] = useState('');
   const [selectedMediaType, setSelectedMediaType] = useState<'image' | 'video' | null>(null);
-  const [praiseBurstPostId, setPraiseBurstPostId] = useState<number | null>(null);
-  const [musicPulsePostId, setMusicPulsePostId] = useState<number | null>(null);
+  const [praiseBurstPostId, setPraiseBurstPostId] = useState<string | number | null>(null);
+  const [musicPulsePostId, setMusicPulsePostId] = useState<string | number | null>(null);
+  const [remotePosts, setRemotePosts] = useState<PortalPost[]>([]);
+  const [remoteLoading, setRemoteLoading] = useState(true);
+  const [demoPosts, setDemoPosts] = useState<PortalPost[]>(() =>
+    shouldIncludeDemoFeed() ? createDemoTestifyPosts() : []
+  );
   const [feed, setFeed] = useState<TestimonyPost[]>(DEFAULT_FEED);
   const [currentUsername, setCurrentUsername] = useState('Guest');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -174,6 +188,8 @@ export default function TestifyPage() {
   const [pipLabel, setPipLabel] = useState<string | null>(null);
   const [pulseOpen, setPulseOpen] = useState(false);
   const [pipSeekSeconds, setPipSeekSeconds] = useState<number | null>(null);
+  const [feedViewMode, setFeedViewMode] = useState<'tiktok' | 'portal'>('tiktok');
+  const [composerExpanded, setComposerExpanded] = useState(false);
 
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
@@ -184,6 +200,34 @@ export default function TestifyPage() {
     setIsMounted(true);
     setFeed(loadStoredTestimonies());
   }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    let cancelled = false;
+    (async () => {
+      setRemoteLoading(true);
+      const rows = await fetchCommunityTestifyPosts(80);
+      if (!cancelled) {
+        setRemotePosts(rows);
+        setRemoteLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isMounted]);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    const refresh = () => {
+      void (async () => {
+        const rows = await fetchCommunityTestifyPosts(80);
+        setRemotePosts(rows);
+      })();
+    };
+    window.addEventListener('focus', refresh);
+    return () => window.removeEventListener('focus', refresh);
+  }, [isMounted]);
 
   useEffect(() => {
     const loadCurrentUser = async () => {
@@ -216,6 +260,14 @@ export default function TestifyPage() {
 
     loadCurrentUser();
   }, []);
+
+  useEffect(() => {
+    if (feedViewMode === 'portal') {
+      setComposerExpanded(true);
+    } else {
+      setComposerExpanded(false);
+    }
+  }, [feedViewMode]);
 
   useEffect(() => {
     if (!isMounted) return;
@@ -302,13 +354,28 @@ export default function TestifyPage() {
     return [me, ...followedAccounts.slice(0, 24)];
   }, [currentUsername, followedAccounts, myAvatarUrl]);
 
+  const mergedFeed = useMemo(() => {
+    const localAsPortal: PortalPost[] = feed.map((p) => ({ ...p }));
+    return [...demoPosts, ...remotePosts, ...localAsPortal].sort((a, b) => b.createdAt - a.createdAt);
+  }, [feed, remotePosts, demoPosts]);
+
   const filteredFeed = useMemo(() => {
-    const sorted = [...feed].sort((a, b) => b.createdAt - a.createdAt);
+    const sorted = [...mergedFeed];
     if (feedFilter === 'LIVE') {
-      return sorted.filter(
-        (post) =>
-          post.tag === 'WORSHIP' || post.tag === 'BREAKTHROUGH' || post.tag === 'PRAYER'
-      );
+      return sorted.filter((post) => {
+        if (post.tag === 'WORSHIP' || post.tag === 'BREAKTHROUGH' || post.tag === 'PRAYER') return true;
+        if (post.mediaType === 'video') return true;
+        const u = post.mediaUrl?.toLowerCase() ?? '';
+        if (
+          u.includes('twitch.tv') ||
+          u.includes('kick.com') ||
+          u.includes('youtube.com/live') ||
+          u.includes('youtu.be/live')
+        ) {
+          return true;
+        }
+        return false;
+      });
     }
     if (feedFilter === 'FOLLOWING') {
       return sorted.filter((post) =>
@@ -316,7 +383,13 @@ export default function TestifyPage() {
       );
     }
     return sorted;
-  }, [feed, feedFilter, followingIds, currentUserId, followedAccounts]);
+  }, [mergedFeed, feedFilter, followingIds, currentUserId, followedAccounts]);
+
+  /** Full-screen TikTok feed: chronological only — filter tabs must not use portal “pulse” reorder. */
+  const tiktokFeedPosts = useMemo(
+    () => [...filteredFeed].sort((a, b) => b.createdAt - a.createdAt),
+    [filteredFeed]
+  );
 
   const gridPosts = useMemo(() => {
     const base = filteredFeed;
@@ -403,6 +476,12 @@ export default function TestifyPage() {
     setPipSeekSeconds(null);
   }, []);
 
+  /** Following feed tab + header: Sanctuary Following with Browse all + Discover (deep-link `?tab=`). */
+  const goToFollowingDiscover = useCallback(() => {
+    setFeedFilter('FOLLOWING');
+    router.push('/following?tab=discover');
+  }, [router]);
+
   const avatarInitials = String(currentUsername || 'U')
     .split(' ')
     .filter(Boolean)
@@ -428,8 +507,14 @@ export default function TestifyPage() {
   ];
 
   const focusComposer = () => {
-    composerRef.current?.focus();
-    composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (feedViewMode === 'tiktok') {
+      setFeedViewMode('portal');
+    }
+    setComposerExpanded(true);
+    setTimeout(() => {
+      composerRef.current?.focus();
+      composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
   };
 
   const clearSelectedMedia = () => {
@@ -492,7 +577,38 @@ export default function TestifyPage() {
     saveStoredTestimonies(updated);
   };
 
-  const handleAmen = (id: number) => {
+  const bumpRemoteShare = (id: string) => {
+    setRemotePosts((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, stats: { ...p.stats, shares: p.stats.shares + 1 } } : p
+      )
+    );
+  };
+
+  const handleAmen = async (id: string | number) => {
+    if (typeof id === 'string' && isDemoPostId(id)) {
+      setDemoPosts((prev) =>
+        prev.map((p) =>
+          p.id === id ? { ...p, stats: { ...p.stats, amens: p.stats.amens + 1 } } : p
+        )
+      );
+      setStatusMessage('AMEN');
+      return;
+    }
+    if (typeof id === 'string') {
+      try {
+        await toggleLike(id);
+        setRemotePosts((prev) =>
+          prev.map((p) =>
+            p.id === id ? { ...p, stats: { ...p.stats, amens: p.stats.amens + 1 } } : p
+          )
+        );
+        setStatusMessage('AMEN SAVED');
+      } catch {
+        setStatusMessage('Sign in to react to community posts');
+      }
+      return;
+    }
     updatePost(id, (post) => ({
       ...post,
       stats: { ...post.stats, amens: post.stats.amens + 1 },
@@ -500,7 +616,23 @@ export default function TestifyPage() {
     setStatusMessage('AMEN ADDED');
   };
 
-  const handleComment = (id: number) => {
+  const handleComment = (id: string | number) => {
+    if (typeof id === 'string' && isDemoPostId(id)) {
+      const comment = window.prompt('Enter a quick comment for this testimony:');
+      if (!comment || !comment.trim()) return;
+      setDemoPosts((prev) =>
+        prev.map((p) =>
+          p.id === id ? { ...p, stats: { ...p.stats, comments: p.stats.comments + 1 } } : p
+        )
+      );
+      setStatusMessage('COMMENT ADDED');
+      return;
+    }
+    if (typeof id === 'string') {
+      router.push(`/testify/${id}`);
+      setStatusMessage('OPENING COMMENTS');
+      return;
+    }
     const comment = window.prompt('Enter a quick comment for this testimony:');
     if (!comment || !comment.trim()) return;
 
@@ -511,8 +643,8 @@ export default function TestifyPage() {
     setStatusMessage('COMMENT ADDED');
   };
 
-  const handleShare = async (id: number) => {
-    const post = feed.find((item) => item.id === id);
+  const handleShare = async (id: string | number) => {
+    const post = mergedFeed.find((item) => item.id === id);
     if (!post) return;
 
     const shareText = `${post.user} • ${post.tag}\n\n${post.text}`;
@@ -527,10 +659,20 @@ export default function TestifyPage() {
         await navigator.clipboard.writeText(shareText);
       }
 
-      updatePost(id, (item) => ({
-        ...item,
-        stats: { ...item.stats, shares: item.stats.shares + 1 },
-      }));
+      if (typeof id === 'string' && isDemoPostId(id)) {
+        setDemoPosts((prev) =>
+          prev.map((p) =>
+            p.id === id ? { ...p, stats: { ...p.stats, shares: p.stats.shares + 1 } } : p
+          )
+        );
+      } else if (typeof id === 'number') {
+        updatePost(id, (item) => ({
+          ...item,
+          stats: { ...item.stats, shares: item.stats.shares + 1 },
+        }));
+      } else {
+        bumpRemoteShare(id);
+      }
 
       setStatusMessage('TESTIMONY SHARED');
     } catch {
@@ -538,7 +680,11 @@ export default function TestifyPage() {
     }
   };
 
-  const handleSupport = (id: number) => {
+  const handleSupport = (id: string | number) => {
+    if (typeof id === 'string') {
+      void handleAmen(id);
+      return;
+    }
     updatePost(id, (post) => ({
       ...post,
       stats: { ...post.stats, amens: post.stats.amens + 1 },
@@ -546,11 +692,33 @@ export default function TestifyPage() {
     setStatusMessage('SUPPORT SENT');
   };
 
-  const handlePraiseBreak = (id: number) => {
-    updatePost(id, (post) => ({
-      ...post,
-      stats: { ...post.stats, praiseBreaks: post.stats.praiseBreaks + 1 },
-    }));
+  const bumpRemotePraise = (id: string) => {
+    setRemotePosts((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? { ...p, stats: { ...p.stats, praiseBreaks: p.stats.praiseBreaks + 1 } }
+          : p
+      )
+    );
+  };
+
+  const handlePraiseBreak = (id: string | number) => {
+    if (typeof id === 'string' && isDemoPostId(id)) {
+      setDemoPosts((prev) =>
+        prev.map((p) =>
+          p.id === id
+            ? { ...p, stats: { ...p.stats, praiseBreaks: p.stats.praiseBreaks + 1 } }
+            : p
+        )
+      );
+    } else if (typeof id === 'string') {
+      bumpRemotePraise(id);
+    } else {
+      updatePost(id, (post) => ({
+        ...post,
+        stats: { ...post.stats, praiseBreaks: post.stats.praiseBreaks + 1 },
+      }));
+    }
 
     setPraiseBurstPostId(id);
     setMusicPulsePostId(id);
@@ -565,7 +733,23 @@ export default function TestifyPage() {
     }, 2600);
   };
 
-  const handleReaction = (id: number, emoji: string) => {
+  const handleReaction = (id: string | number, emoji: string) => {
+    if (typeof id === 'string' && isDemoPostId(id)) {
+      setDemoPosts((prev) =>
+        prev.map((p) => {
+          if (p.id !== id) return p;
+          const reactions = { ...(p.reactions || {}) };
+          reactions[emoji] = (reactions[emoji] || 0) + 1;
+          return { ...p, reactions };
+        })
+      );
+      setStatusMessage('REACTION SENT');
+      return;
+    }
+    if (typeof id === 'string') {
+      setStatusMessage('Emoji reactions on device posts — use Amen or open post');
+      return;
+    }
     updatePost(id, (post) => {
       const reactions = { ...(post.reactions || {}) };
       reactions[emoji] = (reactions[emoji] || 0) + 1;
@@ -573,16 +757,36 @@ export default function TestifyPage() {
     });
   };
 
-  const handlePraiseAction = (id: number, action: 'CLAP' | 'DANCE' | 'SHOUT') => {
-    updatePost(id, (post) => ({
-      ...post,
-      stats: {
-        ...post.stats,
-        claps: action === 'CLAP' ? post.stats.claps + 1 : post.stats.claps,
-        dances: action === 'DANCE' ? post.stats.dances + 1 : post.stats.dances,
-        shouts: action === 'SHOUT' ? post.stats.shouts + 1 : post.stats.shouts,
-      },
-    }));
+  const handlePraiseAction = (id: string | number, action: 'CLAP' | 'DANCE' | 'SHOUT') => {
+    if (typeof id === 'string' && isDemoPostId(id)) {
+      setDemoPosts((prev) =>
+        prev.map((p) => {
+          if (p.id !== id) return p;
+          return {
+            ...p,
+            stats: {
+              ...p.stats,
+              claps: action === 'CLAP' ? p.stats.claps + 1 : p.stats.claps,
+              dances: action === 'DANCE' ? p.stats.dances + 1 : p.stats.dances,
+              shouts: action === 'SHOUT' ? p.stats.shouts + 1 : p.stats.shouts,
+            },
+          };
+        })
+      );
+    } else if (typeof id === 'string') {
+      setStatusMessage('Open the post for full reactions');
+      return;
+    } else {
+      updatePost(id, (post) => ({
+        ...post,
+        stats: {
+          ...post.stats,
+          claps: action === 'CLAP' ? post.stats.claps + 1 : post.stats.claps,
+          dances: action === 'DANCE' ? post.stats.dances + 1 : post.stats.dances,
+          shouts: action === 'SHOUT' ? post.stats.shouts + 1 : post.stats.shouts,
+        },
+      }));
+    }
 
     setPraiseBurstPostId(id);
     setMusicPulsePostId(id);
@@ -705,7 +909,13 @@ export default function TestifyPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#06060a] via-[#050508] to-[#020204] text-white selection:bg-[#00f2ff]/30 pb-24">
+    <main
+      className={
+        feedViewMode === 'tiktok'
+          ? 'flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-black pb-[var(--parable-bottom-inset)] text-white selection:bg-[#00f2ff]/30'
+          : 'min-h-screen bg-gradient-to-b from-[#06060a] via-[#050508] to-[#020204] text-white selection:bg-[#00f2ff]/30 pb-24'
+      }
+    >
       {/* Image crop modal */}
       {cropModalImageUrl ? (
         <div className="fixed inset-0 z-50 flex flex-col bg-[#010101]">
@@ -783,6 +993,83 @@ export default function TestifyPage() {
         onChange={(e) => handleMediaSelect(e, 'VIDEO')}
       />
 
+      {feedViewMode === 'tiktok' ? (
+        <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+          <header className="sticky top-0 z-40 flex shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-black/95 px-3 py-2.5 backdrop-blur-xl sm:gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-black uppercase tracking-[0.25em] text-[#00f2ff]">Testify</p>
+              <p className="text-[10px] text-white/45 truncate">
+                Swipe feed · <span className="text-white/70">{followingIds.length} following</span>
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <div
+                className="mr-1 flex rounded-xl border border-white/10 bg-black/50 p-0.5"
+                role="group"
+                aria-label="Feed layout"
+              >
+                <button
+                  type="button"
+                  onClick={() => setFeedViewMode('tiktok')}
+                  className="flex items-center gap-1 rounded-lg bg-[#00f2ff] px-2 py-1.5 text-[9px] font-black uppercase tracking-wide text-black transition"
+                  title="TikTok-style full-screen feed"
+                >
+                  <Smartphone className="h-3.5 w-3.5" />
+                  Feed
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFeedViewMode('portal')}
+                  className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[9px] font-black uppercase tracking-wide text-white/45 transition hover:text-white/75"
+                  title="Classic portal with grid and tools"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  Portal
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => router.push('/my-sanctuary')}
+                className="p-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:border-[#00f2ff]/40 hover:text-[#00f2ff] transition-colors"
+                title="My Sanctuary"
+              >
+                <Home className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push('/following?tab=discover')}
+                className="p-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:border-[#00f2ff]/40 hover:text-[#00f2ff] transition-colors"
+                title="Following & Discover"
+              >
+                <Users className="h-4 w-4" />
+              </button>
+            </div>
+          </header>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <TestifyTikTokFeed
+              posts={tiktokFeedPosts}
+              feedFilter={feedFilter}
+              onFeedFilterChange={setFeedFilter}
+              userDisplayName={currentUsername}
+              userAvatarUrl={myAvatarUrl && myAvatarUrl !== '/logo.svg' ? myAvatarUrl : null}
+              onGoLive={() => {
+                router.push('/live-studio');
+                setStatusMessage('OPENING LIVE STUDIO');
+              }}
+              onFollowingNavigate={goToFollowingDiscover}
+              formatRelativeTime={formatRelativeTime}
+              onAmen={handleAmen}
+              onComment={handleComment}
+              onShare={handleShare}
+              onPraiseBreak={handlePraiseBreak}
+              onOpenMenu={handleOpenMenu}
+              onStatusMessage={setStatusMessage}
+              onFocusComposer={focusComposer}
+              fillViewport
+            />
+          </div>
+        </div>
+      ) : (
       <div className="mx-auto flex w-full min-w-0 max-w-full flex-col gap-5 px-3 pt-1 pb-28 sm:px-4 sm:pb-32">
         <aside className="order-2 z-20 w-full shrink-0">
           <LivePersonnelRail
@@ -803,7 +1090,31 @@ export default function TestifyPage() {
               Feed + portal · <span className="text-white/70">{followingIds.length} following</span>
             </p>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div
+              className="mr-1 flex rounded-xl border border-white/10 bg-black/50 p-0.5"
+              role="group"
+              aria-label="Feed layout"
+            >
+              <button
+                type="button"
+                onClick={() => setFeedViewMode('tiktok')}
+                className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[9px] font-black uppercase tracking-wide text-white/45 transition hover:text-white/75"
+                title="Full-screen TikTok-style feed"
+              >
+                <Smartphone className="h-3.5 w-3.5" />
+                Feed
+              </button>
+              <button
+                type="button"
+                onClick={() => setFeedViewMode('portal')}
+                className="flex items-center gap-1 rounded-lg bg-[#00f2ff] px-2 py-1.5 text-[9px] font-black uppercase tracking-wide text-black transition"
+                title="Portal grid with pulse & archive"
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                Portal
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => router.push('/my-sanctuary')}
@@ -814,9 +1125,9 @@ export default function TestifyPage() {
             </button>
             <button
               type="button"
-              onClick={() => router.push('/following')}
+              onClick={() => router.push('/following?tab=discover')}
               className="p-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:border-[#00f2ff]/40 hover:text-[#00f2ff] transition-colors"
-              title="Following"
+              title="Following & Discover"
             >
               <Users className="h-4 w-4" />
             </button>
@@ -925,7 +1236,7 @@ export default function TestifyPage() {
               ))}
             </div>
 
-            <section className="rounded-2xl border border-white/10 bg-black/50 backdrop-blur-md shadow-[0_8px_40px_rgba(0,0,0,0.45)] overflow-hidden">
+            <section className="overflow-hidden rounded-2xl border border-white/10 bg-black/50 shadow-[0_8px_40px_rgba(0,0,0,0.45)] backdrop-blur-md">
               <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-[#00f2ff]/10 to-transparent">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#00f2ff]/90 flex items-center gap-2">
                   <Sparkles className="h-3.5 w-3.5" />
@@ -1026,40 +1337,41 @@ export default function TestifyPage() {
               </div>
             </section>
 
-            <TestifyLivePortalFeed
-              posts={gridPosts}
-              feedFilter={feedFilter}
-              onFeedFilterChange={setFeedFilter}
-              portalSection={portalSection}
-              onPortalSectionChange={setPortalSection}
-              streak={streakDays}
-              faithfulUnlocked={faithfulUnlocked}
-              gems={gemsBalance}
-              onSpendGems={handleSpendGems}
-              pipUrl={pipMediaUrl}
-              pipTitle={pipLabel}
-              onSetPip={handleSetPip}
-              praiseBurstPostId={praiseBurstPostId}
-              musicPulsePostId={musicPulsePostId}
-              formatRelativeTime={formatRelativeTime}
-              onAmen={handleAmen}
-              onComment={handleComment}
-              onShare={handleShare}
-              onPraiseBreak={handlePraiseBreak}
-              onReaction={handleReaction}
-              onPraiseAction={handlePraiseAction}
-              onOpenMenu={handleOpenMenu}
-              onStatusMessage={setStatusMessage}
-              emptyFeedFilter={feedFilter}
-              onFocusComposer={focusComposer}
-              onFindPeople={() => router.push('/following')}
-              rippleByPostId={rippleByPostId}
-              pipSeekSeconds={pipSeekSeconds}
-              onPipSeekConsumed={handlePipSeekConsumed}
-              toasts={toasts}
-              dismissToast={dismissToast}
-              congratulateToast={congratulateToast}
-            />
+              <TestifyLivePortalFeed
+                posts={gridPosts}
+                feedFilter={feedFilter}
+                onFeedFilterChange={setFeedFilter}
+                portalSection={portalSection}
+                onPortalSectionChange={setPortalSection}
+                streak={streakDays}
+                faithfulUnlocked={faithfulUnlocked}
+                gems={gemsBalance}
+                onSpendGems={handleSpendGems}
+                pipUrl={pipMediaUrl}
+                pipTitle={pipLabel}
+                onSetPip={handleSetPip}
+                praiseBurstPostId={praiseBurstPostId}
+                musicPulsePostId={musicPulsePostId}
+                formatRelativeTime={formatRelativeTime}
+                onAmen={handleAmen}
+                onComment={handleComment}
+                onShare={handleShare}
+                onPraiseBreak={handlePraiseBreak}
+                onReaction={handleReaction}
+                onPraiseAction={handlePraiseAction}
+                onOpenMenu={handleOpenMenu}
+                onStatusMessage={setStatusMessage}
+                emptyFeedFilter={feedFilter}
+                onFocusComposer={focusComposer}
+                onFindPeople={() => router.push('/following?tab=discover')}
+                onFollowingNavigate={goToFollowingDiscover}
+                rippleByPostId={rippleByPostId}
+                pipSeekSeconds={pipSeekSeconds}
+                onPipSeekConsumed={handlePipSeekConsumed}
+                toasts={toasts}
+                dismissToast={dismissToast}
+                congratulateToast={congratulateToast}
+              />
           </section>
 
           <aside className="hidden space-y-6" aria-hidden>
@@ -1169,6 +1481,7 @@ export default function TestifyPage() {
         </div>
         </div>
       </div>
+      )}
 
       <ActivityPulseDrawer
         open={pulseOpen}

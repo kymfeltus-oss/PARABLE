@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import SparkleOverlay from '@/components/SparkleOverlay';
 import type { SanctuaryChannel } from '@/lib/sanctuary-following';
 import { useRegisteredProfileSuggestions } from '@/hooks/useRegisteredProfileSuggestions';
@@ -10,8 +10,17 @@ import { SanctuaryDiscoverSection } from '@/components/sanctuary/SanctuaryDiscov
 
 type FollowingPageTab = 'browse' | 'discover';
 
-export default function FollowingPage() {
+function FollowingPageContent() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const pageTab: FollowingPageTab =
+    searchParams.get('tab') === 'discover' ? 'discover' : 'browse';
+
+  const setPageTab = (tab: FollowingPageTab) => {
+    router.replace(`${pathname}?tab=${tab}`, { scroll: false });
+  };
   const { registeredChannels, registeredLoading, registeredError } = useRegisteredProfileSuggestions();
   const {
     followingIds,
@@ -23,7 +32,6 @@ export default function FollowingPage() {
   const [newFollowerName, setNewFollowerName] = useState('');
   const [newFollowerHandle, setNewFollowerHandle] = useState('');
   const [search, setSearch] = useState('');
-  const [pageTab, setPageTab] = useState<FollowingPageTab>('browse');
 
   const filteredFollowers = useMemo(
     () =>
@@ -260,3 +268,16 @@ export default function FollowingPage() {
   );
 }
 
+export default function FollowingPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-[#010101] text-white">
+          <p className="text-xs text-white/40">Loading…</p>
+        </main>
+      }
+    >
+      <FollowingPageContent />
+    </Suspense>
+  );
+}

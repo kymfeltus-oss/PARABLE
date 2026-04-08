@@ -19,7 +19,8 @@ import {
 import type { AchievementToast, PostRipple } from '@/hooks/useActivityPulse';
 
 export type PortalPost = {
-  id: number;
+  /** Local drafts use numeric timestamps; Supabase uses UUID strings. */
+  id: string | number;
   user: string;
   authorId?: string;
   time: string;
@@ -68,21 +69,23 @@ type Props = {
   pipUrl: string | null;
   pipTitle: string | null;
   onSetPip: (url: string | null, title: string | null) => void;
-  praiseBurstPostId: number | null;
-  musicPulsePostId: number | null;
+  praiseBurstPostId: string | number | null;
+  musicPulsePostId: string | number | null;
   formatRelativeTime: (createdAt: number) => string;
-  onAmen: (id: number) => void;
-  onComment: (id: number) => void;
-  onShare: (id: number) => void;
-  onPraiseBreak: (id: number) => void;
-  onReaction: (id: number, emoji: string) => void;
-  onPraiseAction: (id: number, action: 'CLAP' | 'DANCE' | 'SHOUT') => void;
+  onAmen: (id: string | number) => void;
+  onComment: (id: string | number) => void;
+  onShare: (id: string | number) => void;
+  onPraiseBreak: (id: string | number) => void;
+  onReaction: (id: string | number, emoji: string) => void;
+  onPraiseAction: (id: string | number, action: 'CLAP' | 'DANCE' | 'SHOUT') => void;
   onOpenMenu: (user: string) => void;
   onStatusMessage: (msg: string) => void;
   emptyFeedFilter: 'FOR YOU' | 'FOLLOWING' | 'LIVE';
   onFocusComposer: () => void;
   onFindPeople: () => void;
-  rippleByPostId: Map<number, PostRipple>;
+  /** After switching to Following filter, open Following & Discover page. */
+  onFollowingNavigate?: () => void;
+  rippleByPostId: Map<string | number, PostRipple>;
   /** Seek PiP after join-from-sidebar (seconds); parent clears via onPipSeekConsumed. */
   pipSeekSeconds: number | null;
   onPipSeekConsumed: () => void;
@@ -118,6 +121,7 @@ export function TestifyLivePortalFeed({
   emptyFeedFilter,
   onFocusComposer,
   onFindPeople,
+  onFollowingNavigate,
   rippleByPostId,
   pipSeekSeconds,
   onPipSeekConsumed,
@@ -125,12 +129,12 @@ export function TestifyLivePortalFeed({
   dismissToast,
   congratulateToast,
 }: Props) {
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<string | number | null>(null);
   const [showJoinOverlay, setShowJoinOverlay] = useState(false);
   const [sentiment, setSentiment] = useState(50);
   const [branchPick, setBranchPick] = useState<'acoustic' | 'band' | null>(null);
   const [raidAccepted, setRaidAccepted] = useState(false);
-  const [microChatPostId, setMicroChatPostId] = useState<number | null>(null);
+  const [microChatPostId, setMicroChatPostId] = useState<string | number | null>(null);
   const [microChatDraft, setMicroChatDraft] = useState('');
   const pipVideoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -165,7 +169,7 @@ export function TestifyLivePortalFeed({
   }, [onStatusMessage]);
 
   const handleClip = useCallback(
-    (postId: number) => {
+    (postId: string | number) => {
       onStatusMessage(`CLIP: 10s lyric/scripture reels for post #${postId} — pipeline coming soon.`);
     },
     [onStatusMessage]
@@ -378,7 +382,10 @@ export function TestifyLivePortalFeed({
           <button
             key={tab}
             type="button"
-            onClick={() => onFeedFilterChange(tab)}
+            onClick={() => {
+              onFeedFilterChange(tab);
+              if (tab === 'FOLLOWING') onFollowingNavigate?.();
+            }}
             className={`flex-1 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wide transition-all ${
               feedFilter === tab
                 ? 'bg-[#00f2ff] text-black shadow-[0_0_20px_rgba(0,242,255,0.35)]'

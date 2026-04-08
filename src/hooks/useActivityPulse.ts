@@ -136,9 +136,16 @@ function formatVibe(n: number): string {
   return String(Math.round(n));
 }
 
+function seedFromPostId(id: string | number): number {
+  if (typeof id === 'number') return hashSeed(id);
+  let s = 0;
+  for (let i = 0; i < id.length; i++) s = (Math.imul(s, 31) + id.charCodeAt(i)) | 0;
+  return hashSeed(Math.abs(s));
+}
+
 export function useActivityPulse(
   friendDisplayNames: string[],
-  postSummaries: { id: number; tag: string; text: string; stats: { amens: number; comments: number } }[],
+  postSummaries: { id: string | number; tag: string; text: string; stats: { amens: number; comments: number } }[],
   firstVideoUrl: string | null
 ) {
   const [tick, setTick] = useState(0);
@@ -265,10 +272,10 @@ export function useActivityPulse(
   }, [postSummaries, tick]);
 
   const rippleByPostId = useMemo(() => {
-    const map = new Map<number, PostRipple>();
+    const map = new Map<string | number, PostRipple>();
     const fn = friendDisplayNames[0]?.split(/\s+/)[0] || 'A friend';
     for (const p of postSummaries) {
-      const h = hashSeed(p.id);
+      const h = seedFromPostId(p.id);
       const others = 12 + (h % 52);
       map.set(p.id, {
         bookmarkLine: `${fn} and ${others} others saved this moment`,
