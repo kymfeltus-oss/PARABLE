@@ -1,6 +1,75 @@
+# PARABLE — Cursor Rules
+
+## PARABLE Technical Standards (Feltus Frequency Protocol)
+
+These standards apply to **all** PARABLE features (live stream, Shed, Testify, altar, maps, onboarding)—not only games. When product logic feels generic, **raise density**: add **Mist** (blur/backdrop), **Glow** (neon cyan/gold accents), and **Haptics** (`navigator.vibrate` where appropriate) so interactions feel spiritual-data-rich, not flat.
+
+### Visual language
+
+- **Mist**: Layered blur, depth, and gradient “atmosphere” (glass, fog, volumetric cues)—never only flat solid panels for primary worship/live UI.
+- **Glow**: Neon highlights on key actions (cyan `#00f2ff` family, gold/amber for “Glory” / peak moments). Signal importance with light, not only color.
+- **Haptics**: Pair major moments (Amen, praise break, altar commit, streak) with short vibration patterns; respect `navigator.vibrate` availability and user settings.
+
+### Glory Pulse (signals)
+
+- **Every meaningful Kingdom interaction** (Amen, Shout, score, commit, seed, bucket, etc.) should emit a **Signal** toward **Supabase Realtime** (or a dedicated `global_pulse` / `activity_log` style channel) so the network can react in real time.
+- Prefer **one clear write path** (table insert + broadcast) over ad-hoc client-only state for events that should be visible globally or in-room.
+
+### Quantum entanglement (sync)
+
+- **Room state** (BPM, praise break, metronome tick, altar phase) must stay **synchronized** across clients: same animation phase at the same millisecond when possible—use **shared clocks** (server time, host authority, or Realtime broadcast), not independent `setInterval` per tab.
+- **LiveKit** is the default for **ultra-low-latency** audio/video (Shed, jam sessions); target **<100ms** feel for music. **WebRTC** patterns, not consumer HLS delay, for real-time jamming.
+
+### Imago standards
+
+- **Avatars**: Prefer **3D GLB**, rigged for **praise moves**; avoid treating avatars as static icons when the feature is worship/live presence.
+- **Auras**: Tie visual intensity to **Supabase** fields such as `anointing_level`, `aura_type`, streaks—e.g. stronger glow / particle density as level or streak rises.
+
+### Praise Break Engine (live stream module — target behavior)
+
+- **Detection**: Web Audio API for BPM; treat **~140–170 BPM** “shout” band as candidate **Praise Break**; drive `isPraiseBreakActive`.
+- **Visuals**: While active—camera shake / shader on video, **gold/cyan strobe** overlay (tasteful, performance-aware).
+- **Haptics**: Optional kick-sync vibration on supported devices.
+- **Multiplayer**: Host “Shout” should trigger **Supabase Realtime** so all **Imago** avatars in the room play **synced** praise animations (e.g. `praise_dance_01`).
+
+### Shed Room (musician hub)
+
+- Use **`@livekit/components-react`** for rooms; **high-fidelity audio** (e.g. Opus 48kHz where configured).
+- **Shared metronome / BPM**: `useMetronome`-style hook + Realtime so BPM changes propagate; haptics may follow host beat.
+- **Director toggle**: optional focus cameras (fretboard, keys), PiP; **request-to-join** queue in Supabase for promoting Member → Musician.
+- **Stripe / Seeds gate**: Before mounting `LiveKitRoom`, check **event access** (e.g. `event_access`); if no paid “Shed Pass,” route to merch / sow flow.
+
+### Digital Altar Call
+
+- **Trigger**: `isAltarCallActive`; UI shifts from high-BPM praise to **low-BPM, heavy atmosphere** (royal purple + gold, slower mist).
+- **Interaction**: Long-press **commit** with **Presence meter** + low-frequency continuous haptic; log to Supabase (e.g. `altar_commits`).
+- **Follow-up**: AI chaplain / mentor thread hooks via RPC or webhook when specified by product.
+
+### Global Signal Array / Global Pulse
+
+- **Global map**: `@react-three/fiber` + globe; on **Realtime** `global_pulse` / `activity_log` inserts, spawn **Glory Sparks** (particles) from **lat/long** when available.
+- **Mist shader**: Global mist density can track **recent activity volume** (e.g. last 60s)—more activity = thicker **golden** mist.
+- **Ticker**: Optional “Neural Download” / personnel ticker for recent global events.
+
+### Onboarding (Binary Ark / Activation Portal)
+
+- Post sign-up: **seed grant** (e.g. 100 seeds), **Framer Motion** progress, **Supabase RPC** to init `user_seeds` / `anointing_level`—copy tone: welcoming, “Second Outpouring” atmosphere, not corporate boilerplate.
+
+### AI Architect (Shed / stream)
+
+- Optional: Web Audio buffer → pitch/chord detection → **Nashville-style** chord JSON → `session_charts` in Supabase; display **live chord** for members.
+
+---
+
+## Pro prompt (when code feels too plain)
+
+If the user says **“Remember the Feltus Frequency—more Glory”**—add mist, glow, haptics, and Realtime hooks without bloating unrelated files; keep changes tied to the feature at hand.
+
+---
+
 # PARABLE Gaming Standards
 
-These rules apply when building or extending **PARABLE game modules** (The Narrow Road, Kingdom Hoops, Gridiron Glory, Sanctuary 3D, engine lab). For non-game UI (feed, auth, settings), standard Next.js/React patterns apply.
+These rules apply when building or extending **PARABLE game modules** (The Narrow Road, Kingdom Hoops, Gridiron Glory, Sanctuary 3D, engine lab). For non-game UI (feed, auth, settings), standard Next.js/React patterns apply—**plus** the Feltus Frequency standards above where worship/atmosphere matters.
 
 ## Rendering (GPU-first)
 

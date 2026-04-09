@@ -15,6 +15,7 @@ import { ChannelAvatar } from '@/components/sanctuary/SanctuaryDiscoverSection';
 import type { SanctuaryChannel } from '@/lib/sanctuary-following';
 import { TestifyLivePortalFeed } from '@/components/testify/TestifyLivePortalFeed';
 import { TestifyTikTokFeed } from '@/components/testify/TestifyTikTokFeed';
+import { GlobalPulseGlobe } from '@/components/testify/GlobalPulseGlobe';
 import { LivePersonnelRail } from '@/components/testify/LivePersonnelRail';
 import { ActivityPulseDrawer } from '@/components/testify/ActivityPulseDrawer';
 import { useActivityPulse, type PresenceActivity } from '@/hooks/useActivityPulse';
@@ -151,7 +152,8 @@ function postMatchesFollowing(
 
 export default function TestifyPage() {
   const router = useRouter();
-  const { avatarUrl: myAvatarUrl } = useAuth();
+  const { avatarUrl: myAvatarUrl, userProfile } = useAuth();
+  const anointingLevel = Number(userProfile?.anointing_level ?? 1);
   const { registeredChannels } = useRegisteredProfileSuggestions();
   const { followingIds, allFollowers } = useSanctuaryFollowGraph(registeredChannels);
 
@@ -1045,13 +1047,15 @@ export default function TestifyPage() {
               </button>
             </div>
           </header>
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+            <GlobalPulseGlobe />
             <TestifyTikTokFeed
               posts={tiktokFeedPosts}
               feedFilter={feedFilter}
               onFeedFilterChange={setFeedFilter}
               userDisplayName={currentUsername}
               userAvatarUrl={myAvatarUrl && myAvatarUrl !== '/logo.svg' ? myAvatarUrl : null}
+              anointingLevel={anointingLevel}
               onGoLive={() => {
                 router.push('/live-studio');
                 setStatusMessage('OPENING LIVE STUDIO');

@@ -7,6 +7,7 @@ import type { SanctuaryChannel } from '@/lib/sanctuary-following';
 import { useRegisteredProfileSuggestions } from '@/hooks/useRegisteredProfileSuggestions';
 import { useSanctuaryFollowGraph } from '@/hooks/useSanctuaryFollowGraph';
 import { SanctuaryDiscoverSection } from '@/components/sanctuary/SanctuaryDiscoverSection';
+import { CategoryHubCards } from '@/components/following/CategoryHubCards';
 
 type FollowingPageTab = 'browse' | 'discover';
 
@@ -130,15 +131,25 @@ function FollowingPageContent() {
         </div>
 
         {pageTab === 'discover' && (
-          <section className="rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4 sm:p-6 space-y-4">
+          <section className="rounded-xl border border-white/10 bg-black/50 backdrop-blur-md p-4 sm:p-6 space-y-6">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.25em] text-[#00f2ff]/80">Discover</p>
+              <p className="text-[10px] uppercase tracking-[0.25em] text-[#00f2ff]/80">Live Sanctuary Hub</p>
               <h2 className="mt-1 text-lg font-black uppercase tracking-tight text-white">
-                Suggested follows
+                Category hubs
               </h2>
               <p className="mt-1 text-xs text-white/50">
-                Same lists as My Sanctuary → Following → Discover. Follow anyone to add them to your
-                circle and search them under Browse all.
+                Pick a calling—each hub opens a glass portal to the right space in PARABLE. Then
+                browse suggested people below.
+              </p>
+            </div>
+            <CategoryHubCards />
+            <div className="border-t border-white/10 pt-6">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-[#00f2ff]/80">Discover</p>
+              <h3 className="mt-1 text-base font-black uppercase tracking-tight text-white">
+                Suggested follows
+              </h3>
+              <p className="mt-1 text-xs text-white/50">
+                Follow anyone to add them to your circle and search them under Browse all.
               </p>
             </div>
             <SanctuaryDiscoverSection

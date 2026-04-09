@@ -96,3 +96,30 @@ body {
   border-radius: 2.5rem; 
 }
 .flip-card-back { transform: rotateY(180deg); }
+
+/* Testify — Praise Break beta (screen shake + partners with gold overlay in component) */
+@keyframes praise-shake {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  15% {
+    transform: translate3d(-3px, 2px, 0);
+  }
+  30% {
+    transform: translate3d(3px, -2px, 0);
+  }
+  45% {
+    transform: translate3d(-2px, -2px, 0);
+  }
+  60% {
+    transform: translate3d(2px, 1px, 0);
+  }
+  75% {
+    transform: translate3d(-1px, 2px, 0);
+  }
+}
+
+.animate-praise-shake {
+  animation: praise-shake 0.45s ease-in-out infinite;
+}

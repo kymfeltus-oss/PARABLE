@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useVideoPraiseBreak } from '@/hooks/useVideoPraiseBreak';
 import Link from 'next/link';
 import {
   Heart,
@@ -54,6 +55,8 @@ type Props = {
   onGoLive?: () => void;
   /** Open Sanctuary Following (browse + discover) — e.g. `/following?tab=discover`. */
   onFollowingNavigate?: () => void;
+  /** From Supabase `profiles.anointing_level`; >1 enables neon aura on feed avatar. */
+  anointingLevel?: number;
   formatRelativeTime: (createdAt: number) => string;
   onAmen: (id: string | number) => void;
   onComment: (id: string | number) => void;
@@ -82,14 +85,29 @@ export function TestifyTikTokFeed({
   userAvatarUrl,
   onGoLive,
   onFollowingNavigate,
+  anointingLevel = 1,
   fillViewport = true,
 }: Props) {
   const [activeId, setActiveId] = useState<string | number | null>(posts[0]?.id ?? null);
   const [muted, setMuted] = useState(true);
+  const [activeVideoEl, setActiveVideoEl] = useState<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Map<string | number, HTMLVideoElement>>(new Map());
   const scrollObsRef = useRef<IntersectionObserver | null>(null);
   const prevFeedFilterRef = useRef(feedFilter);
+
+  const praiseBreakActive = useVideoPraiseBreak(activeVideoEl, Boolean(activeVideoEl));
+
+  useEffect(() => {
+    if (activeId == null) {
+      setActiveVideoEl(null);
+      return;
+    }
+    const sync = () => setActiveVideoEl(videoRefs.current.get(activeId) ?? null);
+    sync();
+    const r = requestAnimationFrame(sync);
+    return () => cancelAnimationFrame(r);
+  }, [activeId, posts]);
 
   const setVideoRef = useCallback((id: string | number, el: HTMLVideoElement | null) => {
     const m = videoRefs.current;
@@ -168,7 +186,11 @@ export function TestifyTikTokFeed({
     >
       <div className="flex items-center gap-3 px-3 py-2.5">
         <div
-          className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/15 bg-zinc-800"
+          className={`relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-zinc-800 ${
+            anointingLevel > 1
+              ? 'border-2 border-cyan-400 shadow-[0_0_22px_rgba(34,211,238,0.7)] animate-pulse'
+              : 'border border-white/15'
+          }`}
           aria-hidden
         >
           {userAvatarUrl ? (
@@ -299,7 +321,7 @@ export function TestifyTikTokFeed({
               data-post-id={String(post.id)}
               className={`relative flex w-full shrink-0 snap-start snap-always flex-col bg-black ${
                 fillViewport ? 'h-full min-h-full' : 'min-h-[min(85vh,720px)]'
-              }`}
+              } ${praiseBreakActive && activeId === post.id ? 'animate-praise-shake' : ''}`}
             >
               <div className="absolute inset-0 overflow-hidden bg-zinc-950">
                 {post.mediaType === 'video' && post.mediaUrl ? (
@@ -361,6 +383,13 @@ export function TestifyTikTokFeed({
                   </div>
                 )}
               </div>
+
+            {praiseBreakActive && activeId === post.id ? (
+              <div
+                className="pointer-events-none absolute inset-0 z-[22] bg-gradient-to-b from-amber-200/30 via-amber-400/20 to-amber-600/25 mix-blend-screen"
+                aria-hidden
+              />
+            ) : null}
 
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/95" />
 

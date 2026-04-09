@@ -67,7 +67,13 @@ export default function Header() {
           </Link>
 
           <div className="flex min-w-0 max-w-[55%] items-center justify-end gap-2">
-            <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full border border-[#00f2ff]/35 bg-black md:h-9 md:w-9">
+            <div
+              className={`h-8 w-8 shrink-0 overflow-hidden rounded-full bg-black md:h-9 md:w-9 ${
+                Number(userProfile?.anointing_level ?? 1) > 1
+                  ? "border-2 border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.75)] animate-pulse"
+                  : "border border-[#00f2ff]/35"
+              }`}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={avatarUrl && avatarUrl !== "/logo.svg" ? avatarUrl : "/logo.svg"}
