@@ -65,7 +65,7 @@ export async function fetchCommunityTestifyPosts(limit = 50): Promise<PortalPost
   const { data, error } = await supabase
     .from('posts')
     .select(
-      'id, profile_id, content, media_url, media_type, is_praise_break, created_at, profiles(full_name, avatar_url)'
+      'id, profile_id, content, media_url, media_type, is_praise_break, created_at, profiles:profile_id(full_name, avatar_url)'
     )
     .order('created_at', { ascending: false })
     .limit(limit);

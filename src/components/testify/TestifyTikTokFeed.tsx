@@ -501,7 +501,7 @@ export function TestifyTikTokFeed({
 
       <p className="shrink-0 border-t border-white/10 bg-black/90 px-2 py-1.5 text-center text-[9px] text-white/35">
         <span className="hidden sm:inline">Scroll or swipe · </span>
-        <Link href="/testify/praise-breaks" className="text-[#00f2ff]/80 underline-offset-2 hover:underline">
+        <Link href="/sanctuary/praise-breaks" className="text-[#00f2ff]/80 underline-offset-2 hover:underline">
           Praise breaks
         </Link>
       </p>

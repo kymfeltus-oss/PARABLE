@@ -129,7 +129,7 @@ export default function SanctuaryReaderPage() {
               </div>
 
               {/* Scrollable text */}
-              <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-5 pt-4 space-y-3 text-sm leading-relaxed">
+              <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-5 pt-4 space-y-3 text-sm leading-relaxed scrollbar-hide">
                 <p className="text-[11px] font-mono uppercase tracking-[3px] text-white/45">
                   {SAMPLE_PASSAGE.reference}
                 </p>
@@ -214,7 +214,7 @@ export default function SanctuaryReaderPage() {
             </div>
 
             {/* Tab content */}
-            <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-3 text-sm space-y-3">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-3 text-sm space-y-3 scrollbar-hide">
               {activeTab === "theory" && (
                 <TheorySolverPanel
                   passageContext={`${SAMPLE_PASSAGE.reference}\n\n${SAMPLE_PASSAGE.text.join(" ")}`}

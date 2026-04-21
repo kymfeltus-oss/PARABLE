@@ -107,7 +107,7 @@ export const HUB_DEFINITIONS: Record<HubId, HubDefinition> = {
       {
         title: 'Testify clips',
         description: 'Vertical micro-testimonies for the main feed.',
-        href: '/testify',
+        href: '/sanctuary',
         badge: 'Clips',
       },
       {

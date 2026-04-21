@@ -153,8 +153,12 @@ function LoginInner() {
       router.replace(nextPath);
     } catch (e) {
       setLoading(false);
-      const msg = e instanceof TypeError && e.message?.includes('fetch')
-        ? 'Cannot reach Supabase (network or blocked request). Confirm NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, stop dev, delete the .next folder, run npm run dev again, and try a private/incognito window (extensions sometimes block *.supabase.co).'
+      const raw = e instanceof Error ? e.message : "";
+      const fetchFailed =
+        (e instanceof TypeError && raw?.toLowerCase().includes("fetch")) ||
+        raw === "Failed to fetch";
+      const msg = fetchFailed
+        ? 'Cannot reach Supabase (network or blocked request). In .env.local set NEXT_PUBLIC_SUPABASE_BROWSER_RELAY=0 to skip /supabase-proxy, confirm URL + anon key, restart dev, delete .next once, and try incognito (extensions sometimes block *.supabase.co).'
         : e instanceof Error ? e.message : 'Sign-in failed. Try again.';
       setErr(msg);
     }
@@ -182,8 +186,12 @@ function LoginInner() {
       setInfo("Check your email to confirm your account.");
     } catch (e) {
       setLoading(false);
-      const msg = e instanceof TypeError && e.message?.includes('fetch')
-        ? 'Cannot reach Supabase (network or blocked request). Confirm NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, stop dev, delete the .next folder, run npm run dev again, and try a private/incognito window (extensions sometimes block *.supabase.co).'
+      const raw = e instanceof Error ? e.message : "";
+      const fetchFailed =
+        (e instanceof TypeError && raw?.toLowerCase().includes("fetch")) ||
+        raw === "Failed to fetch";
+      const msg = fetchFailed
+        ? 'Cannot reach Supabase. Try NEXT_PUBLIC_SUPABASE_BROWSER_RELAY=0 in .env.local, restart dev, delete .next once, incognito window.'
         : e instanceof Error ? e.message : 'Sign-up failed. Try again.';
       setErr(msg);
     }
@@ -211,8 +219,12 @@ function LoginInner() {
       setInfo("Password reset email sent.");
     } catch (e) {
       setLoading(false);
-      const msg = e instanceof TypeError && e.message?.includes('fetch')
-        ? 'Cannot reach the server. Check your connection and that Supabase URL/key are set in .env.local.'
+      const raw = e instanceof Error ? e.message : "";
+      const fetchFailed =
+        (e instanceof TypeError && raw?.toLowerCase().includes("fetch")) ||
+        raw === "Failed to fetch";
+      const msg = fetchFailed
+        ? 'Cannot reach Supabase. Try NEXT_PUBLIC_SUPABASE_BROWSER_RELAY=0 in .env.local, restart dev, incognito.'
         : e instanceof Error ? e.message : 'Request failed. Try again.';
       setErr(msg);
     }

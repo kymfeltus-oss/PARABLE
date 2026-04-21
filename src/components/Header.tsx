@@ -20,7 +20,11 @@ const NAV_LINKS = [
   },
   { name: "Hubs", href: "/hubs", active: (p: string) => p === "/hubs" || p.startsWith("/hubs/") },
   { name: "Streamers", href: "/streamers" },
-  { name: "Sanctuary", href: "/my-sanctuary" },
+  {
+    name: "Sanctuary",
+    href: "/sanctuary",
+    active: (p: string) => p === "/sanctuary" || p.startsWith("/sanctuary/"),
+  },
 ] as const;
 
 export default function Header() {
@@ -92,10 +96,12 @@ export default function Header() {
 
         {/* Row 2: full-width link rail (scroll if needed, never clipped by logo) */}
         <div className="border-t border-white/[0.06] px-2 pb-2 pt-1.5 md:px-3 md:pb-2.5">
-          <div className="-mx-1 flex gap-1 overflow-x-auto px-1 [scrollbar-width:thin] [scrollbar-color:rgba(0,242,255,0.35)_transparent] md:gap-2 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#00f2ff]/30">
+          <div className="-mx-1 flex gap-1 overflow-x-auto px-1 scrollbar-hide md:gap-2">
             {NAV_LINKS.map((link) => {
               const isActive =
                 "active" in link && link.active ? link.active(pathname ?? "") : pathname === link.href;
+              const livePortalHover =
+                link.href === "/sanctuary" || link.name === "Sanctuary";
               return (
                 <Link
                   key={link.href}
@@ -103,7 +109,9 @@ export default function Header() {
                   className={`shrink-0 rounded-full px-2.5 py-1.5 text-[9px] font-black uppercase tracking-wide transition md:px-3 md:text-[10px] md:tracking-[0.12em] ${
                     isActive
                       ? "bg-[#00f2ff]/15 text-[#00f2ff] shadow-[0_0_12px_rgba(0,242,255,0.2)]"
-                      : "text-white/50 hover:bg-white/5 hover:text-white"
+                      : livePortalHover
+                        ? "text-white/50 hover:bg-white/[0.07] hover:text-[#00f2ff] hover:shadow-[0_0_20px_rgba(0,242,255,0.5)]"
+                        : "text-white/50 hover:bg-white/5 hover:text-white"
                   }`}
                 >
                   {link.name}

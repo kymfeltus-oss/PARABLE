@@ -131,8 +131,8 @@ export function LivePersonnelRail({
         <div
           className={
             isSidebar
-              ? 'flex flex-col gap-2.5 max-h-[min(72vh,calc(100vh-6.5rem))] overflow-y-auto overflow-x-hidden pr-0.5 [scrollbar-width:thin]'
-              : 'flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:thin] snap-x snap-mandatory'
+              ? 'flex flex-col gap-2.5 max-h-[min(72vh,calc(100vh-6.5rem))] overflow-y-auto overflow-x-hidden pr-0.5 scrollbar-hide'
+              : 'flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide snap-x snap-mandatory'
           }
         >
           {clusters.map((cluster) => {

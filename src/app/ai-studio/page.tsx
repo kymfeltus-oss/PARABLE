@@ -11,7 +11,7 @@ const LINKS = [
   { href: '/teleprompter', label: 'Teleprompter', desc: 'Scroll notes while you stream', icon: FileText },
   { href: '/sermon-checker', label: 'Sermon checker', desc: 'Compare notes vs transcript', icon: Wand2 },
   { href: '/sunday', label: 'Director Mode', desc: 'Word vs Worship viewer experience', icon: Mic2 },
-  { href: '/testify', label: 'Testify feed', desc: 'Community portal & clips', icon: Sparkles },
+  { href: '/sanctuary', label: 'Sanctuary feed', desc: 'Community portal & clips', icon: Sparkles },
 ] as const;
 
 export default function AIStudioPage() {

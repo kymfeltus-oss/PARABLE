@@ -109,7 +109,7 @@ export default function BrowsePage() {
               <button
                 key={item.id}
                 onClick={() => {
-                  if (item.type === 'stream') router.push('/testify');
+                  if (item.type === 'stream') router.push('/sanctuary');
                   else if (item.type === 'game') router.push('/gaming');
                   else router.push('/parables');
                 }}

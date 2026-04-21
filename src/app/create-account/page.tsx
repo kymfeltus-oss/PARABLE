@@ -127,17 +127,31 @@ export default function CreateAccount() {
       setImageProcessing(false);
     }
 
+    const usernameNormalized = formData.username.trim().toLowerCase();
+    const fullNameTrimmed = formData.full_name.trim();
+
+    /** Supabase Auth user_metadata — consumed by `handle_new_user` / triggers to seed `public.profiles`. */
+    const userMetadata: Record<string, string> = {
+      full_name: fullNameTrimmed,
+      username: usernameNormalized,
+    };
+    // JWT / user_metadata size limits: only store public URLs here. Local `data:` uploads stay in localStorage + post-login upsert.
+    if (
+      avatarValue &&
+      typeof avatarValue === "string" &&
+      /^https?:\/\//i.test(avatarValue.trim())
+    ) {
+      userMetadata.avatar_url = avatarValue.trim();
+    }
+
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
-      options: { 
-        data: { 
-          full_name: formData.full_name, 
-          username: formData.username.toLowerCase()
-        },
+      options: {
+        data: userMetadata,
         // Exchange auth code through callback first, then land in sanctuary.
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/my-sanctuary')}`
-      }
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/my-sanctuary")}`,
+      },
     });
 
     if (authError) {

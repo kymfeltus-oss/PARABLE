@@ -64,7 +64,7 @@ const FLAGSHIPS = [
     hub: "Musicians host in-game concerts; the world becomes a giant interactive music video tied to PARABLE releases.",
     links: [
       { href: "/music-hub", label: "Artist Hub" },
-      { href: "/testify", label: "Testify feed" },
+      { href: "/sanctuary", label: "Sanctuary feed" },
       { href: "/fellowship", label: "Fellowship" },
     ],
   },
@@ -323,7 +323,7 @@ export default function GamingPage() {
 
         <section className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { href: "/testify", label: "Testify", sub: "Seeds & social floor", icon: Mic2 },
+            { href: "/sanctuary", label: "Sanctuary", sub: "Seeds & social floor", icon: Mic2 },
             { href: "/music-hub", label: "Artist Hub", sub: "Residency, sheds, merch", icon: Music },
             { href: "/live-studio", label: "Live Studio", sub: "Broadcast into the world", icon: Sparkles },
             { href: "/browse", label: "Browse", sub: "More live catalogue", icon: Radio },

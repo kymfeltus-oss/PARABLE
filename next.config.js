@@ -30,6 +30,15 @@ const nextConfig = {
     // Ensure browser bundle gets Supabase URL/key after .env.local loads (avoids stale/empty NEXT_PUBLIC_* in dev).
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+    NEXT_PUBLIC_PARABLE_DEV_GUEST: process.env.NEXT_PUBLIC_PARABLE_DEV_GUEST ?? '',
+    NEXT_PUBLIC_SUPABASE_BROWSER_RELAY:
+      process.env.NEXT_PUBLIC_SUPABASE_BROWSER_RELAY ?? '',
+  },
+  async redirects() {
+    return [
+      { source: '/testify', destination: '/sanctuary', permanent: true },
+      { source: '/testify/:path*', destination: '/sanctuary/:path*', permanent: true },
+    ];
   },
   async rewrites() {
     const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -45,11 +54,11 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/testify',
+        source: '/sanctuary',
         headers: [{ key: 'Cache-Control', value: 'no-store, must-revalidate' }],
       },
       {
-        source: '/testify/:path*',
+        source: '/sanctuary/:path*',
         headers: [{ key: 'Cache-Control', value: 'no-store, must-revalidate' }],
       },
       {

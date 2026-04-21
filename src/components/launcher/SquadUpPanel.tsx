@@ -38,7 +38,7 @@ export default function SquadUpPanel() {
         <p className="text-[10px] font-black uppercase tracking-[0.28em] text-white/40">Squad up</p>
         <p className="mt-1 text-sm font-semibold text-white">Who&apos;s online</p>
       </div>
-      <ul className="divide-y divide-white/[0.06] max-h-[320px] overflow-y-auto">
+      <ul className="divide-y divide-white/[0.06] max-h-[320px] overflow-y-auto scrollbar-hide">
         {MOCK_SQUAD.map((f) => (
           <li key={f.id} className="px-4 py-3 flex items-center gap-3">
             <div className="relative shrink-0">

@@ -588,7 +588,7 @@ export function TestifyLivePortalFeed({
               <X className="h-5 w-5" />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 pb-32">
+          <div className="flex-1 overflow-y-auto p-4 pb-32 scrollbar-hide">
             <p className="text-white/75 text-[15px] leading-relaxed whitespace-pre-line">{expanded.text}</p>
             {expanded.mediaUrl ? (
               <div className="mt-4 rounded-2xl border border-[#00f2ff]/20 overflow-hidden relative">
@@ -838,7 +838,7 @@ export function TestifyLivePortalFeed({
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 text-sm">
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 text-sm scrollbar-hide">
               <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-2">
                 <p className="text-[10px] text-white/40 uppercase tracking-wider">Mia</p>
                 <p className="text-white/85">This chorus hit different tonight 🔥</p>

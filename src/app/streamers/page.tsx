@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Radio,
@@ -10,7 +10,6 @@ import {
   Play,
   Pause,
   MessageSquare,
-  Heart,
   DollarSign,
   Settings,
   Loader2,
@@ -25,6 +24,7 @@ import {
   AlertTriangle,
   Flame,
   Headphones,
+  Mic2,
   Cross,
   MonitorPlay,
   Sun,
@@ -34,10 +34,17 @@ import HubBackground from "@/components/HubBackground";
 import Header from "@/components/Header";
 import { FlightDeckVision } from "@/components/command-center/FlightDeckVision";
 import { LiveRolodexBrowse } from "@/components/streamers/LiveRolodexBrowse";
+import StreamersFollowSidebar from "@/components/streamers/StreamersFollowSidebar";
+import StreamersLiveGrid, { type LiveStreamCardItem } from "@/components/streamers/StreamersLiveGrid";
+import StreamersActivityRail from "@/components/streamers/StreamersActivityRail";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { fallbackAvatarOnError } from "@/lib/avatar-display";
+import { createClient } from "@/utils/supabase/client";
+import { CommandCenterSanctuaryRoom } from "@/components/command-center/CommandCenterSanctuaryRoom";
+import { broadcastFellowshipHubStreamStart } from "@/lib/fellowship-hub-broadcast";
+import type { LiveKitEdgeTokenResponse } from "@/lib/livekit-supabase-edge";
 
 const MODES = [
   { id: "broadcast", label: "Live Broadcast", icon: <Radio size={16} />, color: "#00f2ff" },
@@ -48,7 +55,7 @@ const MODES = [
 const CATEGORY_WORLDS = [
   { id: "worship", title: "Worship", watching: "3.8K", subtitle: "Live sets", href: "/music-hub", icon: <Headphones size={20} strokeWidth={1.5} /> },
   { id: "prayer", title: "Prayer", watching: "2.1K", subtitle: "Rooms open", href: "/watch/lr2", icon: <Cross size={20} strokeWidth={1.5} /> },
-  { id: "testimonies", title: "Stories", watching: "1.6K", subtitle: "Testimony", href: "/testify", icon: <Sparkles size={20} strokeWidth={1.5} /> },
+  { id: "testimonies", title: "Stories", watching: "1.6K", subtitle: "Testimony", href: "/sanctuary", icon: <Sparkles size={20} strokeWidth={1.5} /> },
   { id: "study", title: "Bible study", watching: "1.3K", subtitle: "Teaching", href: "/table", icon: <BookOpen size={20} strokeWidth={1.5} /> },
   { id: "revival", title: "Revival", watching: "4.2K", subtitle: "Night services", href: "/watch/lr4", icon: <Flame size={20} strokeWidth={1.5} /> },
   { id: "gaming", title: "Faith gaming", watching: "2.7K", subtitle: "Community", href: "/gaming", icon: <MonitorPlay size={20} strokeWidth={1.5} /> },
@@ -92,12 +99,36 @@ type SermonReport = {
   highlights: string[];
 };
 
+function parseViewersToPraise(viewers: string, id: string): number {
+  const v = viewers.trim();
+  if (v && v !== "—") {
+    const km = v.match(/^([\d.]+)\s*K$/i);
+    if (km) return Math.round(parseFloat(km[1]) * 1000);
+    const n = parseInt(v.replace(/,/g, ""), 10);
+    if (Number.isFinite(n)) return n;
+  }
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return 800 + (Math.abs(h) % 4000);
+}
+
 export default function StreamerHub() {
   const router = useRouter();
-  const { userProfile, avatarUrl, loading: authLoading } = useAuth();
+  const { userProfile, avatarUrl, loading: authLoading, refreshProfile } = useAuth();
+
+  const [clientReady, setClientReady] = useState(false);
 
   const [activeMode, setActiveMode] = useState<(typeof MODES)[number]["id"]>("broadcast");
   const [isLive, setIsLive] = useState(false);
+  const [studioBusy, setStudioBusy] = useState(false);
+  const [sanctuaryLiveKit, setSanctuaryLiveKit] = useState<{
+    token: string;
+    url: string;
+    room: string;
+  } | null>(null);
+  const [liveKitCmdError, setLiveKitCmdError] = useState<string | null>(null);
+  const [directorMode, setDirectorMode] = useState(false);
+  const directorPrompterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [analytics] = useState({ support: "$2,450", active: "1.2k", praise: "1.28M", prayer: "32" });
   const displayName = userProfile?.username || userProfile?.full_name || "User";
 
@@ -175,6 +206,24 @@ export default function StreamerHub() {
   );
 
   useEffect(() => {
+    setClientReady(true);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (directorPrompterTimerRef.current) {
+        clearTimeout(directorPrompterTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof userProfile?.is_live === "boolean") {
+      setIsLive(userProfile.is_live);
+    }
+  }, [userProfile?.is_live]);
+
+  useEffect(() => {
     if (!teleprompterOpen || !telePlaying) return;
     const el = document.getElementById("parable-teleprompter-scroll");
     if (!el) return;
@@ -200,6 +249,18 @@ export default function StreamerHub() {
     );
   }, [STREAMS, activeRow, query]);
 
+  const browseGridItems = useMemo((): LiveStreamCardItem[] => {
+    return filteredTiles.map((s) => ({
+      id: s.id,
+      title: s.title,
+      creator: s.creator,
+      tag: s.tag,
+      live: s.live,
+      hot: false,
+      praiseSeed: parseViewersToPraise(s.viewers, s.id),
+    }));
+  }, [filteredTiles]);
+
   const liveCount = useMemo(() => {
     return Object.values(STREAMS).flat().filter((stream) => stream.live).length;
   }, [STREAMS]);
@@ -212,26 +273,125 @@ export default function StreamerHub() {
   const goAiStudio = () => router.push("/ai-studio");
   const goTeleprompter = () => router.push("/teleprompter");
   const goSermonChecker = () => router.push("/sermon-checker");
-  const goGoLive = () => router.push("/live-studio");
+  const openStudioLive = useCallback(async () => {
+    if (studioBusy) return;
+    setStudioBusy(true);
+    setLiveKitCmdError(null);
+    setDirectorMode(false);
+    if (directorPrompterTimerRef.current) {
+      clearTimeout(directorPrompterTimerRef.current);
+      directorPrompterTimerRef.current = null;
+    }
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      const profileUsername =
+        (typeof userProfile?.username === "string" && userProfile.username.trim()) || displayName;
+
+      const { data: lk, error: fnError } = await supabase.functions.invoke<LiveKitEdgeTokenResponse>(
+        "get-livekit-token",
+        {
+          body: { room: "Sanctuary", username: profileUsername },
+        },
+      );
+
+      if (fnError || !lk?.token || !lk?.url) {
+        const msg = fnError?.message ?? "Could not start LiveKit session.";
+        console.error("openStudioLive: LiveKit token", msg);
+        setLiveKitCmdError(msg);
+        return;
+      }
+
+      setSanctuaryLiveKit({ token: lk.token, url: lk.url, room: lk.room ?? "Sanctuary" });
+
+      const { error: liveRowError } = await supabase
+        .from("profiles")
+        .update({ is_live: true })
+        .eq("id", user.id);
+
+      if (liveRowError) {
+        console.error("openStudioLive: is_live update", liveRowError.message);
+        setLiveKitCmdError(liveRowError.message);
+        setSanctuaryLiveKit(null);
+        return;
+      }
+
+      try {
+        await broadcastFellowshipHubStreamStart(supabase, {
+          username: displayName,
+          userId: user.id,
+          message: "is now LIVE in the Sanctuary!",
+        });
+      } catch (broadcastErr) {
+        console.error("openStudioLive: fellowship-hub broadcast", broadcastErr);
+      }
+
+      refreshProfile();
+      setIsLive(true);
+      setDirectorMode(true);
+      directorPrompterTimerRef.current = setTimeout(() => {
+        setTeleprompterOpen(true);
+        directorPrompterTimerRef.current = null;
+      }, 480);
+    } finally {
+      setStudioBusy(false);
+    }
+  }, [studioBusy, router, refreshProfile, displayName, userProfile?.username]);
+
   const goWatch = (id: string) => router.push(`/watch/${id}`);
   const goTiers = () => router.push("/contribution-tiers");
   const goCommunity = () => router.push("/community");
-  const goTestify = () => router.push("/testify");
+  const goTestify = () => router.push("/sanctuary");
   const goBrowse = () => router.push("/browse");
 
   const goBroadcastMode = (modeId: (typeof MODES)[number]["id"]) => {
     setActiveMode(modeId);
-    if (modeId === "broadcast") router.push("/live-studio");
+    if (modeId === "broadcast") void openStudioLive();
     if (modeId === "study") router.push("/table");
-    if (modeId === "interaction") router.push("/testify");
+    if (modeId === "interaction") router.push("/sanctuary");
   };
 
   const toggleLive = () => {
+    if (studioBusy) return;
     if (isLive) {
-      setIsLive(false);
-      router.push("/live-studio");
+      void (async () => {
+        setStudioBusy(true);
+        if (directorPrompterTimerRef.current) {
+          clearTimeout(directorPrompterTimerRef.current);
+          directorPrompterTimerRef.current = null;
+        }
+        setDirectorMode(false);
+        setSanctuaryLiveKit(null);
+        setLiveKitCmdError(null);
+        try {
+          const supabase = createClient();
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+          if (!user) {
+            router.push("/login");
+            return;
+          }
+          const { error } = await supabase.from("profiles").update({ is_live: false }).eq("id", user.id);
+          if (error) {
+            console.error("toggleLive end:", error.message);
+            return;
+          }
+          refreshProfile();
+          setIsLive(false);
+        } finally {
+          setStudioBusy(false);
+        }
+      })();
     } else {
-      goGoLive();
+      void openStudioLive();
     }
   };
 
@@ -318,11 +478,16 @@ export default function StreamerHub() {
             <div className="flex w-full min-w-0 shrink-0 flex-col gap-2">
               <button
                 type="button"
-                onClick={goGoLive}
-                className="inline-flex w-full min-w-0 items-center justify-center gap-2 rounded-xl bg-red-600 px-6 py-3.5 text-sm font-bold text-white shadow-[0_0_28px_rgba(220,38,38,0.4)] transition hover:bg-red-500 hover:shadow-[0_0_36px_rgba(248,113,113,0.45)]"
+                disabled={studioBusy}
+                onClick={() => void openStudioLive()}
+                className="inline-flex w-full min-w-0 items-center justify-center gap-2 rounded-xl bg-red-600 px-6 py-3.5 text-sm font-bold text-white shadow-[0_0_28px_rgba(220,38,38,0.4)] transition hover:bg-red-500 hover:shadow-[0_0_36px_rgba(248,113,113,0.45)] disabled:opacity-60"
               >
-                <Radio className="h-5 w-5 shrink-0" strokeWidth={2.25} />
-                Go live
+                {studioBusy ? (
+                  <Loader2 className="h-5 w-5 shrink-0 animate-spin" strokeWidth={2.25} />
+                ) : (
+                  <Radio className="h-5 w-5 shrink-0" strokeWidth={2.25} />
+                )}
+                Start stream
               </button>
               <button
                 type="button"
@@ -332,7 +497,93 @@ export default function StreamerHub() {
                 <FileText className="h-4 w-4 shrink-0 text-[#00f2ff]" />
                 Prep teleprompter
               </button>
+              <Link
+                href="/studio"
+                className="inline-flex w-full min-w-0 items-center justify-center rounded-xl border border-[#00f2ff]/35 bg-[#00f2ff]/10 px-5 py-2.5 text-xs font-semibold text-[#00f2ff] transition hover:bg-[#00f2ff]/15"
+              >
+                Open full Live Studio
+              </Link>
             </div>
+
+            {liveKitCmdError ? (
+              <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200/90">
+                {liveKitCmdError}
+              </p>
+            ) : null}
+
+            {clientReady && sanctuaryLiveKit ? (
+              <div className="mt-5 aspect-video w-full min-h-[220px] overflow-hidden rounded-xl border border-[#00f2ff]/25 bg-black shadow-[0_0_40px_-8px_rgba(0,242,255,0.25)]">
+                <CommandCenterSanctuaryRoom
+                  token={sanctuaryLiveKit.token}
+                  serverUrl={sanctuaryLiveKit.url}
+                  roomName={sanctuaryLiveKit.room}
+                  onDisconnected={() => {
+                    setSanctuaryLiveKit(null);
+                    setDirectorMode(false);
+                    setIsLive(false);
+                  }}
+                  onError={(msg) => setLiveKitCmdError(msg)}
+                />
+              </div>
+            ) : null}
+
+            <AnimatePresence>
+              {directorMode && sanctuaryLiveKit ? (
+                <motion.div
+                  key="director-mode"
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 12 }}
+                  transition={{ type: "spring", damping: 26, stiffness: 280 }}
+                  className="mt-5 space-y-3"
+                >
+                  <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+                    <Sparkles className="h-4 w-4 text-[#00f2ff]" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#00f2ff]/90">Director mode</p>
+                  </div>
+                  <p className="text-xs text-white/50">
+                    Ghost-Script prompter and AI Architect — stay in flow while the Sanctuary feed runs above.
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setTeleprompterOpen(true)}
+                      className="rounded-xl border border-fuchsia-500/35 bg-fuchsia-500/[0.08] p-4 text-left transition hover:border-fuchsia-400/50 hover:bg-fuchsia-500/[0.12]"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Mic2 className="h-5 w-5 text-fuchsia-300" strokeWidth={2} />
+                        <span className="text-sm font-semibold text-white">Ghost-Script prompter</span>
+                      </div>
+                      <p className="mt-2 text-[11px] leading-relaxed text-white/45">
+                        Voice-scrolled notes, cues, and on-stage rhythm — opens the prompter overlay.
+                      </p>
+                    </button>
+                    <Link
+                      href="/lab"
+                      className="rounded-xl border border-[#00f2ff]/35 bg-[#00f2ff]/[0.06] p-4 text-left transition hover:border-[#00f2ff]/55 hover:bg-[#00f2ff]/10"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Wand2 className="h-5 w-5 text-[#00f2ff]" strokeWidth={2} />
+                        <span className="text-sm font-semibold text-white">AI Architect</span>
+                      </div>
+                      <p className="mt-2 text-[11px] leading-relaxed text-white/45">
+                        Setlists, sermon structure, Greek/Hebrew glosses — full lab workspace.
+                      </p>
+                      <span className="mt-3 inline-block text-[10px] font-bold uppercase tracking-wider text-[#00f2ff]">
+                        Open lab →
+                      </span>
+                    </Link>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDirectorMode(false)}
+                    className="text-[11px] font-semibold text-white/40 underline-offset-2 hover:text-white/60 hover:underline"
+                  >
+                    Collapse director dock
+                  </button>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -367,8 +618,11 @@ export default function StreamerHub() {
         </div>
 
         <div className="mx-auto w-full min-w-0 max-w-full px-4 py-8">
-          <div className="grid grid-cols-1 gap-8">
-            <aside className="space-y-5">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[220px_minmax(0,1fr)_300px] xl:items-start">
+            <StreamersFollowSidebar className="w-full max-w-full xl:w-[220px]" />
+
+            <div className="min-w-0 space-y-8">
+              <div className="space-y-5">
               <div className="rounded-2xl border border-white/[0.08] bg-black/40 backdrop-blur-md p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
@@ -473,9 +727,8 @@ export default function StreamerHub() {
                   </button>
                 </div>
               </div>
-            </aside>
+              </div>
 
-            <section className="min-w-0 space-y-8">
               <LiveRolodexBrowse items={roloItems} onWatch={goWatch} />
 
               <Link
@@ -539,9 +792,11 @@ export default function StreamerHub() {
                       </button>
                       <button
                         type="button"
-                        onClick={goGoLive}
-                        className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-white/90 hover:bg-white/[0.07] transition-colors"
+                        disabled={studioBusy}
+                        onClick={() => void openStudioLive()}
+                        className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-white/90 transition-colors hover:bg-white/[0.07] disabled:opacity-60"
                       >
+                        {studioBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                         Open studio
                       </button>
                     </div>
@@ -647,52 +902,13 @@ export default function StreamerHub() {
                 </div>
 
                 <div className="p-4 sm:p-5">
-                  <div className="grid grid-cols-1 gap-4">
-                    {filteredTiles.map((s) => (
-                      <motion.button
-                        key={s.id}
-                        type="button"
-                        whileHover={{ y: -2 }}
-                        whileTap={{ scale: 0.99 }}
-                        onClick={() => goWatch(s.id)}
-                        className="rounded-xl border border-white/[0.08] bg-black/40 text-left overflow-hidden hover:border-white/15 transition-colors"
-                      >
-                        <div className="aspect-video bg-zinc-950 flex items-center justify-center border-b border-white/[0.06] relative">
-                          <Zap className="text-[#00f2ff]/30" size={36} strokeWidth={1.25} />
-                          {s.live ? (
-                            <span className="absolute top-3 left-3 text-[10px] font-semibold uppercase tracking-wide text-red-300 bg-black/60 border border-red-500/25 px-2 py-0.5 rounded-md">
-                              Live · {s.viewers}
-                            </span>
-                          ) : (
-                            <span className="absolute top-3 left-3 text-[10px] font-medium text-white/45 bg-black/50 px-2 py-0.5 rounded-md">
-                              Replay
-                            </span>
-                          )}
-                        </div>
-                        <div className="p-4">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="text-[11px] font-medium text-[#00f2ff]/90">{s.tag}</p>
-                              <p className="mt-1 font-semibold text-white leading-snug">{s.title}</p>
-                              <p className="mt-1 text-xs text-white/45">{s.creator}</p>
-                            </div>
-                            <span className="shrink-0 text-xs font-medium text-[#00f2ff]">Watch</span>
-                          </div>
-                          <div className="mt-3 flex items-center gap-4 text-xs text-white/35">
-                            <span className="inline-flex items-center gap-1">
-                              <Heart size={14} /> 12K
-                            </span>
-                            <span className="inline-flex items-center gap-1">
-                              <MessageSquare size={14} /> 940
-                            </span>
-                          </div>
-                        </div>
-                      </motion.button>
-                    ))}
-                  </div>
+                  <StreamersLiveGrid items={browseGridItems} />
                 </div>
               </div>
-            </section>
+            </div>
+
+            <div className="flex min-w-0 flex-col gap-4">
+              <StreamersActivityRail />
 
             <aside className="space-y-5">
               <div className="rounded-2xl border border-white/[0.08] bg-black/40 backdrop-blur-md p-5">
@@ -700,20 +916,25 @@ export default function StreamerHub() {
                   <p className="text-xs font-medium text-white/50">Broadcast mode</p>
                   <button
                     type="button"
+                    disabled={studioBusy}
                     onClick={toggleLive}
-                    className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+                    className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors disabled:opacity-60 ${
                       isLive
                         ? "bg-red-500/15 border-red-500/35 text-red-300"
                         : "bg-[#00f2ff] border-[#00f2ff] text-black"
                     }`}
                   >
-                    {isLive ? (
+                    {studioBusy ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Loader2 size={14} className="animate-spin" /> …
+                      </span>
+                    ) : isLive ? (
                       <span className="inline-flex items-center gap-2">
                         <Pause size={14} /> End
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-2">
-                        <Play size={14} /> Go live
+                        <Play size={14} /> Start stream
                       </span>
                     )}
                   </button>
@@ -776,6 +997,7 @@ export default function StreamerHub() {
                 </div>
               </div>
             </aside>
+            </div>
           </div>
         </div>
 
@@ -816,7 +1038,7 @@ export default function StreamerHub() {
                 </button>
               </div>
 
-              <div className="p-5 space-y-4 overflow-y-auto">
+              <div className="p-5 space-y-4 overflow-y-auto scrollbar-hide">
                 <div className="rounded-[1.5rem] border border-[#00f2ff]/18 bg-black/55 p-4">
                   <p className="text-[10px] font-black uppercase tracking-[5px] text-[#00f2ff]">Teleprompter</p>
                   <p className="mt-2 text-sm text-white/60 font-bold italic leading-relaxed">
@@ -989,7 +1211,7 @@ export default function StreamerHub() {
 
                   <div
                     id="parable-teleprompter-scroll"
-                    className="h-[34vh] overflow-y-auto p-5 leading-relaxed custom-scrollbar"
+                    className="h-[34vh] overflow-y-auto p-5 leading-relaxed scrollbar-hide"
                     style={{ fontSize: teleFont }}
                   >
                     <div className="text-white/80 font-bold whitespace-pre-wrap">

@@ -118,6 +118,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = createClient();
 
     try {
+      try {
+        const guestRes = await fetch("/api/auth/guest-preview", {
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        if (guestRes.ok) {
+          const guestJson = (await guestRes.json()) as {
+            guest?: boolean;
+            profile?: Record<string, unknown>;
+          };
+          if (
+            guestJson?.guest &&
+            guestJson.profile &&
+            typeof guestJson.profile === "object"
+          ) {
+            setUserProfile(guestJson.profile);
+            setCanonicalAvatarUrl("/logo.svg");
+            if (gen === loadGenRef.current) setLoading(false);
+            return;
+          }
+        }
+      } catch {
+        /* continue to Supabase session */
+      }
+
       const {
         data: { session },
       } = await supabase.auth.getSession();

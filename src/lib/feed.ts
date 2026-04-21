@@ -6,15 +6,15 @@ export async function fetchHomeFeed(limit = 20, offset = 0) {
   const supabase = createClient();
 
   // NOTE: This expects posts.profile_id -> profiles.id
-  // and likes/comments tables exist (you now have them).
+  // and post_likes / post_comments tables exist.
   const { data, error } = await supabase
     .from("posts")
     .select(
       `
       id, profile_id, content, post_type, media_url, created_at,
       profiles:profile_id ( id, full_name, avatar_url ),
-      likes(count),
-      comments(count)
+      post_likes(count),
+      post_comments(count)
     `
     )
     .order("created_at", { ascending: false })
@@ -48,8 +48,8 @@ export async function fetchProfileFeed(profileId: string, limit = 20, offset = 0
       `
       id, profile_id, content, post_type, media_url, created_at,
       profiles:profile_id ( id, full_name, avatar_url ),
-      likes(count),
-      comments(count)
+      post_likes(count),
+      post_comments(count)
     `
     )
     .eq("profile_id", profileId)
@@ -68,9 +68,9 @@ export async function toggleLike(postId: string) {
   const user = userRes.user;
   if (!user) throw new Error("Not logged in.");
 
-  // likes table: (post_id uuid, user_id uuid)
+  // post_likes: (post_id uuid, user_id uuid)
   const { data: existing, error: e1 } = await supabase
-    .from("likes")
+    .from("post_likes")
     .select("id")
     .eq("post_id", postId)
     .eq("user_id", user.id)
@@ -79,11 +79,13 @@ export async function toggleLike(postId: string) {
   if (e1) throw e1;
 
   if (existing?.id) {
-    const { error } = await supabase.from("likes").delete().eq("id", existing.id);
+    const { error } = await supabase.from("post_likes").delete().eq("id", existing.id);
     if (error) throw error;
     return { liked: false };
   } else {
-    const { error } = await supabase.from("likes").insert({ post_id: postId, user_id: user.id });
+    const { error } = await supabase
+      .from("post_likes")
+      .insert({ post_id: postId, user_id: user.id });
     if (error) throw error;
     return { liked: true };
   }
@@ -97,9 +99,11 @@ export async function addComment(postId: string, content: string) {
   const user = userRes.user;
   if (!user) throw new Error("Not logged in.");
 
-  const { error } = await supabase
-    .from("comments")
-    .insert({ post_id: postId, user_id: user.id, content });
+  const { error } = await supabase.from("post_comments").insert({
+    post_id: postId,
+    profile_id: user.id,
+    content,
+  });
 
   if (error) throw error;
   return { ok: true };

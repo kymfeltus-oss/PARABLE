@@ -56,7 +56,7 @@ export function ActivityPulseDrawer({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5 pb-8">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5 pb-8 scrollbar-hide">
           <div className="rounded-2xl border border-[#00f2ff]/25 bg-gradient-to-br from-[#00f2ff]/12 to-fuchsia-500/5 p-4">
             <p className="text-[9px] font-black uppercase tracking-[8px] text-white/50">Vibe meter</p>
             <p className="text-lg font-black text-white mt-2 leading-tight">

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   User,
@@ -8,151 +9,71 @@ import {
   Heart,
   DollarSign,
   Gift,
-  Radio,
-  Gamepad2,
   Users,
   Sparkles,
   Instagram,
   Facebook,
   Youtube,
   Link as LinkIcon,
-  Play,
-  Plus,
   Star,
-  Music4,
-  MessageCircle,
   Crown,
   Shield,
   Wallet,
   CalendarDays,
   Eye,
+  Radio,
+  ChevronRight,
+  Settings,
+  Activity,
+  Hash,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { createClient } from "@/utils/supabase/client";
 import { uploadUserAvatarFromDataUrl } from "@/lib/avatar-storage";
 import { clearPendingAvatarKeys, persistAvatarPublicUrlToProfile } from "@/lib/profile-avatar";
 import { fallbackAvatarOnError } from "@/lib/avatar-display";
+import ProfileWidgets from "@/components/ProfileWidgets";
 
-function frac(n: number) {
-  return n - Math.floor(n);
-}
-
-function prand(seed: number) {
-  return frac(Math.sin(seed * 9999.123) * 10000);
-}
-
-function ProfileSparkles() {
-  const sparkles = useMemo(() => {
-    return Array.from({ length: 58 }).map((_, i) => {
-      const r1 = prand(i + 1);
-      const r2 = prand(i + 101);
-      const r3 = prand(i + 1001);
-      const r4 = prand(i + 5001);
-
-      return {
-        id: i,
-        left: `${(r1 * 100).toFixed(4)}%`,
-        top: `${(r2 * 100).toFixed(4)}%`,
-        dur: `${(4.2 + r3 * 3.4).toFixed(4)}s`,
-        delay: `${(r4 * 1.6).toFixed(4)}s`,
-        size: 1 + (i % 3),
-        opacity: 0.18 + (i % 4) * 0.08,
-      };
-    });
-  }, []);
-
+/** Discord-style sidebar card (#2b2d31 surface). */
+function DiscordWidget({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      {sparkles.map((s) => (
-        <span
-          key={s.id}
-          className="absolute rounded-full bg-[#00f2fe] shadow-[0_0_16px_rgba(0,242,254,0.75)]"
-          style={{
-            left: s.left,
-            top: s.top,
-            width: `${s.size}px`,
-            height: `${s.size}px`,
-            opacity: s.opacity,
-            animation: `profileSpark ${s.dur} ease-in-out ${s.delay} infinite`,
-          }}
-        />
-      ))}
-
-      <style jsx global>{`
-        @keyframes profileSpark {
-          0% {
-            transform: translate3d(0, 0, 0) scale(0.9);
-            opacity: 0;
-          }
-          20% {
-            opacity: 1;
-          }
-          50% {
-            transform: translate3d(0, -18px, 0) scale(1.08);
-          }
-          100% {
-            transform: translate3d(0, -44px, 0) scale(0.8);
-            opacity: 0;
-          }
-        }
-
-        @keyframes profileOcean {
-          0%,
-          100% {
-            transform: translate3d(0, 0, 0) rotate(0deg);
-          }
-          50% {
-            transform: translate3d(2%, -2%, 0) rotate(5deg);
-          }
-        }
-
-        @keyframes borderGlow {
-          0%,
-          100% {
-            box-shadow: 0 0 0 rgba(0, 242, 254, 0);
-          }
-          50% {
-            box-shadow: 0 0 48px rgba(0, 242, 254, 0.12);
-          }
-        }
-
-        @keyframes pulseDot {
-          0%,
-          100% {
-            opacity: 0.35;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.08);
-          }
-        }
-      `}</style>
+    <div className="overflow-hidden rounded-lg border border-[#1f2023] bg-[#2b2d31] shadow-[0_1px_0_rgba(4,4,5,0.2)]">
+      <div className="flex items-center gap-2 border-b border-black/50 bg-[#232428] px-3 py-2">
+        <span className="text-[#949ba4]">{icon}</span>
+        <h3 className="text-[11px] font-bold uppercase tracking-wide text-[#b5bac1]">{title}</h3>
+      </div>
+      <div className="p-3">{children}</div>
     </div>
   );
 }
 
-function StatCard({
-  label,
-  value,
-  icon,
+/** Twitch “About” panel: header strip + content. */
+function TwitchPanel({
+  title,
+  subtitle,
+  children,
+  className = "",
 }: {
-  label: string;
-  value: string;
-  icon: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="min-w-0 rounded-[24px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur-2xl">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-white/40">{icon}</span>
-        <span className="text-[9px] font-black uppercase tracking-[3px] text-white/35">
-          Live Stat
-        </span>
+    <div className={`flex flex-col overflow-hidden rounded-md border border-[#1f2023] bg-[#2b2d31] ${className}`}>
+      <div className="border-b border-black/40 bg-[#1e1f22] px-4 py-2.5">
+        <h4 className="text-sm font-semibold text-[#ececec]">{title}</h4>
+        {subtitle ? <p className="mt-0.5 text-xs text-[#949ba4]">{subtitle}</p> : null}
       </div>
-      <p className="mt-4 text-[10px] font-black uppercase tracking-[4px] text-white/45">
-        {label}
-      </p>
-      <p className="mt-1 break-words text-lg font-black leading-tight text-white">{value}</p>
+      <div className="p-4 text-sm text-[#dbdee1]">{children}</div>
     </div>
   );
 }
@@ -172,100 +93,95 @@ function SupportCard({
 }) {
   return (
     <motion.button
-      whileHover={{ y: -2, scale: 1.01 }}
-      whileTap={{ scale: 0.99 }}
+      whileHover={{ y: -1 }}
+      whileTap={{ scale: 0.995 }}
       className={[
-        "w-full min-w-0 overflow-hidden rounded-[24px] border p-5 text-left backdrop-blur-2xl transition-all",
+        "w-full min-w-0 overflow-hidden rounded-lg border p-4 text-left transition-all",
         active
-          ? "border-[#00f2fe]/28 bg-[#00f2fe]/10 shadow-[0_0_42px_rgba(0,242,254,0.12)]"
-          : "border-white/10 bg-white/[0.04] hover:border-[#00f2fe]/20",
+          ? "border-[#5865f2]/50 bg-[#5865f2]/15 shadow-[0_0_0_1px_rgba(88,101,242,0.35)]"
+          : "border-[#1f2023] bg-[#1e1f22] hover:border-[#3f4147]",
       ].join(" ")}
     >
       <div className="flex items-center justify-between">
-        <span className="text-[#00f2fe]">{icon}</span>
-        <span className="text-[10px] font-black uppercase tracking-[4px] text-[#00f2fe]">
-          {amount}
-        </span>
+        <span className="text-[#5865f2]">{icon}</span>
+        <span className="text-xs font-bold text-[#00d166]">{amount}</span>
       </div>
-
-      <h3 className="mt-5 break-words text-[18px] font-black text-white">{title}</h3>
-      <p className="mt-2 break-words text-sm leading-relaxed text-white/55">{subtitle}</p>
-
-      <div className="mt-5 w-full min-w-0">
-        <span className="block w-full rounded-full border border-[#00f2fe]/20 bg-black/45 px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-[4px] text-[#00f2fe]">
-          Support Now
-        </span>
+      <h3 className="mt-3 break-words text-base font-bold text-[#ececec]">{title}</h3>
+      <p className="mt-1 break-words text-xs leading-relaxed text-[#949ba4]">{subtitle}</p>
+      <div className="mt-4 rounded bg-[#5865f2]/20 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-[#949ef8]">
+        Support now
       </div>
     </motion.button>
   );
 }
 
-function SocialButton({
-  label,
-  icon,
-}: {
-  label: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <button className="rounded-[18px] border border-white/10 bg-black/45 px-4 py-3 text-[10px] font-black uppercase tracking-[3px] text-white/70 hover:bg-white/10 transition inline-flex items-center gap-2">
-      <span className="text-[#00f2fe]">{icon}</span>
-      {label}
-    </button>
-  );
-}
+type ProfileGridPost = {
+  id: string;
+  media_url: string | null;
+  content: string | null;
+  media_type: string | null;
+  created_at?: string;
+};
 
-function MediaCard({
-  title,
-  subtitle,
-  tag,
-}: {
-  title: string;
-  subtitle: string;
-  tag: string;
-}) {
-  return (
-    <motion.div
-      whileHover={{ y: -2, scale: 1.01 }}
-      className="min-w-0 rounded-[26px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-2xl shadow-[0_0_80px_rgba(0,242,254,0.08)]"
-    >
-      <div className="flex items-center justify-between">
-        <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/45 px-3 py-2">
-          <span className="h-2 w-2 rounded-full bg-[#00f2fe]" />
-          <span className="text-[10px] font-black uppercase tracking-[4px] text-white/65">
-            {tag}
-          </span>
-        </span>
+const CONNECTED_GROUPS: { name: string; href: string; tag: string }[] = [
+  { name: "Fellowship", href: "/fellowship", tag: "Community" },
+  { name: "Writers Hub", href: "/writers-hub", tag: "Stories" },
+  { name: "Music Hub", href: "/music-hub", tag: "Artists" },
+];
 
-        <button className="rounded-full border border-[#00f2fe]/18 bg-[#00f2fe]/10 p-3 text-[#00f2fe]">
-          <Play size={14} />
-        </button>
-      </div>
-
-      <div className="mt-4 h-[160px] rounded-[20px] border border-[#00f2fe]/12 bg-black/45 flex items-center justify-center overflow-hidden relative">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,242,254,0.14),transparent_58%)]" />
-        <Play className="relative z-10 text-[#00f2fe]/55" size={36} />
-      </div>
-
-      <h3 className="mt-4 break-words text-[18px] font-black text-white">{title}</h3>
-      <p className="mt-2 break-words text-sm leading-relaxed text-white/55">{subtitle}</p>
-    </motion.div>
-  );
+function formatActivityDate(iso: string | undefined) {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return "";
+  }
 }
 
 export default function ProfilePage() {
   const [selectedSupport, setSelectedSupport] = useState("Seed");
+  const [profileTab, setProfileTab] = useState<"posts" | "about">("posts");
+  const [gridPosts, setGridPosts] = useState<ProfileGridPost[]>([]);
   const { userProfile, avatarUrl, loading, applyAvatarFromUpload } = useAuth();
   const [savingAvatar, setSavingAvatar] = useState(false);
   const [avatarStatus, setAvatarStatus] = useState<string | null>(null);
   const [localAvatarPreview, setLocalAvatarPreview] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
   const displayName =
-    userProfile?.username ||
-    userProfile?.full_name ||
-    "Your Profile";
+    userProfile?.username || userProfile?.full_name || "Your Profile";
   const roleLabel = userProfile?.role || "Creator";
+  const handle =
+    userProfile?.username ??
+    (userProfile?.full_name
+      ? String(userProfile.full_name).split(/\s+/)[0].toLowerCase()
+      : "you");
   const supabase = createClient();
+
+  useEffect(() => {
+    if (!userProfile?.id) {
+      setGridPosts([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("posts")
+        .select("id, media_url, content, media_type, created_at")
+        .eq("profile_id", userProfile.id)
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (error || cancelled) return;
+      setGridPosts((data ?? []) as ProfileGridPost[]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userProfile?.id, supabase]);
 
   const compressImage = async (file: File): Promise<string | null> => {
     const source = await new Promise<string | null>((resolve) => {
@@ -341,7 +257,7 @@ export default function ProfilePage() {
       const uploaded = await uploadUserAvatarFromDataUrl(supabase, user.id, dataUrl);
       if ("error" in uploaded) {
         setAvatarStatus(
-          `Upload failed: ${uploaded.error}. In Supabase: create bucket "avatars" (public) and run SQL from supabase/storage-avatars-policies.sql.`
+          `Upload failed: ${uploaded.error}. In Supabase: create bucket "avatars" (public) and run SQL from supabase/storage-avatars-policies.sql.`,
         );
         return;
       }
@@ -368,13 +284,13 @@ export default function ProfilePage() {
         data: { avatar_url: uploaded.publicUrl },
       });
       if (metaErr) {
-        /* profile row saved; JWT metadata is optional */
+        /* optional */
       }
 
       clearPendingAvatarKeys(
         user.id,
         user.email ? String(user.email).trim().toLowerCase() : null,
-        user.email ? `parable:pending-avatar:${String(user.email).trim().toLowerCase()}` : null
+        user.email ? `parable:pending-avatar:${String(user.email).trim().toLowerCase()}` : null,
       );
 
       applyAvatarFromUpload(uploaded.publicUrl);
@@ -418,14 +334,12 @@ export default function ProfilePage() {
     },
   ];
 
-  const media: { title: string; subtitle: string; tag: string }[] = [];
-
   if (loading) {
-    return <div className="min-h-screen bg-black" />;
+    return <div className="min-h-full bg-[#313338]" />;
   }
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-black text-white pb-parable-bottom">
+    <div className="min-h-full bg-[#313338] pb-parable-bottom text-[#dbdee1]">
       <input
         ref={avatarInputRef}
         type="file"
@@ -433,260 +347,320 @@ export default function ProfilePage() {
         className="hidden"
         onChange={handleChangeProfilePicture}
       />
-      <div className="absolute inset-0">
-        <div className="absolute inset-[-30%] opacity-[0.20] blur-[90px] animate-[profileOcean_18s_ease-in-out_infinite] bg-[radial-gradient(circle_at_18%_18%,rgba(0,242,254,0.34),transparent_55%),radial-gradient(circle_at_75%_68%,rgba(255,255,255,0.12),transparent_60%),radial-gradient(circle_at_46%_82%,rgba(0,242,254,0.18),transparent_55%)]" />
-        <div className="absolute inset-0 opacity-[0.10] [background:linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:92px_92px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_0%,rgba(0,0,0,0.74)_58%,rgba(0,0,0,0.97)_100%)]" />
+
+      {/* Facebook-style cover (full width) */}
+      <div className="relative w-full overflow-hidden bg-[#1e1f22]">
+        <div className="h-44 bg-gradient-to-br from-[#5865f2]/35 via-[#3c45a5]/20 to-[#1e1f22] sm:h-52 lg:h-60" />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.15]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h30v30H0zm30 30h30v30H30z' fill='%23fff' fill-opacity='.06'/%3E%3C/svg%3E")`,
+          }}
+        />
+        {/* Profile photo overlaps bottom-left of cover */}
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="relative -mt-[4.5rem] pb-1 sm:-mt-[5.25rem]">
+            <button
+              type="button"
+              onClick={openAvatarPicker}
+              disabled={savingAvatar}
+              className="relative flex h-[7.5rem] w-[7.5rem] shrink-0 overflow-hidden rounded-full border-4 border-[#313338] bg-[#2b2d31] shadow-xl ring-2 ring-[#1f2023] transition hover:ring-[#5865f2]/50 disabled:opacity-60 sm:h-[8.5rem] sm:w-[8.5rem]"
+            >
+              {(localAvatarPreview || avatarUrl) && (localAvatarPreview || avatarUrl) !== "/logo.svg" ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={localAvatarPreview || avatarUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  onError={fallbackAvatarOnError}
+                />
+              ) : (
+                <User className="m-auto text-[#5865f2]" size={48} />
+              )}
+            </button>
+          </div>
+        </div>
       </div>
 
-      <ProfileSparkles />
-
-      <div className="relative z-10 mx-auto w-full min-w-0 max-w-full px-4 pt-10">
-        <div className="grid grid-cols-1 gap-6">
-          <div>
-            <div
-              className="relative overflow-hidden rounded-[34px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-2xl shadow-[0_0_140px_rgba(0,242,254,0.12)]"
-              style={{ animation: "borderGlow 5.4s ease-in-out infinite" }}
-            >
-              <div className="pointer-events-none absolute inset-0 opacity-[0.22] bg-[radial-gradient(circle_at_18%_18%,rgba(0,242,254,0.18),transparent_55%),radial-gradient(circle_at_85%_80%,rgba(255,255,255,0.08),transparent_60%)]" />
-
-              <div className="relative">
-                <div className="flex flex-col gap-6">
-                  <div className="flex min-w-0 flex-col gap-5">
-                    <div className="relative shrink-0">
-                      <div className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-[#00f2fe]/35 bg-black/55 shadow-[0_0_34px_rgba(0,242,254,0.18)] overflow-hidden">
-                        {(localAvatarPreview || avatarUrl) && (localAvatarPreview || avatarUrl) !== "/logo.svg" ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={localAvatarPreview || avatarUrl}
-                            alt={displayName}
-                            className="h-full w-full object-cover"
-                            onError={fallbackAvatarOnError}
-                          />
-                        ) : (
-                          <User className="text-[#00f2fe]" size={40} />
-                        )}
-                      </div>
-                      <div className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-black bg-red-500">
-                        <span
-                          className="h-2.5 w-2.5 rounded-full bg-white"
-                          style={{ animation: "pulseDot 1.15s ease-in-out infinite" }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2">
-                        <BadgeCheck size={14} className="text-[#00f2fe]" />
-                        <span className="text-[11px] font-black uppercase tracking-[4px] text-white/70">
-                          Sanctuary Member
-                        </span>
-                      </div>
-
-                      <h1 className="mt-4 break-words text-3xl font-black leading-tight tracking-tight sm:text-4xl">
-                        {displayName}
-                      </h1>
-
-                      <p className="mt-3 max-w-full text-[15px] leading-relaxed text-white/65">
-                        This is your profile space. Add highlights, update your bio, and shape how your sanctuary appears to the community.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                    <button
-                      type="button"
-                      onClick={openAvatarPicker}
-                      disabled={savingAvatar}
-                      className="rounded-[20px] bg-[#00f2fe] px-3 py-3 text-[9px] font-black uppercase leading-tight tracking-wider text-black shadow-[0_0_30px_rgba(0,242,254,0.18)] disabled:opacity-70 sm:px-5 sm:py-4 sm:text-[10px] sm:tracking-[4px]"
-                    >
-                      {savingAvatar ? "Uploading…" : "Upload photo"}
-                    </button>
-                    <button className="rounded-[20px] border border-white/10 bg-black/50 px-3 py-3 text-[9px] font-black uppercase leading-tight tracking-wider text-white/70 transition hover:bg-white/10 sm:px-5 sm:py-4 sm:text-[10px] sm:tracking-[4px]">
-                      Customize
-                    </button>
-                    <button className="rounded-[20px] border border-white/10 bg-black/50 px-3 py-3 text-[9px] font-black uppercase leading-tight tracking-wider text-white/70 transition hover:bg-white/10 sm:px-5 sm:py-4 sm:text-[10px] sm:tracking-[4px]">
-                      Add media
-                    </button>
-                    <button className="rounded-[20px] border border-white/10 bg-black/50 px-3 py-3 text-[9px] font-black uppercase leading-tight tracking-wider text-white/70 transition hover:bg-white/10 sm:px-5 sm:py-4 sm:text-[10px] sm:tracking-[4px]">
-                      Share
-                    </button>
-                  </div>
-                </div>
-                {avatarStatus ? (
-                  <p className="mt-3 text-[11px] text-white/65">{avatarStatus}</p>
-                ) : null}
-                <label className="mt-2 inline-flex cursor-pointer text-[10px] uppercase tracking-[3px] text-white/45 hover:text-[#00f2fe]">
-                  <input type="file" accept="image/*" className="hidden" onChange={handleChangeProfilePicture} />
-                  Upload from device (fallback)
-                </label>
-
-                <div className="mt-8 flex flex-wrap gap-3">
-                  <SocialButton label="Instagram" icon={<Instagram size={14} />} />
-                  <SocialButton label="Facebook" icon={<Facebook size={14} />} />
-                  <SocialButton label="YouTube" icon={<Youtube size={14} />} />
-                  <SocialButton label="Link Hub" icon={<LinkIcon size={14} />} />
-                </div>
-              </div>
+      <div className="mx-auto max-w-6xl px-4 pb-10 pt-5">
+        {/* Identity row */}
+        <div className="flex flex-col gap-4 border-b border-[#1f2023] pb-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 pl-0 sm:pl-[calc(8.5rem+1rem)]">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight text-[#ececec] sm:text-3xl">{displayName}</h1>
+              <span className="inline-flex items-center gap-1 rounded bg-[#5865f2]/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-[#b5bac1]">
+                <BadgeCheck size={12} className="text-[#5768f5]" />
+                Member
+              </span>
             </div>
+            <p className="mt-1 text-sm text-[#949ba4]">
+              @{handle} · {roleLabel}
+            </p>
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <StatCard label="Followers" value="0" icon={<Users size={18} />} />
-            <StatCard label="Live Viewers" value="0" icon={<Eye size={18} />} />
-            <StatCard label="Streams" value="0" icon={<Radio size={18} />} />
-            <StatCard label="Role" value={roleLabel} icon={<Star size={18} />} />
+          <div className="flex flex-wrap gap-2 sm:justify-end">
+            <Link
+              href="/settings"
+              className="inline-flex items-center gap-1.5 rounded bg-[#4e5058] px-3 py-2 text-xs font-medium text-white transition hover:bg-[#5c5e66]"
+            >
+              <Settings size={14} />
+              Edit profile
+            </Link>
+            <Link
+              href="/my-sanctuary"
+              className="rounded bg-[#5865f2] px-4 py-2 text-xs font-semibold text-white hover:bg-[#4752c4]"
+            >
+              My Sanctuary
+            </Link>
+            <button
+              type="button"
+              onClick={openAvatarPicker}
+              disabled={savingAvatar}
+              className="rounded border border-[#4e5058] px-3 py-2 text-xs font-medium text-[#b5bac1] hover:bg-[#2b2d31] disabled:opacity-50"
+            >
+              {savingAvatar ? "…" : "Update photo"}
+            </button>
           </div>
         </div>
 
-        <div className="mt-8 flex flex-col gap-6">
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-4">
-              <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-2xl shadow-[0_0_90px_rgba(0,242,254,0.08)]">
-                <div className="flex items-center justify-between">
-                  <Gamepad2 className="text-[#00f2fe]" size={18} />
-                  <span className="text-[9px] font-black uppercase tracking-[3px] text-white/35">
-                    Gaming
+        {avatarStatus ? (
+          <p className="mt-3 text-xs text-[#949ba4]">{avatarStatus}</p>
+        ) : null}
+
+        {/* Discord sidebar + Twitch center + ProfileWidgets (right on lg) */}
+        <div className="mt-8 flex flex-col gap-6 lg:flex-row lg:items-start">
+          {/* Sidebar widgets */}
+          <aside className="flex w-full shrink-0 flex-col gap-4 lg:w-[260px]">
+            <DiscordWidget title="User info" icon={<User size={14} />}>
+              <ul className="space-y-3 text-xs">
+                <li className="flex justify-between gap-2 border-b border-[#1f2023] pb-2 text-[#b5bac1]">
+                  <span className="flex items-center gap-1.5 text-[#949ba4]">
+                    <Hash size={12} />
+                    Username
                   </span>
-                </div>
-                <h3 className="mt-5 text-[18px] font-black text-white">Gaming Identity</h3>
-                <p className="mt-2 text-sm text-white/55 leading-relaxed">
-                  Competitive energy, live sessions, replay moments, and creator highlights.
+                  <span className="truncate font-medium text-[#ececec]">{handle}</span>
+                </li>
+                <li className="flex justify-between gap-2 border-b border-[#1f2023] pb-2">
+                  <span className="flex items-center gap-1.5 text-[#949ba4]">
+                    <Star size={12} />
+                    Role
+                  </span>
+                  <span className="text-[#ececec]">{roleLabel}</span>
+                </li>
+                <li className="flex justify-between gap-2 border-b border-[#1f2023] pb-2">
+                  <span className="flex items-center gap-1.5 text-[#949ba4]">
+                    <Eye size={12} />
+                    Followers
+                  </span>
+                  <span className="text-[#ececec]">0</span>
+                </li>
+                <li className="flex justify-between gap-2">
+                  <span className="flex items-center gap-1.5 text-[#949ba4]">
+                    <Radio size={12} />
+                    Streams
+                  </span>
+                  <span className="text-[#ececec]">0</span>
+                </li>
+              </ul>
+            </DiscordWidget>
+
+            <DiscordWidget title="Connected groups" icon={<Users size={14} />}>
+              <ul className="space-y-1">
+                {CONNECTED_GROUPS.map((g) => (
+                  <li key={g.href}>
+                    <Link
+                      href={g.href}
+                      className="group flex items-center justify-between gap-2 rounded px-2 py-2 text-xs transition hover:bg-[#35373c]"
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-[#5865f2]/25 text-[#b5bac1]">
+                          <Hash size={14} />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate font-semibold text-[#ececec]">{g.name}</span>
+                          <span className="text-[10px] text-[#949ba4]">{g.tag}</span>
+                        </span>
+                      </span>
+                      <ChevronRight size={14} className="shrink-0 text-[#6d7078] group-hover:text-[#b5bac1]" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </DiscordWidget>
+          </aside>
+
+          <div className="flex min-w-0 flex-1 flex-col gap-6 lg:flex-row lg:items-start">
+            {/* Center: Twitch-style info grid + tabs */}
+            <main className="min-w-0 flex-1 space-y-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <TwitchPanel title="About" subtitle="Bio & mission" className="md:col-span-2">
+                <p className="leading-relaxed text-[#b5bac1]">
+                  Your public identity on PARABLE: testimony, streams, and fellowship. Update details in{" "}
+                  <Link href="/settings" className="font-medium text-[#00aff4] hover:underline">
+                    Settings
+                  </Link>
+                  ; post from Sanctuary to grow your grid and show up in recent activity.
                 </p>
+                <div className="mt-4 rounded-md border border-[#1f2023] bg-[#1e1f22] p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#6d7078]">Mission</p>
+                  <p className="mt-2 text-sm text-[#b5bac1]">
+                    Building a digital sanctuary where creators and communities gather through story, sound, and live
+                    connection.
+                  </p>
+                </div>
+              </TwitchPanel>
+
+              <TwitchPanel title="Recent activity" subtitle="Latest moments">
+                {gridPosts.length === 0 ? (
+                  <p className="text-sm text-[#949ba4]">No posts yet. Share from Sanctuary.</p>
+                ) : (
+                  <ul className="max-h-56 space-y-2 overflow-y-auto pr-1 scrollbar-hide">
+                    {gridPosts.slice(0, 6).map((p) => (
+                      <li key={p.id}>
+                        <Link
+                          href={`/sanctuary/${p.id}`}
+                          className="flex gap-2 rounded-md border border-transparent px-2 py-2 text-left transition hover:border-[#1f2023] hover:bg-[#1e1f22]"
+                        >
+                          <Activity size={14} className="mt-0.5 shrink-0 text-[#5865f2]" />
+                          <span className="min-w-0">
+                            <span className="block truncate text-xs text-[#ececec]">
+                              {(p.content || "New post").slice(0, 80)}
+                              {(p.content || "").length > 80 ? "…" : ""}
+                            </span>
+                            <span className="text-[10px] text-[#6d7078]">
+                              {formatActivityDate(p.created_at) || "Sanctuary"}
+                            </span>
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </TwitchPanel>
+
+              <TwitchPanel title="Links" subtitle="Social & hubs">
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href="#"
+                    className="inline-flex items-center gap-2 rounded-md border border-[#1f2023] bg-[#1e1f22] px-3 py-2 text-xs font-medium text-[#b5bac1] hover:bg-[#2b2d31]"
+                  >
+                    <Instagram size={14} />
+                    Instagram
+                  </a>
+                  <a
+                    href="#"
+                    className="inline-flex items-center gap-2 rounded-md border border-[#1f2023] bg-[#1e1f22] px-3 py-2 text-xs font-medium text-[#b5bac1] hover:bg-[#2b2d31]"
+                  >
+                    <Facebook size={14} />
+                    Facebook
+                  </a>
+                  <a
+                    href="#"
+                    className="inline-flex items-center gap-2 rounded-md border border-[#1f2023] bg-[#1e1f22] px-3 py-2 text-xs font-medium text-[#b5bac1] hover:bg-[#2b2d31]"
+                  >
+                    <Youtube size={14} />
+                    YouTube
+                  </a>
+                  <Link
+                    href="/hubs"
+                    className="inline-flex items-center gap-2 rounded-md border border-[#1f2023] bg-[#1e1f22] px-3 py-2 text-xs font-medium text-[#00aff4] hover:bg-[#2b2d31]"
+                  >
+                    <LinkIcon size={14} />
+                    Parable hubs
+                  </Link>
+                </div>
+              </TwitchPanel>
               </div>
 
-              <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-2xl shadow-[0_0_90px_rgba(0,242,254,0.08)]">
-                <div className="flex items-center justify-between">
-                  <Music4 className="text-[#00f2fe]" size={18} />
-                  <span className="text-[9px] font-black uppercase tracking-[3px] text-white/35">
-                    Artists
-                  </span>
-                </div>
-                <h3 className="mt-5 break-words text-[18px] font-black text-white">Sound Profile</h3>
-                <p className="mt-2 break-words text-sm leading-relaxed text-white/55">
-                  Sanctuary sessions, featured audio moments, and worship centered releases.
-                </p>
+              {/* Mobile: stacked below info panels, above post feed */}
+              <div className="lg:hidden">
+                <ProfileWidgets profile={userProfile} />
               </div>
 
-              <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-2xl shadow-[0_0_90px_rgba(0,242,254,0.08)]">
-                <div className="flex items-center justify-between">
-                  <MessageCircle className="text-[#00f2fe]" size={18} />
-                  <span className="text-[9px] font-black uppercase tracking-[3px] text-white/35">
-                    Community
-                  </span>
-                </div>
-                <h3 className="mt-5 break-words text-[18px] font-black text-white">Fellowship Signal</h3>
-                <p className="mt-2 break-words text-sm leading-relaxed text-white/55">
-                  Prayer circles, testimonies, conversations, and follower engagement in one place.
-                </p>
-              </div>
+              {/* Tab strip (Twitch panel feel) */}
+              <div className="flex rounded-md bg-[#1e1f22] p-1 ring-1 ring-[#1f2023]">
+              <button
+                type="button"
+                onClick={() => setProfileTab("posts")}
+                className={`flex-1 rounded py-2.5 text-center text-sm font-semibold transition ${
+                  profileTab === "posts" ? "bg-[#313338] text-[#ececec] shadow-sm" : "text-[#949ba4] hover:text-[#dbdee1]"
+                }`}
+              >
+                Posts · {gridPosts.length}
+              </button>
+              <button
+                type="button"
+                onClick={() => setProfileTab("about")}
+                className={`flex-1 rounded py-2.5 text-center text-sm font-semibold transition ${
+                  profileTab === "about" ? "bg-[#313338] text-[#ececec] shadow-sm" : "text-[#949ba4] hover:text-[#dbdee1]"
+                }`}
+              >
+                Details
+              </button>
             </div>
 
-            <div className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-2xl shadow-[0_0_120px_rgba(0,242,254,0.10)]">
-              <div className="flex min-w-0 flex-col gap-4">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-[4px] text-white/45">
-                    Profile Highlights
-                  </p>
-                  <h2 className="mt-1 break-words text-xl font-black text-white sm:text-2xl">Featured Media</h2>
-                </div>
-
-                <button
-                  type="button"
-                  className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-[18px] border border-[#00f2fe]/18 bg-[#00f2fe]/10 px-4 py-3 text-[10px] font-black uppercase tracking-[3px] text-[#00f2fe]"
-                >
-                  <Plus size={14} /> Add Highlight
-                </button>
-              </div>
-
-              <div className="mt-5 grid grid-cols-1 gap-6">
-                {media.map((item) => (
-                  <MediaCard
-                    key={item.title}
-                    title={item.title}
-                    subtitle={item.subtitle}
-                    tag={item.tag}
-                  />
-                ))}
-                {media.length === 0 && (
-                  <div className="rounded-[22px] border border-dashed border-[#00f2fe]/35 bg-[#00f2fe]/6 p-6">
-                    <p className="text-[11px] font-black uppercase tracking-[4px] text-[#00f2fe]">
-                      No highlights yet
-                    </p>
-                    <p className="mt-2 text-sm text-white/65">
-                      Start posting from Testify and your clips can be added here as profile highlights.
-                    </p>
+            {profileTab === "posts" && (
+              <TwitchPanel title="Posts" subtitle="Your Sanctuary grid">
+                {gridPosts.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-[#3f4147] py-12 text-center text-sm text-[#949ba4]">
+                    No public posts yet. Share from{" "}
+                    <Link href="/my-sanctuary" className="font-medium text-[#00aff4] hover:underline">
+                      Sanctuary
+                    </Link>
+                    .
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-1 sm:gap-2">
+                    {gridPosts.map((p) => (
+                      <Link
+                        key={p.id}
+                        href={`/sanctuary/${p.id}`}
+                        className="relative aspect-square overflow-hidden rounded-md bg-[#1e1f22]"
+                      >
+                        {p.media_url ? (
+                          p.media_type === "video" ||
+                          /\.(mp4|webm|mov)$/i.test(p.media_url.split("?")[0] ?? "") ? (
+                            <video src={p.media_url} className="h-full w-full object-cover" muted playsInline />
+                          ) : (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={p.media_url} alt="" className="h-full w-full object-cover" />
+                          )
+                        ) : (
+                          <div className="flex h-full items-center p-2 text-center text-[10px] text-[#6d7078]">
+                            {(p.content ?? "").slice(0, 48)}
+                          </div>
+                        )}
+                      </Link>
+                    ))}
                   </div>
                 )}
-              </div>
-            </div>
+              </TwitchPanel>
+            )}
 
-            <div className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-2xl shadow-[0_0_120px_rgba(0,242,254,0.10)]">
-              <div className="flex min-w-0 flex-col gap-4">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-[4px] text-white/45">
-                    About
-                  </p>
-                  <h2 className="mt-1 break-words text-xl font-black text-white sm:text-2xl">Creator Bio</h2>
-                </div>
-
-                <button
-                  type="button"
-                  className="w-full rounded-[18px] border border-white/10 bg-black/45 px-4 py-3 text-[10px] font-black uppercase tracking-[3px] text-white/70 transition hover:bg-white/10"
-                >
-                  Edit Bio
-                </button>
-              </div>
-
-              <div className="mt-5 grid grid-cols-1 gap-5">
-                <div className="min-w-0 rounded-[22px] border border-white/10 bg-black/45 p-5">
-                  <p className="text-[10px] font-black uppercase tracking-[4px] text-white/45">
-                    Mission
-                  </p>
-                  <p className="mt-3 break-words text-sm leading-relaxed text-white/60">
-                    Building an immersive digital sanctuary where creators, communities, and supporters can gather through story, sound, live streams, and meaningful connection.
-                  </p>
-                </div>
-
-                <div className="min-w-0 rounded-[22px] border border-white/10 bg-black/45 p-5">
-                  <p className="text-[10px] font-black uppercase tracking-[4px] text-white/45">
-                    Profile Details
-                  </p>
-                  <div className="mt-3 space-y-4 text-sm text-white/60">
-                    <div className="flex flex-col gap-1">
-                      <span className="shrink-0 text-white/50">Creator Type</span>
-                      <span className="min-w-0 break-words font-black text-white/80">{roleLabel}</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="shrink-0 text-white/50">Joined</span>
-                      <span className="inline-flex min-w-0 flex-wrap items-center gap-2 font-black text-white/80">
-                        <CalendarDays size={14} className="shrink-0 text-[#00f2fe]" />
-                        <span>Jan 2026</span>
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="shrink-0 text-white/50">Support Wallet</span>
-                      <span className="inline-flex min-w-0 items-center gap-2 font-black text-white/80">
-                        <Wallet size={14} className="shrink-0 text-[#00f2fe]" />
-                        Enabled
-                      </span>
-                    </div>
+            {profileTab === "about" && (
+              <TwitchPanel title="Profile details" subtitle="At a glance">
+                <div className="space-y-4 text-sm">
+                  <div className="flex flex-col gap-1 border-b border-[#1f2023] pb-3">
+                    <span className="text-xs text-[#6d7078]">Creator type</span>
+                    <span className="font-semibold text-[#ececec]">{roleLabel}</span>
+                  </div>
+                  <div className="flex flex-col gap-1 border-b border-[#1f2023] pb-3">
+                    <span className="flex items-center gap-2 text-xs text-[#6d7078]">
+                      <CalendarDays size={14} className="text-[#5865f2]" /> Joined
+                    </span>
+                    <span className="font-semibold text-[#ececec]">Jan 2026</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="flex items-center gap-2 text-xs text-[#6d7078]">
+                      <Wallet size={14} className="text-[#5865f2]" /> Support wallet
+                    </span>
+                    <span className="font-semibold text-[#ececec]">Enabled</span>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
+              </TwitchPanel>
+            )}
 
-          <div className="space-y-6">
-            <div className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-2xl shadow-[0_0_120px_rgba(0,242,254,0.10)]">
-              <div className="flex items-center gap-2">
-                <DollarSign size={18} className="text-[#00f2fe]" />
-                <p className="text-[10px] font-black uppercase tracking-[4px] text-white/50">
-                  Support Center
-                </p>
-              </div>
-
-              <div className="mt-5 space-y-4">
+            <TwitchPanel title="Support" subtitle="Bless this creator">
+              <div className="grid gap-3 sm:grid-cols-2">
                 {supportOptions.map((item) => (
                   <div key={item.title} onClick={() => setSelectedSupport(item.title)}>
                     <SupportCard
@@ -699,52 +673,43 @@ export default function ProfilePage() {
                   </div>
                 ))}
               </div>
+            </TwitchPanel>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <TwitchPanel title="Quick amounts" subtitle="One-tap tiers">
+                <div className="grid grid-cols-2 gap-2">
+                  {["$10", "$25", "$50", "$100", "$250", "$500"].map((amount) => (
+                    <button
+                      key={amount}
+                      type="button"
+                      className="rounded-md border border-[#1f2023] bg-[#1e1f22] px-3 py-3 text-xs font-bold text-[#00d166] transition hover:bg-[#2b2d31]"
+                    >
+                      {amount}
+                    </button>
+                  ))}
+                </div>
+              </TwitchPanel>
+              <TwitchPanel title="Signals" subtitle="Community pulse">
+                <ul className="space-y-2 text-xs text-[#949ba4]">
+                  {[
+                    "24 new supporters this week",
+                    "Top seed amount today is $250",
+                    "Offering goal is 68% complete",
+                    "Most active support hour is 8 PM",
+                  ].map((item) => (
+                    <li key={item} className="rounded border border-[#1f2023] bg-[#1e1f22] px-3 py-2">
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </TwitchPanel>
             </div>
+            </main>
 
-            <div className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-2xl shadow-[0_0_120px_rgba(0,242,254,0.10)]">
-              <div className="flex items-center gap-2">
-                <Heart size={18} className="text-[#00f2fe]" />
-                <p className="text-[10px] font-black uppercase tracking-[4px] text-white/50">
-                  Quick Support
-                </p>
-              </div>
-
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                {["$10", "$25", "$50", "$100", "$250", "$500"].map((amount) => (
-                  <button
-                    key={amount}
-                    className="rounded-[18px] border border-[#00f2fe]/16 bg-black/45 px-4 py-4 text-[10px] font-black uppercase tracking-[3px] text-[#00f2fe] hover:bg-[#00f2fe]/10 transition"
-                  >
-                    Give {amount}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-2xl shadow-[0_0_120px_rgba(0,242,254,0.10)]">
-              <div className="flex items-center gap-2">
-                <Gift size={18} className="text-[#00f2fe]" />
-                <p className="text-[10px] font-black uppercase tracking-[4px] text-white/50">
-                  Support Signals
-                </p>
-              </div>
-
-              <div className="mt-5 space-y-4">
-                {[
-                  "24 new supporters this week",
-                  "Top seed amount today is $250",
-                  "Offering goal is 68% complete",
-                  "Most active support hour is 8 PM",
-                ].map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-[18px] border border-white/10 bg-black/45 px-4 py-4 text-sm text-white/65"
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Desktop: right sidebar */}
+            <aside className="hidden w-full shrink-0 lg:block lg:w-80">
+              <ProfileWidgets profile={userProfile} />
+            </aside>
           </div>
         </div>
       </div>

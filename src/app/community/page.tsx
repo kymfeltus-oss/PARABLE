@@ -14,7 +14,7 @@ const HUBS = [
   },
   { href: '/following', title: 'Following', desc: 'People and channels you follow.', icon: Users },
   { href: '/table', title: 'The Table', desc: 'Study groups and hosted tables.', icon: BookOpen },
-  { href: '/testify', title: 'Testify', desc: 'Stories, portal feed, and live energy.', icon: MessageCircle },
+  { href: '/sanctuary', title: 'Sanctuary', desc: 'Stories, portal feed, and live energy.', icon: MessageCircle },
 ] as const;
 
 export default function CommunityPage() {

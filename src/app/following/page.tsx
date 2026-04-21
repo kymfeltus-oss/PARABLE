@@ -222,7 +222,7 @@ function FollowingPageContent() {
                 above.
               </div>
             ) : (
-              <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1 scrollbar-hide">
                 {filteredFollowers.map((account) => {
                   const isFollowing = followingIds.includes(account.id);
                   return (

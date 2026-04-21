@@ -166,7 +166,14 @@ export default function LiveStudioPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(text || "Token request failed");
+        let msg = text || "Token request failed";
+        try {
+          const j = JSON.parse(text) as { error?: string };
+          if (j?.error) msg = j.error;
+        } catch {
+          /* use raw text */
+        }
+        throw new Error(msg);
       }
 
       const data = (await res.json()) as {
@@ -184,15 +191,15 @@ export default function LiveStudioPage() {
       setIsLive(true);
     } catch (e: any) {
       console.error("GO LIVE FAILED:", e);
-      setLkError(
-        typeof e?.message === "string"
-          ? e.message
-          : "GO LIVE FAILED — open console for details."
-      );
+      const detail =
+        typeof e?.message === "string" && e.message.trim()
+          ? e.message.trim()
+          : "Unknown error — see browser console.";
+      setLkError(detail);
       setIsLive(false);
       setLkToken(null);
       setLkUrl(null);
-      alert("GO LIVE FAILED — open console for details.");
+      alert(`Go Live failed\n\n${detail}`);
     } finally {
       setGoingLive(false);
     }
