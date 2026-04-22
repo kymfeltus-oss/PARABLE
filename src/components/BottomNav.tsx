@@ -8,6 +8,7 @@ import {
   isMainNavItemActive,
   IS_STUDY_AI,
 } from "@/lib/parable-main-nav";
+import { shellBottomNavInnerClass, shellKindFromPathname } from "@/lib/app-shell-widths";
 
 const STUDY_AI_ACCENT_ACTIVE = "bg-amber-500/15 border-amber-500/30 shadow-[0_0_22px_rgba(234,179,8,0.2)]";
 const STUDY_AI_ACCENT_TEXT = "text-amber-400";
@@ -55,10 +56,11 @@ export default function BottomNav() {
   const pathname = usePathname();
   const items = getMainNavItems();
   const colClass = items.length <= 4 ? "grid-cols-4" : items.length <= 5 ? "grid-cols-5" : "grid-cols-7";
+  const navInner = shellBottomNavInnerClass(shellKindFromPathname(pathname));
 
   return (
     <div className="z-50 flex w-full shrink-0 justify-center border-t border-white/[0.06] bg-[#070708]/98 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1 backdrop-blur-md">
-      <div className="w-full max-w-[430px] px-2 md:max-w-[480px] lg:max-w-[560px]">
+      <div className={navInner}>
         <div
           className={[
             "relative overflow-hidden rounded-[26px] border border-white/10 backdrop-blur-2xl",

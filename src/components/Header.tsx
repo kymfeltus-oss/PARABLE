@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { fallbackAvatarOnError } from "@/lib/avatar-display";
+import { shellBottomNavInnerClass, shellKindFromPathname } from "@/lib/app-shell-widths";
 
 const NAV_LINKS = [
   { name: "Home", href: "/" },
@@ -61,9 +62,11 @@ export default function Header() {
     }
   }, [userProfile?.username, userProfile?.full_name]);
 
+  const shellInner = shellBottomNavInnerClass(shellKindFromPathname(pathname));
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-[150] flex justify-center border-b border-white/10 bg-black/90 backdrop-blur-md">
-      <div className="flex w-full max-w-[430px] flex-col gap-0 md:max-w-[480px]">
+      <div className={["flex flex-col gap-0", shellInner].join(" ")}>
         {/* Row 1: brand + identity (never overlaps) */}
         <div className="flex min-h-[52px] items-center justify-between gap-2 px-3 pt-2 md:min-h-14 md:px-3">
           <Link href="/" className="relative block h-7 w-[6.25rem] shrink-0 md:h-8 md:w-32">
@@ -100,8 +103,7 @@ export default function Header() {
             {NAV_LINKS.map((link) => {
               const isActive =
                 "active" in link && link.active ? link.active(pathname ?? "") : pathname === link.href;
-              const livePortalHover =
-                link.href === "/sanctuary" || link.name === "Sanctuary";
+              const livePortalHover = link.href === "/sanctuary";
               return (
                 <Link
                   key={link.href}

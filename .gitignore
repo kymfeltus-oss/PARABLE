@@ -15,3 +15,6 @@ coverage
 .DS_Store
 Thumbs.db
 *.tsbuildinfo
+
+# Supabase CLI cache (local only)
+supabase/.temp/

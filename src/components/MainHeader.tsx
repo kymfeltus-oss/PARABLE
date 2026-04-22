@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import ProfileDropdown from "@/components/ProfileDropdown";
 import NotificationToast from "@/components/NotificationToast";
+import { shellHeaderInnerClass, shellKindFromPathname } from "@/lib/app-shell-widths";
 
 type ProfileSnippet = {
   username: string | null;
@@ -17,6 +19,7 @@ type ProfileSnippet = {
  * Profile text/avatar refresh on auth changes and on `profiles` updates (e.g. Settings).
  */
 export default function MainHeader() {
+  const pathname = usePathname();
   const [userId, setUserId] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<ProfileSnippet | null>(null);
 
@@ -111,26 +114,30 @@ export default function MainHeader() {
     [userId, userProfile?.username, userProfile?.full_name, userProfile?.avatar_url],
   );
 
+  const headerInner = shellHeaderInnerClass(shellKindFromPathname(pathname));
+
   return (
     <>
-    <header className="z-50 flex w-full shrink-0 items-center justify-between overflow-visible border-b border-neutral-800 bg-[#0f1011] p-4">
-      <div className="flex items-center gap-2">
-        <Link href="/" className="font-black tracking-tighter text-xl text-cyan-400">
-          PARABLE
-        </Link>
-      </div>
-
-      <div className="relative flex items-center gap-4">
-        {userId && dropdownProfile ? (
-          <ProfileDropdown profile={dropdownProfile} />
-        ) : (
-          <Link
-            href="/login"
-            className="text-sm font-bold text-gray-300 transition-opacity hover:text-white hover:opacity-90"
-          >
-            Sign in
+    <header className="z-50 flex w-full shrink-0 justify-center overflow-visible border-b border-neutral-800 bg-[#0f1011] py-3 sm:py-4">
+      <div className={headerInner}>
+        <div className="flex min-w-0 items-center gap-2">
+          <Link href="/" className="font-black tracking-tighter text-xl text-cyan-400">
+            PARABLE
           </Link>
-        )}
+        </div>
+
+        <div className="relative flex shrink-0 items-center gap-4">
+          {userId && dropdownProfile ? (
+            <ProfileDropdown profile={dropdownProfile} />
+          ) : (
+            <Link
+              href="/login"
+              className="text-sm font-bold text-gray-300 transition-opacity hover:text-white hover:opacity-90"
+            >
+              Sign in
+            </Link>
+          )}
+        </div>
       </div>
     </header>
     <NotificationToast currentUserId={userId} />

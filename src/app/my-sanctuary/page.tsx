@@ -214,21 +214,13 @@ export default function MySanctuaryPage() {
     setSanctuaryFeedLoading(true);
     const supabase = createClient();
 
-    let res = await supabase
+    // Disambiguate FK: `posts` may reference `profiles` more than once (e.g. author + editor).
+    const res = await supabase
       .from("posts")
-      .select("*, profiles(*), post_likes(count)")
+      .select("*, profiles:profile_id(*), post_likes(count)")
       .eq("category", "sanctuary")
       .order("created_at", { ascending: false })
       .limit(50);
-
-    if (res.error && res.error.message.includes("Could not find a relationship")) {
-      res = await supabase
-        .from("posts")
-        .select("*, profiles:profile_id(*), post_likes(count)")
-        .eq("category", "sanctuary")
-        .order("created_at", { ascending: false })
-        .limit(50);
-    }
 
     const { data, error } = res;
     if (error) {

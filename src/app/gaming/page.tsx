@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import Header from "@/components/Header";
 import HubBackground from "@/components/HubBackground";
+import GamersHub from "@/components/gaming/GamersHub";
 
 const FLAGSHIPS = [
   {
@@ -261,20 +262,23 @@ export default function GamingPage() {
           </Link>
         </div>
 
-        <header className="mb-12">
+        <GamersHub />
+
+        <header className="mb-8 mt-16">
           <div className="flex flex-wrap items-center gap-3 text-[#00f2ff]">
-            <Gamepad2 size={28} strokeWidth={1.25} />
-            <span className="text-[10px] font-black uppercase tracking-[0.35em] text-white/40">Faith gaming · open world</span>
+            <Gamepad2 size={24} strokeWidth={1.25} />
+            <span className="text-[10px] font-black uppercase tracking-[0.35em] text-white/40">
+              Parable flagship worlds
+            </span>
           </div>
-          <h1 className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight leading-[1.1]">
+          <h2 className="mt-3 text-2xl sm:text-3xl font-bold text-white tracking-tight leading-[1.15]">
             Territory, teamwork,
             <span className="text-[#00f2ff]"> high-fidelity physics</span>
-          </h1>
-          <p className="mt-5 text-sm sm:text-base text-white/55 max-w-2xl leading-relaxed">
-            Competitive energy and open-world scale—reaimed for ministries and musicians. Four flagship lanes mirror the
-            giants you know, but the win conditions are influence, unity, worship, and wisdom—not exploitation.
+          </h2>
+          <p className="mt-4 text-sm sm:text-base text-white/55 max-w-2xl leading-relaxed">
+            In-browser prototypes for four flagship lanes — open-world scale reaimed for ministries and musicians.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3 text-xs text-white/40">
+          <div className="mt-5 flex flex-wrap gap-3 text-xs text-white/40">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5">
               <MapPin size={14} className="text-[#00f2ff]" />
               Territory

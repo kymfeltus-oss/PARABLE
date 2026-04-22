@@ -6,6 +6,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import ParableGlobalLayout from "@/components/layout/ParableGlobalLayout";
+import { shellColumnClass, shellKindFromPathname } from "@/lib/app-shell-widths";
 import { AuthProvider } from "@/providers/AuthProvider";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -28,6 +29,7 @@ export default function RootLayout({
 
   const isSanctuaryRoute = (pathname ?? "").startsWith("/sanctuary");
   const isMySanctuaryHome = (pathname ?? "").startsWith("/my-sanctuary");
+  const shellKind = shellKindFromPathname(pathname);
 
   useEffect(() => {
     document.title = APP_TITLE;
@@ -48,29 +50,23 @@ export default function RootLayout({
               <ParableGlobalLayout>
                 {isMySanctuaryHome ? (
                   <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-                    <div className="mx-auto flex h-full min-h-0 w-full flex-1 justify-center overflow-hidden px-0 sm:px-2">
-                      <div
-                        className="flex h-full min-h-0 w-full min-w-0 max-w-[470px] flex-1 flex-col overflow-hidden border-x border-white/[0.07] bg-black lg:max-w-[min(100%,920px)]"
-                        data-parable-app-shell
-                      >
+                    <div className="mx-auto flex h-full min-h-0 w-full flex-1 justify-center overflow-hidden px-0 sm:px-2 lg:px-4">
+                      <div className={shellColumnClass(shellKind)} data-parable-app-shell>
                         {children}
                       </div>
                     </div>
                   </div>
                 ) : isSanctuaryRoute ? (
                   <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                    <div className="mx-auto flex min-h-0 w-full flex-1 justify-center overflow-hidden">
-                      <div
-                        className="flex min-h-0 w-full min-w-0 max-w-[430px] flex-1 flex-col overflow-hidden border-x border-white/[0.07] bg-black md:max-w-[480px] lg:max-w-[560px]"
-                        data-parable-app-shell
-                      >
+                    <div className="mx-auto flex min-h-0 w-full flex-1 justify-center overflow-hidden px-0 sm:px-2 lg:px-4">
+                      <div className={shellColumnClass(shellKind)} data-parable-app-shell>
                         {children}
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain scrollbar-hide">
-                    <div className="mx-auto flex min-h-0 w-full max-w-[430px] flex-col border-x border-white/[0.07] bg-black md:max-w-[480px] lg:max-w-[560px]">
+                    <div className={["mx-auto", shellColumnClass(shellKind)].join(" ")} data-parable-app-shell>
                       {children}
                     </div>
                   </div>
