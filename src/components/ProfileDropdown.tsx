@@ -74,7 +74,7 @@ export default function ProfileDropdown({ profile }: Props) {
     router.replace("/login?logged_out=1");
   };
 
-  const profileHref = profile?.id ? `/profile/${profile.id}` : "/profile";
+  const profileHref = "/profile";
   const displayName =
     profile?.full_name?.trim() || profile?.username?.trim() || "My Account";
   const handle = profile?.username?.trim();

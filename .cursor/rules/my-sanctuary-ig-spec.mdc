@@ -1,0 +1,43 @@
+---
+description: My Sanctuary Instagram parity — read spec, no dead UI, P0 validation before done
+globs: src/app/my-sanctuary/**,src/components/my-sanctuary/**,src/components/sanctuary-stories/**,src/components/FeedCard/**,src/components/feed/**,src/hooks/useProfile*.ts,src/hooks/useTaggedPostsLive.ts,src/hooks/useSanctuaryStories.ts,src/hooks/useProfilePostsLive.ts,src/lib/sanctuary-*.ts,src/styles/my-sanctuary-instagram.css,src/styles/sanctuary-stories.css,src/app/api/stories/**
+alwaysApply: false
+---
+
+# My Sanctuary IG Spec (mandatory)
+
+Before editing matching files, **read** `docs/MY_SANCTUARY_IG_SPEC.md` and treat it as the source of truth.
+
+## Hard constraints
+
+- **No regressions** — do not break existing Supabase auth, `useAuth`, `useFeed`, user/profile tables, or unrelated hooks.
+- **Isolation** — stories use `sanctuary-stories` + `public.stories` / `public.story_views` only; never revive post-based stories or Fellowship Circles as the stories UI.
+- **No dead UI** — every button, tab, and create entry must call a real handler (upload, navigate, modal, or Supabase action). No placeholder shells.
+- **Design palette** — use spec colors (`#01040A`, `#020712`, `#06111E`, `#00F2FE`, `#0EA5E9`, `#F8FAFC`, `#94A3B8`, `#CBD5E1`).
+- **Media limit** — profile create flows enforce **10 MB** via `src/lib/sanctuary-media-limits.ts`.
+
+## P0 must remain functional
+
+1. Stories tray + viewer (neon rings, 24h `expires_at` filter)
+2. Profile **+** / **Create** → post (image) or reel (video)
+3. Posts / Reels / Tagged tabs backed by Supabase (Tagged = `@username` mentions)
+4. Stories schema in `supabase/schema-stories.sql`
+
+## Definition of done
+
+Do **not** declare the task finished until:
+
+1. `npx tsc --noEmit` passes
+2. All P0 acceptance items in the spec still hold:
+   - [ ] Stories tray: hidden scrollbar, touch scroll works
+   - [ ] Stories &lt; 24h only
+   - [ ] Tab switches without React errors / content flash
+   - [ ] Reels tab play overlays visible
+   - [ ] Layout responsive through 1180px desktop grid
+3. Manual smoke from spec § Manual Test Script is reported (pass/fail per step)
+
+## Prefer existing modules
+
+- Tray/viewer: `src/components/sanctuary-stories/*`
+- Profile layout: `MySanctuaryInstagramLayout`, `MySanctuaryClientView`
+- Live posts: `useProfilePostsLive` (do not duplicate in `useFeed`)

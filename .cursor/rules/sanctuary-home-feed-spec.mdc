@@ -1,0 +1,31 @@
+---
+description: My Sanctuary home feed — hybrid simulation engine, tray, ticketing (read spec first)
+globs: src/app/my-sanctuary/**,src/components/SanctuaryHomeFeed.tsx,src/components/SanctuaryHomeStoriesStrip.tsx,src/lib/sanctuary-home-mode.ts,src/lib/demo-personas.ts,src/app/stream/**,src/app/parables/**
+alwaysApply: false
+---
+
+# Sanctuary Home Feed Spec (mandatory)
+
+Before editing matching files, **read** `docs/SANCTUARY_HOME_FEED_SPEC.md` and treat it as the source of truth for `/my-sanctuary`.
+
+## Hard constraints
+
+- **No regressions** — preserve `MySanctuaryHomeServer` auth, session cookies, and existing hooks (`useFeed`, `useSanctuaryStories`, `useAuth`).
+- **Hybrid merge** — real Supabase payloads from `home-data.ts` + demo personas from `demo-personas.ts` via `buildMergedHomeFeed`.
+- **No dead UI** — tray live → `/stream/[id]`; story ring → `StoryModalViewer`; video → `/parables/[id]`; heart → `post_likes`; Get Pass → `sanctuary_event_registrations`.
+- **Do not** paste broken mock URLs (`https://unsplash.com` bare links) or duplicate simulation user lists outside `demo-personas.ts`.
+
+## Database mapping
+
+| Spec | Production |
+|------|------------|
+| `sanctuary_posts` | `public.posts` |
+| `sanctuary_live_streams` | `public.profiles` where `is_live` |
+| `sanctuary_events` | `public.sanctuary_events` (optional SQL) |
+| `sanctuary_event_registrations` | `public.sanctuary_event_registrations` |
+
+## Definition of done
+
+1. `npx tsc --noEmit` passes
+2. Manual test script in spec §6 reported
+3. Profile IG spec (`MY_SANCTUARY_IG_SPEC.md`) still valid for `/profile`

@@ -2,12 +2,15 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
 import { fallbackAvatarOnError } from "@/lib/avatar-display";
 import FeedUserProfileHover from "./FeedUserProfileHover";
 import type { PostCardProps } from "./PostCard";
 import { createClient } from "@/utils/supabase/client";
 import CommentSection from "./CommentSection";
 import PraiseButton from "./PraiseButton";
+import ConfirmDeleteDialog from "@/components/ui/ConfirmDeleteDialog";
+import { deletePost } from "@/lib/content-delete";
 
 /** Twitch-style pill; parent should position (e.g. bottom-center on avatar). */
 export const LiveBadge = ({ isLive }: { isLive: boolean }) => {
@@ -57,13 +60,19 @@ export default function InstagramPost({
   likesCount: likesCountProp,
   praisesInitial,
   initialLiked,
-}: PostCardProps) {
+  onDeleted,
+}: PostCardProps & { onDeleted?: () => void }) {
   const supabase = useMemo(() => createClient(), []);
+  const optionsAnchorRef = useRef<HTMLButtonElement>(null);
   const baseLikes = likesCountProp ?? praisesInitial ?? 0;
   const [displayLikes, setDisplayLikes] = useState(baseLikes);
   const [liked, setLiked] = useState(() => Boolean(initialLiked));
   const [likeBusy, setLikeBusy] = useState(false);
   const [pulse, setPulse] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const sessionUserIdRef = useRef<string | null>(null);
 
   const profile = normalizeAuthor(author);
@@ -82,6 +91,43 @@ export default function InstagramPost({
   useEffect(() => {
     setDisplayLikes(baseLikes);
   }, [baseLikes]);
+
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data: { user } }) => {
+      setCurrentUserId(user?.id ?? null);
+    });
+  }, [supabase]);
+
+  useEffect(() => {
+    if (!optionsOpen) return;
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      if (optionsAnchorRef.current?.contains(target)) return;
+      setOptionsOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+    };
+  }, [optionsOpen]);
+
+  const isOwnPost = Boolean(profileId && currentUserId && profileId === currentUserId);
+
+  const handleDeletePost = useCallback(async () => {
+    if (deleteLoading) return;
+    setDeleteLoading(true);
+    try {
+      await deletePost(supabase, id);
+      setConfirmDeleteOpen(false);
+      onDeleted?.();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Could not delete post.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [deleteLoading, supabase, id, onDeleted]);
 
   const refreshSelfLiked = useCallback(async () => {
     const {
@@ -222,7 +268,7 @@ export default function InstagramPost({
   }, [id, liked, likeBusy, displayLikes, supabase]);
 
   return (
-    <article className="w-full border-b border-neutral-800 bg-black">
+    <article className="ig-feed-card w-full bg-white">
       <div className="flex items-start justify-between gap-2 px-3 py-3 sm:px-4">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <FeedUserProfileHover
@@ -239,8 +285,8 @@ export default function InstagramPost({
                     className={[
                       "relative block shrink-0 rounded-full",
                       isLive
-                        ? "ring-2 ring-red-500 ring-offset-2 ring-offset-black"
-                        : "ring-2 ring-transparent transition hover:ring-white/20",
+                        ? "ring-2 ring-red-500 ring-offset-2 ring-offset-white"
+                        : "ring-2 ring-transparent transition hover:ring-[#dbdbdb]",
                     ].join(" ")}
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -249,11 +295,11 @@ export default function InstagramPost({
                       <img
                         src={authorAvatar}
                         alt=""
-                        className="h-8 w-8 rounded-full object-cover"
+                        className="h-9 w-9 rounded-full object-cover sm:h-10 sm:w-10"
                         onError={fallbackAvatarOnError}
                       />
                     ) : (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-neutral-700 to-black text-[10px] font-bold text-white/90">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#efefef] text-[10px] font-bold text-[#262626] sm:h-10 sm:w-10">
                         {authorName.slice(0, 2).toUpperCase()}
                       </div>
                     )}
@@ -271,8 +317,8 @@ export default function InstagramPost({
                     src={authorAvatar}
                     alt=""
                     className={[
-                      "h-8 w-8 shrink-0 rounded-full object-cover",
-                      isLive ? "ring-2 ring-red-500 ring-offset-2 ring-offset-black" : "",
+                      "h-9 w-9 shrink-0 rounded-full object-cover sm:h-10 sm:w-10",
+                      isLive ? "ring-2 ring-red-500 ring-offset-2 ring-offset-white" : "",
                     ].join(" ")}
                     onError={fallbackAvatarOnError}
                   />
@@ -286,8 +332,8 @@ export default function InstagramPost({
                 <div className="relative shrink-0">
                   <div
                     className={[
-                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-800 text-[10px] font-bold",
-                      isLive ? "ring-2 ring-red-500 ring-offset-2 ring-offset-black" : "",
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#efefef] text-[10px] font-bold text-[#262626] sm:h-10 sm:w-10",
+                      isLive ? "ring-2 ring-red-500 ring-offset-2 ring-offset-white" : "",
                     ].join(" ")}
                   >
                     {authorName.slice(0, 2).toUpperCase()}
@@ -302,97 +348,133 @@ export default function InstagramPost({
               {profileId ? (
                 <Link
                   href={profileHref}
-                  className="min-w-0 truncate text-sm font-semibold text-white hover:text-neutral-200"
+                  className="min-w-0 truncate text-sm font-semibold text-[#262626] hover:text-[#8e8e8e]"
                 >
                   {authorName}
                 </Link>
               ) : (
-                <span className="min-w-0 truncate text-sm font-semibold text-white">{authorName}</span>
+                <span className="min-w-0 truncate text-sm font-semibold text-[#262626]">{authorName}</span>
               )}
             </div>
           </FeedUserProfileHover>
         </div>
         <button
+          ref={optionsAnchorRef}
           type="button"
-          className="shrink-0 p-1 text-neutral-500 hover:text-white"
+          onClick={() => setOptionsOpen((open) => !open)}
+          className="relative shrink-0 p-1 text-[#8e8e8e] hover:text-[#262626]"
           aria-label="Post options"
+          aria-expanded={optionsOpen}
+          aria-haspopup="menu"
         >
           <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
             <circle cx="12" cy="6" r="1.5" />
             <circle cx="12" cy="12" r="1.5" />
             <circle cx="12" cy="18" r="1.5" />
           </svg>
+          {optionsOpen && isOwnPost ? (
+            <div
+              role="menu"
+              className="absolute right-0 top-full z-20 mt-1 min-w-[160px] overflow-hidden rounded-lg border border-[#dbdbdb] bg-white py-1 shadow-lg"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setOptionsOpen(false);
+                  setConfirmDeleteOpen(true);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-[#fafafa]"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete post
+              </button>
+            </div>
+          ) : null}
         </button>
       </div>
 
       {mainMedia &&
         (isVideo ? (
-          <div className="relative bg-black">
+          <div className="relative bg-[#efefef]">
             <Link
               href={`/post/${id}`}
-              className="absolute right-2 top-2 z-10 rounded-md bg-black/70 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm transition hover:bg-black/90"
+              className="absolute right-2 top-2 z-10 rounded-md bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm transition hover:bg-black/80"
             >
               View post
             </Link>
             <video
               controls
-              className="aspect-square w-full bg-black object-cover sm:aspect-auto sm:max-h-[min(85vh,560px)]"
+              className="aspect-square w-full bg-black object-cover"
               key={id}
             >
               <source src={mainMedia} />
             </video>
           </div>
         ) : (
-          <div className="relative bg-black">
+          <div className="relative bg-[#efefef]">
             <Link
               href={`/post/${id}`}
-              className="relative block focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+              className="relative block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00f2ff]/40"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={mainMedia}
                 alt=""
-                className="aspect-square w-full cursor-pointer bg-black object-cover sm:aspect-auto sm:max-h-[min(85vh,560px)]"
+                className="aspect-square w-full cursor-pointer bg-[#efefef] object-cover"
               />
             </Link>
           </div>
         ))}
 
-      <div className="p-3 pb-4">
+      <div className="p-3 pb-4 sm:px-4">
         <PraiseButton
           liked={liked}
           count={displayLikes}
           disabled={likeBusy}
           pulse={pulse}
+          variant="light"
           onPraise={() => void handleLike()}
         />
 
         <div className="mt-2 space-y-1">
-          <p className="text-sm leading-relaxed text-white">
+          <p className="text-sm leading-relaxed text-[#262626]">
             {profileId ? (
-              <Link href={profileHref} className="mr-2 font-bold text-white hover:underline">
+              <Link href={profileHref} className="mr-2 font-semibold text-[#262626] hover:underline">
                 {profile?.username?.trim() || authorName}
               </Link>
             ) : (
-              <span className="mr-2 font-bold text-white">{profile?.username?.trim() || authorName}</span>
+              <span className="mr-2 font-semibold text-[#262626]">{profile?.username?.trim() || authorName}</span>
             )}
-            <span className="text-neutral-300">{content}</span>
+            <span className="text-[#262626]">{content}</span>
           </p>
           <JoinStreamButton isLive={isLive} userId={profileId ?? ""} />
-          <p className="mt-2 text-[10px] uppercase text-gray-500">
+          <p className="mt-2 text-[10px] uppercase tracking-wide text-[#8e8e8e]">
             {new Date(created_at).toLocaleDateString()}
           </p>
         </div>
 
-        <div className="mt-3 border-t border-neutral-800 pt-3">
+        <div className="mt-3 border-t border-[#efefef] pt-3">
           <CommentSection
             postId={id}
             maxVisible={2}
             viewAllHref={`/post/${id}`}
             noOuterFrame
+            theme="light"
+            currentUserId={currentUserId}
+            postOwnerId={profileId ?? null}
           />
         </div>
       </div>
+
+      <ConfirmDeleteDialog
+        open={confirmDeleteOpen}
+        title="Delete post?"
+        description="This permanently removes the post, its praises, and comments."
+        loading={deleteLoading}
+        onCancel={() => setConfirmDeleteOpen(false)}
+        onConfirm={() => void handleDeletePost()}
+      />
     </article>
   );
 }

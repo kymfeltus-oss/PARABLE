@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+@keyframes sanctuary-story-ring-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes sanctuary-story-heart-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) translateY(8px);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.15) translateY(-6px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9) translateY(-28px);
+  }
+}
+
+.sanctuary-stories {
+  --ss-canvas: #01040a;
+  --ss-panel: #06111e;
+  --ss-panel-deep: #020712;
+  --ss-neon: #00f2fe;
+  --ss-cyan: #0ea5e9;
+  --ss-text: #f8fafc;
+  --ss-muted: #94a3b8;
+  --ss-soft: #cbd5e1;
+}
+
+.sanctuary-stories-tray {
+  background: var(--ss-canvas);
+  border-bottom: 1px solid rgba(6, 17, 30, 0.9);
+}
+
+.sanctuary-stories-tray-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sanctuary-stories-tray-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.sanctuary-story-ring-unviewed {
+  padding: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, var(--ss-neon), var(--ss-cyan), var(--ss-neon));
+  background-size: 200% 200%;
+  animation: sanctuary-story-ring-shift 3s ease infinite;
+}
+
+.sanctuary-story-ring-viewed {
+  padding: 2px;
+  border-radius: 9999px;
+  background: var(--ss-panel);
+  box-shadow: inset 0 0 0 1px var(--ss-muted);
+}
+
+.sanctuary-story-ring-own-empty {
+  padding: 2px;
+  border-radius: 9999px;
+  background: var(--ss-panel);
+  box-shadow: inset 0 0 0 1px rgba(0, 242, 254, 0.35);
+}
+
+.sanctuary-story-modal {
+  background: var(--ss-canvas);
+  color: var(--ss-text);
+}
+
+.sanctuary-story-progress-track {
+  height: 2px;
+  border-radius: 9999px;
+  background: rgba(148, 163, 184, 0.35);
+  overflow: hidden;
+}
+
+.sanctuary-story-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--ss-neon), var(--ss-cyan));
+  transform-origin: left center;
+}
+
+.sanctuary-story-heart-float {
+  animation: sanctuary-story-heart-pop 900ms ease-out forwards;
+  pointer-events: none;
+}
+
+.sanctuary-story-media-shell {
+  touch-action: none;
+  user-select: none;
+}
+
+.sanctuary-story-media-frame {
+  aspect-ratio: 9 / 16;
+  width: min(100%, calc((100vh - 8rem) * 9 / 16));
+  max-height: calc(100vh - 8rem);
+  overflow: hidden;
+  border-radius: 0.35rem;
+  background: #000;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+}
+
+.sanctuary-story-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Light theme (profile page) */
+.sanctuary-stories--light .sanctuary-stories-tray {
+  background: #fafafa;
+  border-bottom-color: #dbdbdb;
+}
+
+.sanctuary-stories--light .story-bubble-label {
+  color: #262626;
+}
+
+.sanctuary-stories--light .story-bubble-label:hover {
+  color: #000;
+}
+
+.sanctuary-stories--light .story-bubble-avatar-ring {
+  --ss-ring-bg: #fafafa;
+}
+
+.sanctuary-stories--light .sanctuary-story-ring-own-empty {
+  box-shadow: inset 0 0 0 1px rgba(0, 242, 254, 0.55);
+}
+
+.sanctuary-stories--light .story-bubble-plus {
+  border-color: #fafafa;
+  background: #fff;
+}

@@ -38,6 +38,8 @@ import SanctuaryHomeSidebar from '@/components/sanctuary-feed/SanctuaryHomeSideb
 import Feed from '@/components/feed/Feed';
 import SanctuaryFeedTopBar from '@/components/feed/SanctuaryFeedTopBar';
 import SanctuaryPostComposer from '@/components/sanctuary/SanctuaryPostComposer';
+import SanctuaryStoryTray from '@/components/sanctuary-stories/SanctuaryStoryTray';
+import '@/styles/sanctuary-instagram-feed.css';
 
 type TestimonyPost = {
   id: number;
@@ -505,22 +507,23 @@ export default function SanctuaryPage() {
   /* Instagram-style home (shared Feed + useFeed) — same stack as /my-sanctuary */
   if (sanctuaryExperience === 'home') {
     return (
-      <main className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-black text-white selection:bg-[#00f2ff]/30">
-        <header className="sticky top-0 z-30 shrink-0 border-b border-neutral-800 bg-black">
+      <main className="sanctuary-ig-feed flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden selection:bg-[#00f2ff]/25">
+        <header className="ig-topbar sticky top-0 z-30 shrink-0">
           <SanctuaryFeedTopBar />
-          <div className="flex items-center justify-between gap-2 border-t border-neutral-900/80 px-3 py-2">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">Home</span>
+          <div className="flex items-center justify-between gap-2 border-t border-[#dbdbdb] px-4 py-2.5">
+            <span className="text-xs font-semibold text-[#262626]">Home</span>
             <button
               type="button"
               onClick={() => setSanctuaryExperience('testify')}
-              className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[#00f2ff] transition hover:border-[#00f2ff]/40 hover:bg-[#00f2ff]/10"
+              className="rounded-lg border border-[#dbdbdb] bg-[#fafafa] px-3 py-1.5 text-[11px] font-semibold text-[#7c3aed] transition hover:border-[#7c3aed]/40 hover:bg-[#7c3aed]/5"
             >
               Testify portal
             </button>
           </div>
         </header>
         <SanctuaryPostComposer variant="igHome" />
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain scrollbar-hide pb-parable-bottom">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain scrollbar-hide bg-[#fafafa] pb-parable-bottom">
+          <SanctuaryStoryTray />
           <Feed hideMiniProfile />
         </div>
       </main>

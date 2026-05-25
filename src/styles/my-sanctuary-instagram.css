@@ -1,0 +1,1669 @@
+@import url("https://fonts.googleapis.com/css?family=Open+Sans:300,400,600");
+
+.my-sanctuary-ig {
+  --brand-primary: #00f2fe;
+  --brand-secondary: #0ea5e9;
+  --ig-bg: #01040a;
+  --ig-surface: #020712;
+  --ig-border: #06111e;
+  --ig-text: #f8fafc;
+  --ig-text-muted: #94a3b8;
+  --ig-text-soft: #cbd5e1;
+  --ig-neon: #00f2fe;
+  --ig-cyan: #0ea5e9;
+  font-size: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100%;
+  background-color: var(--ig-bg);
+  color: var(--ig-text);
+  padding-bottom: 3rem;
+  box-sizing: border-box;
+}
+
+.my-sanctuary-ig *,
+.my-sanctuary-ig *::before,
+.my-sanctuary-ig *::after {
+  box-sizing: border-box;
+}
+
+.my-sanctuary-ig img {
+  display: block;
+}
+
+.my-sanctuary-ig .container {
+  max-width: 73.75rem;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.my-sanctuary-ig .btn {
+  display: inline-block;
+  font: inherit;
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.my-sanctuary-ig .visually-hidden {
+  position: absolute !important;
+  height: 1px;
+  width: 1px;
+  overflow: hidden;
+  clip: rect(1px, 1px, 1px, 1px);
+}
+
+.my-sanctuary-ig .profile {
+  padding: 5rem 0;
+}
+
+.my-sanctuary-ig .profile::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+.my-sanctuary-ig .profile-image {
+  float: left;
+  width: calc(33.333% - 1rem);
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  margin-right: 3rem;
+}
+
+.my-sanctuary-ig .profile-image-shell {
+  width: 15.2rem;
+  height: 15.2rem;
+  aspect-ratio: 1 / 1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #efefef;
+}
+
+.my-sanctuary-ig .profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.my-sanctuary-ig .profile-avatar-img--static {
+  display: block;
+}
+
+.my-sanctuary-ig .profile-image-trigger {
+  position: relative;
+  width: 15.2rem;
+  height: 15.2rem;
+  padding: 0;
+  border: none;
+  background: #efefef;
+  cursor: pointer;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.my-sanctuary-ig .profile-image-change-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.my-sanctuary-ig .profile-image-trigger:hover .profile-image-change-overlay,
+.my-sanctuary-ig .profile-image-trigger:focus-visible .profile-image-change-overlay {
+  opacity: 1;
+}
+
+.my-sanctuary-ig .profile-image-trigger:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.my-sanctuary-ig .profile-image-loading {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.my-sanctuary-ig .profile-user-settings,
+.my-sanctuary-ig .profile-stats,
+.my-sanctuary-ig .profile-bio,
+.my-sanctuary-ig .profile-creator-hub,
+.my-sanctuary-ig .profile-composer-dock {
+  float: left;
+  width: calc(66.666% - 2rem);
+}
+
+.my-sanctuary-ig .profile-user-settings {
+  margin-top: 1.1rem;
+}
+
+.my-sanctuary-ig .profile-user-name {
+  display: inline-block;
+  font-size: 3.2rem;
+  font-weight: 300;
+  margin: 0;
+}
+
+.my-sanctuary-ig .profile-edit-btn {
+  font-size: 1.4rem;
+  line-height: 1.8;
+  border: 0.1rem solid #dbdbdb;
+  border-radius: 0.3rem;
+  padding: 0 2.4rem;
+  margin-left: 2rem;
+}
+
+.my-sanctuary-ig .profile-settings-btn {
+  font-size: 2rem;
+  margin-left: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.my-sanctuary-ig .profile-stats {
+  margin-top: 2.3rem;
+}
+
+.my-sanctuary-ig .profile-stats ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.my-sanctuary-ig .profile-stats li {
+  display: inline-block;
+  font-size: 1.6rem;
+  line-height: 1.5;
+  margin-right: 4rem;
+  cursor: pointer;
+}
+
+.my-sanctuary-ig .profile-stats li:last-of-type {
+  margin-right: 0;
+}
+
+.my-sanctuary-ig .profile-bio {
+  font-size: 1.6rem;
+  font-weight: 400;
+  line-height: 1.5;
+  margin-top: 2.3rem;
+}
+
+.my-sanctuary-ig .profile-bio p {
+  margin: 0;
+}
+
+.my-sanctuary-ig .profile-real-name,
+.my-sanctuary-ig .profile-stat-count,
+.my-sanctuary-ig .profile-edit-btn {
+  font-weight: 600;
+}
+
+.my-sanctuary-ig .profile-real-name {
+  margin: 0 0 0.4rem;
+}
+
+.my-sanctuary-ig .profile-bio-text {
+  margin: 0;
+  color: var(--ig-text-soft);
+  font-weight: 400;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.my-sanctuary-ig .profile-bio-empty {
+  margin-top: 0.4rem;
+  color: var(--ig-text-muted);
+  font-weight: 400;
+}
+
+.my-sanctuary-ig .profile-creator-hub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.my-sanctuary-ig .profile-creator-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  border-radius: 0.8rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 0.9rem 1.6rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.my-sanctuary-ig .profile-creator-btn--primary {
+  border: none;
+  background: var(--brand-primary);
+  color: #010101;
+}
+
+.my-sanctuary-ig .profile-creator-btn--primary:hover {
+  filter: brightness(0.95);
+}
+
+.my-sanctuary-ig .profile-creator-btn--secondary {
+  border: 0.1rem solid #dbdbdb;
+  background: #fafafa;
+  color: #262626;
+}
+
+.my-sanctuary-ig .profile-creator-btn--secondary:hover {
+  background: #efefef;
+}
+
+.my-sanctuary-ig .profile-creator-btn--story {
+  border: none;
+  background: #7c3aed;
+  color: #fff;
+}
+
+.my-sanctuary-ig .profile-creator-btn--story:hover {
+  background: #6d28d9;
+}
+
+.my-sanctuary-ig .profile-stories-row {
+  border-bottom: 0.1rem solid #dbdbdb;
+  padding: 1.6rem 0 1.2rem;
+}
+
+.my-sanctuary-ig .profile-stories-label {
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8e8e8e;
+  margin: 0 0 1rem;
+}
+
+.my-sanctuary-ig .profile-stories-list {
+  display: flex;
+  gap: 1.6rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+}
+
+.my-sanctuary-ig .profile-story-bubble {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  width: 7.2rem;
+  text-decoration: none;
+  color: #262626;
+}
+
+.my-sanctuary-ig .profile-story-thumb {
+  width: 6.4rem;
+  height: 6.4rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 0.22rem solid var(--brand-primary);
+  padding: 0.15rem;
+  background: #fff;
+}
+
+.my-sanctuary-ig .profile-story-thumb--empty {
+  display: block;
+  background: #efefef;
+}
+
+.my-sanctuary-ig .profile-story-name {
+  font-size: 1.1rem;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.my-sanctuary-ig .gallery--reels {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.2rem;
+}
+
+.my-sanctuary-ig .gallery-item--reel {
+  aspect-ratio: 9 / 16;
+}
+
+.studio-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.6rem;
+}
+
+.studio-overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.studio-shell {
+  position: relative;
+  z-index: 1;
+  width: min(110rem, 100%);
+  max-height: calc(100vh - 3.2rem);
+  overflow: auto;
+  border-radius: 1.2rem;
+  border: 0.1rem solid #27272a;
+  background: #09090b;
+  color: #fafafa;
+}
+
+.studio-shell--narrow {
+  width: min(48rem, 100%);
+}
+
+.profile-avatar-crop-overlay {
+  align-items: stretch;
+  padding: 0;
+}
+
+.profile-avatar-crop-shell {
+  display: flex;
+  flex-direction: column;
+  width: min(52rem, 100%);
+  max-height: 100vh;
+  border-radius: 0;
+}
+
+@media (min-width: 40rem) {
+  .profile-avatar-crop-overlay {
+    padding: 1.6rem;
+  }
+
+  .profile-avatar-crop-shell {
+    max-height: calc(100vh - 3.2rem);
+    border-radius: 1.2rem;
+  }
+}
+
+.profile-avatar-crop-hint {
+  margin: 0.4rem 0 0;
+  font-size: 1.2rem;
+  color: #a1a1aa;
+}
+
+.profile-avatar-crop-stage {
+  position: relative;
+  flex: 1;
+  min-height: 28rem;
+  background: #18181b;
+}
+
+.profile-avatar-crop-controls {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1.2rem 2rem;
+  border-top: 0.1rem solid #27272a;
+}
+
+.profile-avatar-crop-zoom-label {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #a1a1aa;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.profile-avatar-crop-zoom {
+  flex: 1;
+  height: 0.4rem;
+  appearance: none;
+  border-radius: 999px;
+  background: #27272a;
+  accent-color: var(--brand-primary, #00f2ff);
+}
+
+.profile-avatar-crop-error {
+  margin: 0 2rem;
+}
+
+.profile-avatar-crop-actions {
+  padding: 0 2rem 2rem;
+}
+
+.studio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.6rem 2rem;
+  border-bottom: 0.1rem solid #27272a;
+}
+
+.studio-title {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.studio-close {
+  border: none;
+  background: transparent;
+  color: #a1a1aa;
+  cursor: pointer;
+}
+
+.studio-body {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 2rem;
+  padding: 2rem;
+}
+
+.studio-preview-panel,
+.studio-options-panel {
+  min-width: 0;
+}
+
+.studio-preview-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28rem;
+  border-radius: 1rem;
+  background: #18181b;
+  overflow: hidden;
+}
+
+.studio-preview-media {
+  max-width: 100%;
+  max-height: 45vh;
+  object-fit: contain;
+}
+
+.studio-filters {
+  margin-top: 1.6rem;
+}
+
+.studio-filters-label,
+.studio-options-title {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #a1a1aa;
+}
+
+.studio-filters-row {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 0.4rem;
+}
+
+.studio-filter-chip {
+  flex-shrink: 0;
+  width: 7.2rem;
+  border: none;
+  background: transparent;
+  color: #d4d4d8;
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: 0.8rem;
+}
+
+.studio-filter-chip--active {
+  background: #27272a;
+  outline: 0.2rem solid #0ea5e9;
+}
+
+.studio-filter-thumb {
+  width: 6.4rem;
+  height: 6.4rem;
+  border-radius: 0.6rem;
+  object-fit: cover;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.studio-video-note {
+  margin-top: 1.2rem;
+  color: #a1a1aa;
+  font-size: 1.2rem;
+}
+
+.studio-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1.2rem;
+}
+
+.studio-field span {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #d4d4d8;
+}
+
+.studio-field textarea,
+.studio-field input,
+.studio-customize-form textarea,
+.studio-customize-form input {
+  width: 100%;
+  border: 0.1rem solid #3f3f46;
+  border-radius: 0.8rem;
+  background: #18181b;
+  color: #fafafa;
+  padding: 1rem 1.2rem;
+  font: inherit;
+  font-size: 1.4rem;
+}
+
+.studio-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 1.6rem 0;
+}
+
+.studio-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.2rem;
+  padding: 1.2rem;
+  border-radius: 0.8rem;
+  background: #18181b;
+  border: 0.1rem solid #27272a;
+}
+
+.studio-toggle strong {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.studio-toggle p {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #a1a1aa;
+}
+
+.studio-toggle input {
+  width: 1.8rem;
+  height: 1.8rem;
+  accent-color: #0ea5e9;
+}
+
+.studio-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.6rem;
+}
+
+.studio-btn {
+  flex: 1;
+  border-radius: 0.8rem;
+  padding: 1rem 1.4rem;
+  font-size: 1.4rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.studio-btn--ghost {
+  border: 0.1rem solid #3f3f46;
+  background: transparent;
+  color: #d4d4d8;
+}
+
+.studio-btn--primary {
+  border: none;
+  background: var(--brand-primary, #00f2ff);
+  color: #010101;
+}
+
+.studio-btn--primary:disabled,
+.studio-btn--ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.studio-error {
+  color: #f87171;
+  font-size: 1.2rem;
+  margin: 0 0 1rem;
+}
+
+.studio-status {
+  color: #a1a1aa;
+  font-size: 1.2rem;
+  margin: 0 0 1rem;
+}
+
+.studio-customize-form {
+  padding: 2rem;
+}
+
+@media (max-width: 48rem) {
+  .studio-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.my-sanctuary-ig .profile-composer-dock {
+  margin-top: 1.6rem;
+  padding: 1.6rem;
+  border: 0.1rem solid #dbdbdb;
+  border-radius: 0.8rem;
+  background: #fff;
+}
+
+.my-sanctuary-ig .profile-composer-preview {
+  overflow: hidden;
+  border-radius: 0.6rem;
+  border: 0.1rem solid #efefef;
+  margin-bottom: 1.2rem;
+}
+
+.my-sanctuary-ig .profile-composer-preview-media {
+  display: block;
+  width: 100%;
+  max-height: 24rem;
+  object-fit: contain;
+  background: #000;
+}
+
+.my-sanctuary-ig .profile-composer-caption {
+  width: 100%;
+  resize: vertical;
+  min-height: 6rem;
+  border: 0.1rem solid #dbdbdb;
+  border-radius: 0.6rem;
+  padding: 1rem 1.2rem;
+  font: inherit;
+  font-size: 1.4rem;
+  line-height: 1.5;
+  color: #262626;
+}
+
+.my-sanctuary-ig .profile-composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.2rem;
+}
+
+.my-sanctuary-ig .profile-composer-remove {
+  background: none;
+  border: none;
+  color: #8e8e8e;
+  cursor: pointer;
+  font-size: 1.2rem;
+  text-decoration: underline;
+}
+
+.my-sanctuary-ig .profile-composer-share {
+  border: none;
+  border-radius: 0.6rem;
+  background: #0095f6;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1.3rem;
+  font-weight: 700;
+  padding: 0.8rem 1.6rem;
+}
+
+.my-sanctuary-ig .profile-composer-share:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.my-sanctuary-ig .profile-composer-message {
+  margin: 1rem 0 0;
+  font-size: 1.2rem;
+  color: #8e8e8e;
+  text-align: center;
+}
+
+.my-sanctuary-ig .profile-follow-btn {
+  background: #0095f6;
+  border: 0.1rem solid #0095f6;
+  color: #fff;
+  font-weight: 600;
+}
+
+.my-sanctuary-ig .profile-follow-btn--active {
+  background: transparent;
+  border-color: #dbdbdb;
+  color: #262626;
+}
+
+.my-sanctuary-ig .profile-tabs {
+  border-top: 0.1rem solid #dbdbdb;
+  margin-bottom: 0.8rem;
+}
+
+.my-sanctuary-ig .profile-tabs-list {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-height: 5.2rem;
+}
+
+.my-sanctuary-ig .profile-tabs-list li {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.my-sanctuary-ig .profile-tabs-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #8e8e8e;
+  cursor: pointer;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 1.2rem 0.4rem 1.6rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.my-sanctuary-ig .profile-tabs-item--active {
+  color: #262626;
+}
+
+.my-sanctuary-ig .profile-tabs-item--active::after {
+  content: "";
+  position: absolute;
+  bottom: 0.6rem;
+  left: 0;
+  width: 100%;
+  height: 0.2rem;
+  background: var(--brand-primary);
+}
+
+.my-sanctuary-ig .gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.3rem;
+  margin: 0;
+  padding-bottom: 3rem;
+}
+
+.my-sanctuary-ig .gallery-item {
+  position: relative;
+  margin: 0;
+  flex: unset;
+  min-width: 0;
+  color: #fff;
+  cursor: pointer;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  text-decoration: none;
+}
+
+.my-sanctuary-ig main .container {
+  padding-top: 1.2rem;
+}
+
+.my-sanctuary-ig .gallery-item:hover .gallery-item-info,
+.my-sanctuary-ig .gallery-item:focus .gallery-item-info,
+.my-sanctuary-ig .gallery-item:focus-visible .gallery-item-info {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.my-sanctuary-ig .gallery-item-info {
+  display: none;
+}
+
+.my-sanctuary-ig .gallery-item-info ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.my-sanctuary-ig .gallery-item-info li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.7rem;
+  font-weight: 600;
+}
+
+.my-sanctuary-ig .gallery-item-likes {
+  margin-right: 2.2rem;
+}
+
+.my-sanctuary-ig .gallery-item-type {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 2.5rem;
+  text-shadow: 0.2rem 0.2rem 0.2rem rgba(0, 0, 0, 0.1);
+  z-index: 1;
+}
+
+.my-sanctuary-ig .ig-icon-clone,
+.my-sanctuary-ig .ig-icon-comment {
+  transform: rotateY(180deg);
+}
+
+.my-sanctuary-ig .ig-icon {
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
+}
+
+.my-sanctuary-ig .gallery-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.my-sanctuary-ig .gallery-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #efefef;
+  color: #8e8e8e;
+  font-size: 1.2rem;
+  padding: 1rem;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.my-sanctuary-ig .gallery-empty {
+  width: 100%;
+  padding: 6rem 2rem;
+  text-align: center;
+  color: #8e8e8e;
+  font-size: 1.6rem;
+}
+
+.my-sanctuary-ig .loader {
+  width: 5rem;
+  height: 5rem;
+  border: 0.6rem solid #999;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  margin: 0 auto;
+  animation: my-sanctuary-ig-loader 500ms linear infinite;
+}
+
+@media screen and (max-width: 40rem) {
+  .my-sanctuary-ig .profile {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 4rem 0;
+  }
+
+  .my-sanctuary-ig .profile::after {
+    display: none;
+  }
+
+  .my-sanctuary-ig .profile-image,
+  .my-sanctuary-ig .profile-user-settings,
+  .my-sanctuary-ig .profile-bio,
+  .my-sanctuary-ig .profile-stats,
+  .my-sanctuary-ig .profile-creator-hub,
+  .my-sanctuary-ig .profile-composer-dock {
+    float: none;
+    width: auto;
+  }
+
+  .my-sanctuary-ig .profile-image-shell,
+  .my-sanctuary-ig .profile-image-trigger {
+    width: 7.7rem;
+    height: 7.7rem;
+  }
+
+  .my-sanctuary-ig .profile-user-settings {
+    flex-basis: calc(100% - 10.7rem);
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+
+  .my-sanctuary-ig .profile-user-name {
+    font-size: 2.2rem;
+  }
+
+  .my-sanctuary-ig .profile-edit-btn {
+    order: 1;
+    padding: 0;
+    text-align: center;
+    margin-top: 1rem;
+    margin-left: 0;
+  }
+
+  .my-sanctuary-ig .profile-bio {
+    font-size: 1.4rem;
+    margin-top: 1.5rem;
+  }
+
+  .my-sanctuary-ig .profile-edit-btn,
+  .my-sanctuary-ig .profile-bio,
+  .my-sanctuary-ig .profile-stats,
+  .my-sanctuary-ig .profile-creator-hub,
+  .my-sanctuary-ig .profile-composer-dock {
+    flex-basis: 100%;
+  }
+
+  .my-sanctuary-ig .profile-creator-hub {
+    justify-content: center;
+    margin-top: 1.5rem;
+  }
+
+  .my-sanctuary-ig .profile-composer-dock {
+    margin-top: 1.2rem;
+  }
+
+  .my-sanctuary-ig .profile-stats {
+    order: 1;
+    margin-top: 1.5rem;
+  }
+
+  .my-sanctuary-ig .profile-stats ul {
+    display: flex;
+    text-align: center;
+    padding: 1.2rem 0;
+    border-top: 0.1rem solid #dadada;
+    border-bottom: 0.1rem solid #dadada;
+  }
+
+  .my-sanctuary-ig .profile-stats li {
+    font-size: 1.4rem;
+    flex: 1;
+    margin: 0;
+  }
+
+  .my-sanctuary-ig .profile-stat-count {
+    display: block;
+  }
+}
+
+@supports (display: grid) {
+  .my-sanctuary-ig .profile {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    grid-template-rows: repeat(3, auto);
+    grid-column-gap: 3rem;
+    align-items: start;
+  }
+
+  .my-sanctuary-ig .profile-image {
+    grid-row: 1 / -1;
+    align-self: center;
+  }
+
+  .my-sanctuary-ig .gallery {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.3rem;
+  }
+
+  .my-sanctuary-ig .profile-image,
+  .my-sanctuary-ig .profile-user-settings,
+  .my-sanctuary-ig .profile-stats,
+  .my-sanctuary-ig .profile-bio,
+  .my-sanctuary-ig .profile-creator-hub,
+  .my-sanctuary-ig .profile-composer-dock,
+  .my-sanctuary-ig .gallery-item,
+  .my-sanctuary-ig .gallery {
+    width: auto;
+    margin: 0;
+  }
+
+  @media (max-width: 40rem) {
+    .my-sanctuary-ig .profile {
+      grid-template-columns: auto 1fr;
+      grid-row-gap: 1.5rem;
+    }
+
+    .my-sanctuary-ig .profile-image {
+      grid-row: 1 / 2;
+    }
+
+    .my-sanctuary-ig .profile-user-settings {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      grid-gap: 1rem;
+    }
+
+    .my-sanctuary-ig .profile-edit-btn,
+    .my-sanctuary-ig .profile-stats,
+    .my-sanctuary-ig .profile-bio,
+    .my-sanctuary-ig .profile-creator-hub,
+    .my-sanctuary-ig .profile-composer-dock {
+      grid-column: 1 / -1;
+    }
+
+    .my-sanctuary-ig .profile-user-settings,
+    .my-sanctuary-ig .profile-edit-btn,
+    .my-sanctuary-ig .profile-settings-btn,
+    .my-sanctuary-ig .profile-bio,
+    .my-sanctuary-ig .profile-stats {
+      margin: 0;
+    }
+  }
+}
+
+@keyframes my-sanctuary-ig-loader {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- Instagram profile layout (Phase 1) ---- */
+.my-sanctuary-ig .profile-header {
+  background: var(--ig-surface);
+}
+
+.my-sanctuary-ig .profile-header-inner {
+  padding-top: 1.6rem;
+  padding-bottom: 0;
+}
+
+.my-sanctuary-ig .profile--instagram {
+  padding: 0 0 1.2rem;
+  display: block;
+  float: none;
+}
+
+.my-sanctuary-ig .profile--instagram::after {
+  display: none;
+}
+
+.my-sanctuary-ig .profile-top-row {
+  display: flex;
+  align-items: center;
+  gap: 2.4rem;
+}
+
+.my-sanctuary-ig .profile--instagram .profile-image {
+  float: none;
+  width: auto;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.my-sanctuary-ig .profile--instagram .profile-image-shell,
+.my-sanctuary-ig .profile--instagram .profile-image-trigger {
+  width: 7.7rem;
+  height: 7.7rem;
+}
+
+.my-sanctuary-ig .profile--instagram .profile-stats {
+  float: none;
+  width: auto;
+  flex: 1;
+  margin: 0;
+}
+
+.my-sanctuary-ig .profile--instagram .profile-stats ul {
+  display: flex;
+  justify-content: space-around;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.my-sanctuary-ig .profile--instagram .profile-stats li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  text-align: center;
+}
+
+.my-sanctuary-ig .profile-stat-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.my-sanctuary-ig .profile-stat-label {
+  font-size: 1.3rem;
+  color: var(--ig-text);
+  font-weight: 400;
+}
+
+.my-sanctuary-ig .profile--instagram .profile-stat-count {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.my-sanctuary-ig .profile-desktop-meta {
+  display: none;
+}
+
+.my-sanctuary-ig .profile-stats--desktop {
+  display: none;
+}
+
+.my-sanctuary-ig .profile-identity {
+  margin-top: 1.2rem;
+  float: none;
+  width: auto;
+}
+
+.my-sanctuary-ig .profile-identity .profile-real-name {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+  color: var(--ig-text);
+}
+
+.my-sanctuary-ig .profile-identity .profile-bio-text,
+.my-sanctuary-ig .profile-identity .profile-bio-empty {
+  font-size: 1.4rem;
+  line-height: 1.45;
+  margin: 0;
+  color: var(--ig-text-soft);
+}
+
+.my-sanctuary-ig .profile-identity .profile-bio-empty {
+  color: var(--ig-text-muted);
+}
+
+.my-sanctuary-ig .profile-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 1.2rem;
+}
+
+.my-sanctuary-ig .profile-action-btn {
+  flex: 1;
+  min-height: 3.2rem;
+  border: none;
+  border-radius: 0.8rem;
+  background: #efefef;
+  color: #262626;
+  font-size: 1.4rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 1.2rem;
+}
+
+.my-sanctuary-ig .profile-action-btn--primary {
+  background: #0095f6;
+  color: #fff;
+}
+
+.my-sanctuary-ig .profile-action-btn--secondary {
+  background: #efefef;
+  color: #262626;
+}
+
+.my-sanctuary-ig .profile-settings-btn--mobile {
+  display: inline-flex;
+  flex: 0 0 3.2rem;
+  width: 3.2rem;
+  height: 3.2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.8rem;
+  background: #efefef;
+  color: #262626;
+}
+
+.my-sanctuary-ig .profile-settings-btn--desktop {
+  display: none;
+}
+
+.my-sanctuary-ig .profile-share-notice {
+  margin: 0.8rem 0 0;
+  font-size: 1.2rem;
+  color: #8e8e8e;
+  text-align: center;
+}
+
+.my-sanctuary-ig .profile-tabs-list {
+  gap: 0;
+  justify-content: stretch;
+  min-height: 4.8rem;
+}
+
+.my-sanctuary-ig .profile-tabs-list li {
+  flex: 1;
+}
+
+.my-sanctuary-ig .profile-tabs-item {
+  width: 100%;
+  padding: 1.1rem 0 0.9rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.my-sanctuary-ig .profile-tabs-icon {
+  width: 2.4rem;
+  height: 2.4rem;
+}
+
+.my-sanctuary-ig .profile-tabs-item--active::after {
+  bottom: 0;
+  height: 0.1rem;
+  background: #262626;
+}
+
+.my-sanctuary-ig .gallery-reel-metric {
+  position: absolute;
+  left: 0.8rem;
+  bottom: 0.8rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 600;
+  text-shadow: 0 0.1rem 0.4rem rgba(0, 0, 0, 0.45);
+}
+
+.my-sanctuary-ig .ig-icon-play-metric {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.my-sanctuary-ig .container {
+  padding-left: 1.6rem;
+  padding-right: 1.6rem;
+}
+
+.profile-follow-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 1.6rem;
+}
+
+.profile-follow-modal {
+  width: min(42rem, 100%);
+  max-height: min(70vh, 52rem);
+  display: flex;
+  flex-direction: column;
+  border-radius: 1.2rem;
+  background: #fff;
+  color: #262626;
+  overflow: hidden;
+}
+
+.profile-follow-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 1.4rem 4rem;
+  border-bottom: 0.1rem solid #dbdbdb;
+}
+
+.profile-follow-modal-header h2 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.profile-follow-modal-close {
+  position: absolute;
+  right: 1.2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #262626;
+}
+
+.profile-follow-modal-body {
+  overflow-y: auto;
+  min-height: 12rem;
+}
+
+.profile-follow-modal-loading,
+.profile-follow-modal-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  color: #8e8e8e;
+  font-size: 1.4rem;
+}
+
+.profile-follow-modal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.8rem 0;
+}
+
+.profile-follow-modal-row {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 0.8rem 1.6rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.profile-follow-modal-row:hover {
+  background: #fafafa;
+}
+
+.profile-follow-modal-avatar {
+  width: 4.4rem;
+  height: 4.4rem;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #efefef;
+}
+
+.profile-follow-modal-handle {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.profile-follow-modal-name {
+  margin: 0.1rem 0 0;
+  font-size: 1.4rem;
+  color: #8e8e8e;
+}
+
+@media (min-width: 48rem) {
+  .my-sanctuary-ig .profile-header-inner {
+    padding-top: 3rem;
+  }
+
+  .my-sanctuary-ig .profile--instagram {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "avatar meta"
+      "avatar identity"
+      "avatar actions";
+    column-gap: 3rem;
+    row-gap: 1.2rem;
+    align-items: start;
+    padding-bottom: 2rem;
+  }
+
+  .my-sanctuary-ig .profile-top-row {
+    display: contents;
+  }
+
+  .my-sanctuary-ig .profile--instagram .profile-image {
+    grid-area: avatar;
+    align-self: center;
+  }
+
+  .my-sanctuary-ig .profile--instagram .profile-image-shell,
+  .my-sanctuary-ig .profile--instagram .profile-image-trigger {
+    width: 15rem;
+    height: 15rem;
+  }
+
+  .my-sanctuary-ig .profile-stats--mobile {
+    display: none;
+  }
+
+  .my-sanctuary-ig .profile-stats--desktop {
+    display: block;
+  }
+
+  .my-sanctuary-ig .profile-desktop-meta {
+    display: block;
+    grid-area: meta;
+  }
+
+  .my-sanctuary-ig .profile-desktop-meta .profile-user-settings {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    margin: 0 0 1.8rem;
+    float: none;
+    width: auto;
+  }
+
+  .my-sanctuary-ig .profile-desktop-meta .profile-user-name {
+    font-size: 2rem;
+    font-weight: 300;
+  }
+
+  .my-sanctuary-ig .profile-desktop-meta .profile-stats {
+    margin: 0;
+  }
+
+  .my-sanctuary-ig .profile-desktop-meta .profile-stats ul {
+    justify-content: flex-start;
+    gap: 4rem;
+  }
+
+  .my-sanctuary-ig .profile-desktop-meta .profile-stats li {
+    flex-direction: row;
+    gap: 0.35rem;
+    font-size: 1.6rem;
+  }
+
+  .my-sanctuary-ig .profile-identity {
+    grid-area: identity;
+    margin: 0;
+  }
+
+  .my-sanctuary-ig .profile-actions {
+    grid-area: actions;
+    margin: 0;
+    max-width: 32rem;
+  }
+
+  .my-sanctuary-ig .profile-action-btn {
+    flex: 0 1 auto;
+    min-width: 12rem;
+  }
+
+  .my-sanctuary-ig .profile-settings-btn--mobile {
+    display: none;
+  }
+
+  .my-sanctuary-ig .profile-settings-btn--desktop {
+    display: inline-flex;
+    margin-left: 0.4rem;
+  }
+}
+
+/* ---- Dark palette + P0 create / reels overlays ---- */
+.my-sanctuary-ig .profile-image-shell {
+  background: var(--ig-border);
+}
+
+.my-sanctuary-ig .profile-action-btn {
+  background: var(--ig-border);
+  color: var(--ig-text-soft);
+  border: 1px solid rgba(0, 242, 254, 0.12);
+}
+
+.my-sanctuary-ig .profile-action-btn--create {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.18), rgba(14, 165, 233, 0.12));
+  border-color: rgba(0, 242, 254, 0.35);
+  color: var(--ig-neon);
+}
+
+.my-sanctuary-ig .profile-action-btn--primary {
+  background: var(--ig-cyan);
+  color: var(--ig-bg);
+}
+
+.my-sanctuary-ig .profile-action-btn--secondary {
+  background: var(--ig-border);
+  color: var(--ig-text-soft);
+}
+
+.my-sanctuary-ig .profile-settings-btn--mobile,
+.my-sanctuary-ig .profile-settings-btn--desktop {
+  background: var(--ig-border);
+  color: var(--ig-text-soft);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.my-sanctuary-ig .profile-create-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.2rem;
+  height: 3.2rem;
+  margin-left: 0.6rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 242, 254, 0.45);
+  background: rgba(0, 242, 254, 0.1);
+  color: var(--ig-neon);
+  box-shadow: 0 0 18px rgba(0, 242, 254, 0.2);
+}
+
+.my-sanctuary-ig .profile-create-btn:hover {
+  background: rgba(0, 242, 254, 0.18);
+}
+
+.my-sanctuary-ig .profile-share-notice,
+.my-sanctuary-ig .profile-bio-empty {
+  color: var(--ig-text-muted);
+}
+
+.my-sanctuary-ig .profile-tabs {
+  background: var(--ig-surface);
+  border-top: 1px solid var(--ig-border);
+  border-bottom: 1px solid var(--ig-border);
+}
+
+.my-sanctuary-ig .profile-tabs-item {
+  color: var(--ig-text-muted);
+}
+
+.my-sanctuary-ig .profile-tabs-item--active {
+  color: var(--ig-text);
+  border-top: 1px solid var(--ig-neon);
+}
+
+.my-sanctuary-ig .profile-tabs-icon {
+  fill: currentColor;
+}
+
+.my-sanctuary-ig .gallery-empty {
+  color: var(--ig-text-muted);
+}
+
+.my-sanctuary-ig .gallery-item {
+  background: var(--ig-border);
+}
+
+.my-sanctuary-ig .gallery-placeholder {
+  background: var(--ig-surface);
+  color: var(--ig-text-muted);
+}
+
+.my-sanctuary-ig .gallery-item-type--play,
+.my-sanctuary-ig .gallery-reel-play-badge {
+  pointer-events: none;
+}
+
+.my-sanctuary-ig .gallery-reel-play-badge {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  color: #fff;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.65));
+}
+
+.my-sanctuary-ig .loader {
+  border-color: rgba(148, 163, 184, 0.25);
+  border-top-color: var(--ig-neon);
+}
+
+.my-sanctuary-ig .profile-mobile-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.my-sanctuary-ig .profile-user-name--mobile {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--ig-text);
+}
+
+.my-sanctuary-ig .profile-create-btn--mobile {
+  flex-shrink: 0;
+  margin-left: 0;
+}
+
+@media (min-width: 48rem) {
+  .my-sanctuary-ig .profile-mobile-toolbar {
+    display: none;
+  }
+}

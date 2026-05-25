@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import GlobalPulseTicker from "@/components/GlobalPulseTicker";
 import MainHeader from "@/components/MainHeader";
 import { GlobalPulseProvider } from "@/providers/GlobalPulseProvider";
@@ -9,12 +10,20 @@ import { GlobalPulseProvider } from "@/providers/GlobalPulseProvider";
  * `GlobalPulseTicker` (z-index 100) → `MainHeader` → scrollable `children`.
  */
 export default function ParableGlobalLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const hideGlobalTopStack =
+    (pathname ?? "").startsWith("/my-sanctuary") ||
+    (pathname ?? "") === "/profile" ||
+    (pathname ?? "").startsWith("/profile/");
+
   return (
     <GlobalPulseProvider>
-      <div className="flex min-w-0 shrink-0 flex-col">
-        <GlobalPulseTicker />
-        <MainHeader />
-      </div>
+      {!hideGlobalTopStack ? (
+        <div className="flex min-w-0 shrink-0 flex-col">
+          <GlobalPulseTicker />
+          <MainHeader />
+        </div>
+      ) : null}
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
     </GlobalPulseProvider>
   );

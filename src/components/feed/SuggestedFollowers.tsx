@@ -5,7 +5,8 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { fallbackAvatarOnError } from "@/lib/avatar-display";
 import { useAuth } from "@/hooks/useAuth";
-import { SIMULATION_PROFILE_USERNAMES, orderSimulationProfiles } from "@/lib/simulation-profiles";
+import { SIMULATION_PROFILE_USERNAMES, resolveSimulationProfiles } from "@/lib/simulation-profiles";
+import { isDemoPersonaId } from "@/lib/demo-personas";
 
 type Profile = {
   id: string;
@@ -24,8 +25,8 @@ type Props = {
 const MAX_SUGGESTIONS = 5;
 
 /**
- * Sidebar: Sarah, James, and Michael — only those you do not follow yet (up to {@link MAX_SUGGESTIONS}).
- * Follow → `public.follows` insert; home feed is follow-only via {@link useFeed} + {@link onFollowed} refresh.
+ * Sidebar: five demo personas — only those you do not follow yet (up to {@link MAX_SUGGESTIONS}).
+ * Follow → `public.follows` insert; demo personas use optimistic UI only.
  */
 export default function SuggestedFollowers({ onFollowed, compact = false }: Props) {
   const { loading: authLoading } = useAuth();
@@ -81,7 +82,7 @@ export default function SuggestedFollowers({ onFollowed, compact = false }: Prop
         return;
       }
 
-      const ordered = orderSimulationProfiles((trio ?? []) as Profile[]);
+      const ordered = resolveSimulationProfiles((trio ?? []) as Profile[]);
       const out = ordered.filter((p) => p.id !== followerId && !followingSet.has(p.id));
 
       setSuggestions(out.slice(0, MAX_SUGGESTIONS));
@@ -99,6 +100,12 @@ export default function SuggestedFollowers({ onFollowed, compact = false }: Prop
   }, [authLoading, sessionReady, sessionUserId, fetchSuggestions]);
 
   const handleFollow = async (targetId: string) => {
+    if (isDemoPersonaId(targetId)) {
+      setSuggestions((prev) => prev.filter((p) => p.id !== targetId));
+      onFollowed?.();
+      return;
+    }
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -129,7 +136,7 @@ export default function SuggestedFollowers({ onFollowed, compact = false }: Prop
         return (
           <div key={profile.id} className="flex items-center justify-between gap-2">
             <Link
-              href={`/profile/${profile.id}`}
+              href={`/profile/${profile.username ?? profile.id}`}
               className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-90"
             >
               {profile.avatar_url ? (

@@ -86,6 +86,8 @@ function withImgCacheBust(url: string, rev: number): string {
   return `${url}${sep}_av=${rev}`;
 }
 
+const FOCUS_RELOAD_MS = 5000;
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [canonicalAvatarUrl, setCanonicalAvatarUrl] =
@@ -93,6 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [avatarRev, setAvatarRev] = useState(0);
   const [loading, setLoading] = useState(true);
   const loadGenRef = useRef(0);
+  const lastFocusLoadAtRef = useRef(0);
 
   const avatarUrl = useMemo(
     () => withImgCacheBust(canonicalAvatarUrl, avatarRev),
@@ -435,7 +438,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } finally {
-      if (gen === loadGenRef.current) setLoading(false);
+      if (gen === loadGenRef.current) {
+        setLoading(false);
+      }
     }
   }, [bumpAvatar]);
 
@@ -444,8 +449,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadUser]);
 
   useEffect(() => {
-    void loadUser();
-
     const supabase = createClient();
     const {
       data: { subscription },
@@ -454,6 +457,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     const onFocus = () => {
+      const now = Date.now();
+      if (now - lastFocusLoadAtRef.current < FOCUS_RELOAD_MS) return;
+      lastFocusLoadAtRef.current = now;
       void loadUser();
     };
 

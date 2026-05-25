@@ -3,12 +3,14 @@
 import type React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Plus } from "lucide-react";
 import {
   getMainNavItems,
   isMainNavItemActive,
   IS_STUDY_AI,
 } from "@/lib/parable-main-nav";
 import { shellBottomNavInnerClass, shellKindFromPathname } from "@/lib/app-shell-widths";
+import { dispatchSanctuaryCreateMenu } from "@/lib/sanctuary-home-interactions";
 
 const STUDY_AI_ACCENT_ACTIVE = "bg-amber-500/15 border-amber-500/30 shadow-[0_0_22px_rgba(234,179,8,0.2)]";
 const STUDY_AI_ACCENT_TEXT = "text-amber-400";
@@ -57,9 +59,20 @@ export default function BottomNav() {
   const items = getMainNavItems();
   const colClass = items.length <= 4 ? "grid-cols-4" : items.length <= 5 ? "grid-cols-5" : "grid-cols-7";
   const navInner = shellBottomNavInnerClass(shellKindFromPathname(pathname));
+  const isMySanctuary = (pathname ?? "").startsWith("/my-sanctuary");
 
   return (
-    <div className="z-50 flex w-full shrink-0 justify-center border-t border-white/[0.06] bg-[#070708]/98 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1 backdrop-blur-md">
+    <div className="relative z-50 flex w-full shrink-0 justify-center border-t border-white/[0.06] bg-[#070708]/98 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1 backdrop-blur-md">
+      {isMySanctuary ? (
+        <button
+          type="button"
+          onClick={dispatchSanctuaryCreateMenu}
+          className="absolute left-1/2 top-0 z-[60] flex h-11 w-11 -translate-x-1/2 -translate-y-[58%] items-center justify-center rounded-full bg-gradient-to-r from-[#00F2FE] to-[#0EA5E9] text-[#01040A] shadow-[0_0_24px_rgba(0,242,254,0.35)]"
+          aria-label="Create"
+        >
+          <Plus className="h-6 w-6 stroke-[2.5]" />
+        </button>
+      ) : null}
       <div className={navInner}>
         <div
           className={[

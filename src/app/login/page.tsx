@@ -5,6 +5,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { createClient, getSupabaseConfigError } from "@/utils/supabase/client";
+import { getBrowserSupabaseUrl } from "@/utils/supabase/browser-url";
 import Sparkles from "@/components/login/Sparkles";
 
 function frac(n: number) {
@@ -146,6 +147,7 @@ function LoginInner() {
     setErr(null);
     setInfo(null);
     setLoading(true);
+    const browserUrl = getBrowserSupabaseUrl();
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setLoading(false);
@@ -158,8 +160,12 @@ function LoginInner() {
         (e instanceof TypeError && raw?.toLowerCase().includes("fetch")) ||
         raw === "Failed to fetch";
       const msg = fetchFailed
-        ? 'Cannot reach Supabase (network or blocked request). In .env.local set NEXT_PUBLIC_SUPABASE_BROWSER_RELAY=0 to skip /supabase-proxy, confirm URL + anon key, restart dev, delete .next once, and try incognito (extensions sometimes block *.supabase.co).'
-        : e instanceof Error ? e.message : 'Sign-in failed. Try again.';
+        ? browserUrl.includes("/supabase-proxy")
+          ? "Cannot reach Supabase through the local proxy. Ensure `npm run dev` is running, then try again. Or set NEXT_PUBLIC_SUPABASE_BROWSER_RELAY=0 in .env.local, restart dev, and delete the .next folder once."
+          : "Cannot reach Supabase (network or blocked request). Confirm NEXT_PUBLIC_SUPABASE_URL is https://YOUR_REF.supabase.co, restart dev, delete .next once, and try incognito (extensions sometimes block *.supabase.co)."
+        : e instanceof Error
+          ? e.message
+          : "Sign-in failed. Try again.";
       setErr(msg);
     }
   };

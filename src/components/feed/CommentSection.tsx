@@ -2,9 +2,15 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { Trash2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { fallbackAvatarOnError } from "@/lib/avatar-display";
 import { addComment } from "@/lib/feed";
+import { canDeleteComment, deleteComment } from "@/lib/content-delete";
+import {
+  POST_COMMENT_SELECT,
+  commentAuthorId,
+} from "@/lib/post-comments";
 
 type ProfileSnippet = {
   username: string | null;
@@ -15,7 +21,9 @@ type ProfileSnippet = {
 export type CommentRow = {
   id: string;
   post_id: string;
-  profile_id: string;
+  user_id: string;
+  /** @deprecated live DB uses user_id; kept for older rows/cache */
+  profile_id?: string;
   content: string;
   created_at: string;
   profiles?: ProfileSnippet | ProfileSnippet[] | null;
@@ -36,11 +44,17 @@ type Props = {
   noOuterFrame?: boolean;
   /** Set false when the parent renders a sticky composer (e.g. post detail page). */
   showComposer?: boolean;
+  /** When false, comments are hidden and the composer is disabled (post owner turned off comments). */
+  commentsEnabled?: boolean;
+  currentUserId?: string | null;
+  postOwnerId?: string | null;
+  onCommentDeleted?: (commentId: string) => void;
+  theme?: "dark" | "light";
 };
 
 /**
  * Full comment thread for a post: loads `post_comments`, subscribes to Realtime `INSERT`,
- * and inserts via `addComment` (`profile_id` = auth user).
+ * and inserts via `addComment` (`user_id` = auth user).
  */
 export default function CommentSection({
   postId,
@@ -49,11 +63,18 @@ export default function CommentSection({
   viewAllHref,
   noOuterFrame = false,
   showComposer = true,
+  commentsEnabled = true,
+  currentUserId = null,
+  postOwnerId = null,
+  onCommentDeleted,
+  theme = "dark",
 }: Props) {
+  const isLight = theme === "light";
   const supabase = useMemo(() => createClient(), []);
   const [comments, setComments] = useState<CommentRow[]>([]);
   const [newComment, setNewComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [enteringIds, setEnteringIds] = useState<Record<string, boolean>>({});
 
   const isPreview = typeof maxVisible === "number" && maxVisible > 0;
@@ -78,9 +99,7 @@ export default function CommentSection({
     const fetchComments = async () => {
       let q = supabase
         .from("post_comments")
-        .select(
-          "id, post_id, profile_id, content, created_at, profiles:profile_id(username, avatar_url, full_name)",
-        )
+        .select(POST_COMMENT_SELECT)
         .eq("post_id", postId);
 
       if (isPreview) {
@@ -129,7 +148,7 @@ export default function CommentSection({
             return [...prev, row];
           });
 
-          const pid = row.profile_id;
+          const pid = commentAuthorId(row);
           if (!pid) return;
 
           const { data: prof } = await supabase
@@ -145,6 +164,20 @@ export default function CommentSection({
           );
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "post_comments",
+          filter: `post_id=eq.${postId}`,
+        },
+        (payload) => {
+          const row = payload.old as { id?: string };
+          if (!row?.id) return;
+          setComments((prev) => prev.filter((c) => c.id !== row.id));
+        },
+      )
       .subscribe();
 
     return () => {
@@ -155,6 +188,7 @@ export default function CommentSection({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!commentsEnabled) return;
     const text = newComment.trim();
     if (!text || submitting) return;
 
@@ -171,10 +205,27 @@ export default function CommentSection({
     }
   };
 
+  const handleDeleteComment = async (commentId: string) => {
+    if (deletingCommentId) return;
+    if (!window.confirm("Delete this comment permanently?")) return;
+
+    setDeletingCommentId(commentId);
+    try {
+      await deleteComment(supabase, commentId);
+      setComments((prev) => prev.filter((c) => c.id !== commentId));
+      onCommentDeleted?.(commentId);
+    } catch (err) {
+      console.error("CommentSection delete:", err);
+      window.alert(err instanceof Error ? err.message : "Could not delete comment.");
+    } finally {
+      setDeletingCommentId(null);
+    }
+  };
+
   return (
     <div
       className={[
-        noOuterFrame ? "" : "mt-4 border-t border-neutral-800 pt-4",
+        noOuterFrame ? "" : isLight ? "mt-4 border-t border-[#efefef] pt-4" : "mt-4 border-t border-neutral-800 pt-4",
         className,
       ]
         .filter(Boolean)
@@ -187,12 +238,15 @@ export default function CommentSection({
         ].join(" ")}
       >
         {comments.length === 0 && !isPreview ? (
-          <p className="text-sm text-neutral-500">No comments yet — add the first praise below.</p>
+          <p className={`text-sm ${isLight ? "text-[#8e8e8e]" : "text-neutral-500"}`}>
+            No comments yet — add the first praise below.
+          </p>
         ) : null}
         {comments.map((c) => {
           const p = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
           const name = p?.username?.trim() || p?.full_name?.trim() || "Member";
-          const href = `/profile/${c.profile_id}`;
+          const href = `/profile/${commentAuthorId(c)}`;
+          const showDelete = canDeleteComment(commentAuthorId(c), postOwnerId, currentUserId);
           return (
             <div
               key={c.id}
@@ -202,7 +256,9 @@ export default function CommentSection({
             >
               <Link
                 href={href}
-                className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-neutral-800 ring-1 ring-neutral-700"
+                className={`relative h-7 w-7 shrink-0 overflow-hidden rounded-full ring-1 ${
+                  isLight ? "bg-[#efefef] ring-[#dbdbdb]" : "bg-neutral-800 ring-neutral-700"
+                }`}
                 onClick={(e) => e.stopPropagation()}
               >
                 {p?.avatar_url ? (
@@ -214,23 +270,44 @@ export default function CommentSection({
                     onError={fallbackAvatarOnError}
                   />
                 ) : (
-                  <span className="flex h-full w-full items-center justify-center text-[10px] font-bold text-white/80">
+                  <span
+                    className={`flex h-full w-full items-center justify-center text-[10px] font-bold ${
+                      isLight ? "text-[#262626]" : "text-white/80"
+                    }`}
+                  >
                     {name.slice(0, 2).toUpperCase()}
                   </span>
                 )}
               </Link>
-              <p className="min-w-0 leading-relaxed">
-                <Link href={href} className="font-bold text-white hover:underline" onClick={(e) => e.stopPropagation()}>
+              <p className="min-w-0 flex-1 leading-relaxed">
+                <Link
+                  href={href}
+                  className={`font-semibold hover:underline ${isLight ? "text-[#262626]" : "font-bold text-white"}`}
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {name}
                 </Link>{" "}
-                <span className="text-neutral-300">{c.content}</span>
+                <span className={isLight ? "text-[#262626]" : "text-neutral-300"}>{c.content}</span>
               </p>
+              {showDelete ? (
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteComment(c.id)}
+                  disabled={deletingCommentId === c.id}
+                  className={`shrink-0 self-start p-0.5 disabled:opacity-40 ${
+                    isLight ? "text-[#8e8e8e] hover:text-red-500" : "text-neutral-500 hover:text-red-400"
+                  }`}
+                  aria-label="Delete comment"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              ) : null}
             </div>
           );
         })}
       </div>
 
-      {isPreview && viewAllHref ? (
+      {isPreview && viewAllHref && commentsEnabled ? (
         <Link
           href={viewAllHref}
           className="mb-3 inline-block text-xs font-semibold text-[#00f2ff] hover:underline"
@@ -239,17 +316,25 @@ export default function CommentSection({
         </Link>
       ) : null}
 
-      {showComposer ? (
+      {!commentsEnabled ? (
+        <p className={`text-xs ${isLight ? "text-[#8e8e8e]" : "text-neutral-500"}`}>
+          Comments are turned off for this post.
+        </p>
+      ) : null}
+
+      {showComposer && commentsEnabled ? (
         <form
           onSubmit={(e) => void handleSubmit(e)}
-          className="flex items-center gap-2 border-t border-neutral-800 pt-2"
+          className={`flex items-center gap-2 border-t pt-2 ${isLight ? "border-[#efefef]" : "border-neutral-800"}`}
         >
           <input
             type="text"
             placeholder="Add a praise…"
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            className="w-full bg-transparent text-sm text-white outline-none placeholder:text-gray-500"
+            className={`w-full bg-transparent text-sm outline-none ${
+              isLight ? "text-[#262626] placeholder:text-[#8e8e8e]" : "text-white placeholder:text-gray-500"
+            }`}
             maxLength={2000}
             autoComplete="off"
           />

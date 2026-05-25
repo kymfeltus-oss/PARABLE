@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Gospel Vibe">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#0EA5E9"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="64" fill="#06111E"/>
+  <circle cx="64" cy="64" r="58" fill="url(#g)" opacity="0.3"/>
+  <text x="64" y="74" text-anchor="middle" font-family="system-ui,sans-serif" font-size="42" font-weight="700" fill="#F8FAFC">GV</text>
+</svg>

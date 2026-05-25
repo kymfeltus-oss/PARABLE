@@ -1,0 +1,75 @@
+/**
+ * Instagram-style Sanctuary home feed — presentation only.
+ * Brand: primary #00f2ff (PARABLE cyan), secondary #7c3aed (Sanctuary purple).
+ */
+.sanctuary-ig-feed {
+  --brand-primary: #00f2ff;
+  --brand-secondary: #7c3aed;
+  --ig-bg: #fafafa;
+  --ig-surface: #ffffff;
+  --ig-border: #dbdbdb;
+  --ig-text: #262626;
+  --ig-text-muted: #8e8e8e;
+  --ig-hover: #efefef;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--ig-bg);
+  color: var(--ig-text);
+}
+
+.sanctuary-ig-feed .ig-feed-column {
+  width: 100%;
+  max-width: 63rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.sanctuary-ig-feed .ig-feed-card {
+  background: var(--ig-surface);
+  border-bottom: 1px solid var(--ig-border);
+}
+
+@media (min-width: 640px) {
+  .sanctuary-ig-feed .ig-feed-card {
+    border: 1px solid var(--ig-border);
+    border-radius: 0.4rem;
+    margin-bottom: 1.2rem;
+    overflow: hidden;
+  }
+}
+
+.sanctuary-ig-feed .ig-topbar {
+  background: var(--ig-surface);
+  border-bottom: 1px solid var(--ig-border);
+}
+
+.sanctuary-ig-feed .ig-stories-strip {
+  background: var(--ig-surface);
+  border-bottom: 1px solid var(--ig-border);
+}
+
+.sanctuary-ig-feed .ig-composer {
+  background: var(--ig-surface);
+  border-bottom: 1px solid var(--ig-border);
+}
+
+.sanctuary-ig-feed .ig-btn-primary {
+  background: var(--brand-primary);
+  color: #010101;
+  font-weight: 600;
+}
+
+.sanctuary-ig-feed .ig-btn-primary:hover {
+  filter: brightness(0.95);
+}
+
+.sanctuary-ig-feed .ig-btn-primary:disabled {
+  opacity: 0.45;
+}
+
+.sanctuary-ig-feed .ig-link {
+  color: var(--brand-primary);
+}
+
+.sanctuary-ig-feed .ig-link:hover {
+  color: #00c4e0;
+}

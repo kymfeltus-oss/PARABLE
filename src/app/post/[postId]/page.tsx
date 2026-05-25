@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Heart } from "lucide-react";
+import { ArrowLeft, Heart, Trash2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { fallbackAvatarOnError } from "@/lib/avatar-display";
 import CommentSection from "@/components/feed/CommentSection";
+import ConfirmDeleteDialog from "@/components/ui/ConfirmDeleteDialog";
 import { toggleLike, addComment } from "@/lib/feed";
+import { deletePost } from "@/lib/content-delete";
 
 type ProfileLite = {
   id: string;
@@ -45,6 +47,9 @@ export default function PostDetailPage() {
   const [sending, setSending] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const refreshLikes = useCallback(async () => {
     if (!postId) return;
@@ -104,6 +109,12 @@ export default function PostDetailPage() {
   }, [load]);
 
   useEffect(() => {
+    void supabase.auth.getUser().then(({ data: { user } }) => {
+      setCurrentUserId(user?.id ?? null);
+    });
+  }, [supabase]);
+
+  useEffect(() => {
     if (!postId) return;
     const ch = supabase
       .channel(`post-detail-likes-${postId}`)
@@ -128,6 +139,7 @@ export default function PostDetailPage() {
   }, [postId, supabase, refreshLikes]);
 
   const author = post ? normalizeProfile(post.profiles as ProfileLite | ProfileLite[] | null) : null;
+  const isOwnPost = Boolean(post && currentUserId && post.profile_id === currentUserId);
   const mainMedia = post?.media_url ?? null;
   const isVideo =
     post?.media_type === "video" ||
@@ -163,6 +175,19 @@ export default function PostDetailPage() {
       setErr(e instanceof Error ? e.message : "Could not post comment.");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleDeletePost() {
+    if (deleteLoading || !postId) return;
+    setDeleteLoading(true);
+    try {
+      await deletePost(supabase, postId);
+      router.push("/my-sanctuary");
+    } catch (e: unknown) {
+      window.alert(e instanceof Error ? e.message : "Could not delete post.");
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -225,6 +250,16 @@ export default function PostDetailPage() {
               </span>
             </Link>
           )}
+          {isOwnPost ? (
+            <button
+              type="button"
+              onClick={() => setConfirmDeleteOpen(true)}
+              className="rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-red-400"
+              aria-label="Delete post"
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
+          ) : null}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 scrollbar-hide">
@@ -250,9 +285,24 @@ export default function PostDetailPage() {
 
           <div className="mt-4">
             <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">Comments</p>
-            <CommentSection postId={postId} showComposer={false} noOuterFrame />
+            <CommentSection
+              postId={postId}
+              showComposer={false}
+              noOuterFrame
+              currentUserId={currentUserId}
+              postOwnerId={post?.profile_id ?? null}
+            />
           </div>
         </div>
+
+        <ConfirmDeleteDialog
+          open={confirmDeleteOpen}
+          title="Delete post?"
+          description="This permanently removes the post, its praises, and comments."
+          loading={deleteLoading}
+          onCancel={() => setConfirmDeleteOpen(false)}
+          onConfirm={() => void handleDeletePost()}
+        />
 
         <div className="shrink-0 border-t border-neutral-800 p-3">
           {err && post ? <p className="mb-2 text-xs text-red-400">{err}</p> : null}

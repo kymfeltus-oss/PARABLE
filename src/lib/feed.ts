@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/client";
+import { buildCommentInsert } from "@/lib/post-comments";
 
 export type FeedFilter = "home" | "following" | "profile";
 
@@ -99,11 +100,9 @@ export async function addComment(postId: string, content: string) {
   const user = userRes.user;
   if (!user) throw new Error("Not logged in.");
 
-  const { error } = await supabase.from("post_comments").insert({
-    post_id: postId,
-    profile_id: user.id,
-    content,
-  });
+  const { error } = await supabase.from("post_comments").insert(
+    buildCommentInsert(postId, user.id, content),
+  );
 
   if (error) throw error;
   return { ok: true };

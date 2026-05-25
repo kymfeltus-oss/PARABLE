@@ -15,6 +15,8 @@ type Props = {
   profileUserId?: string;
   /** Refetch feed after following someone from suggestions. */
   onFollowed?: () => void;
+  /** Remove a post from the list after the owner deletes it. */
+  onPostDeleted?: (postId: string) => void;
 };
 
 /**
@@ -28,13 +30,14 @@ export default function Posts({
   hasMore,
   profileUserId,
   onFollowed,
+  onPostDeleted,
 }: Props) {
   return (
-    <div className="w-full scrollbar-hide bg-black">
+    <div className="w-full scrollbar-hide bg-[#fafafa]">
       {posts.length === 0 && !isLoading && !profileUserId && (
         <div className="mt-8 space-y-4 px-3 text-center">
-          <p className="text-sm font-medium text-white/90">No posts to show right now.</p>
-          <p className="text-xs text-white/45">
+          <p className="text-sm font-medium text-[#262626]">No posts to show right now.</p>
+          <p className="text-xs text-[#8e8e8e]">
             This feed lists people you follow. Follow accounts below — new posts appear here in real time.
           </p>
           <div className="text-left">
@@ -43,7 +46,7 @@ export default function Posts({
         </div>
       )}
       {posts.length === 0 && !isLoading && profileUserId && (
-        <p className="mt-10 text-center text-sm text-white/45">No posts yet.</p>
+        <p className="mt-10 text-center text-sm text-[#8e8e8e]">No posts yet.</p>
       )}
       <div className="w-full">
         {posts.map((post) => (
@@ -67,6 +70,7 @@ export default function Posts({
             }
             created_at={post.created_at}
             likesCount={post.likesCount}
+            onDeleted={() => onPostDeleted?.(post.id)}
           />
         ))}
       </div>
@@ -77,7 +81,7 @@ export default function Posts({
         </div>
       )}
       {!hasMore && posts.length > 0 && (
-        <p className="py-8 text-center text-sm text-white/40">No more posts</p>
+        <p className="py-8 text-center text-sm text-[#8e8e8e]">You&apos;re all caught up</p>
       )}
     </div>
   );

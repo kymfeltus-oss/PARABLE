@@ -1,3 +1,4 @@
+const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
@@ -13,14 +14,50 @@ function resolveGitSha() {
     process.env.VERCEL_GIT_COMMIT_SHA ||
     process.env.CODEBUILD_RESOLVED_SOURCE_VERSION;
   if (fromEnv && String(fromEnv).trim()) return String(fromEnv).trim();
+
+  const localGitDir = path.join(__dirname, '.git');
+  const hasLocalGit = fs.existsSync(localGitDir);
+  if (!hasLocalGit) return '';
+
   try {
     return execSync('git rev-parse HEAD', {
       encoding: 'utf-8',
       cwd: __dirname,
+      stdio: ['pipe', 'pipe', 'ignore'],
     }).trim();
   } catch {
     return '';
   }
+}
+
+function supabaseProjectRefFromAnonKey(anonKey) {
+  try {
+    const part = String(anonKey || '').split('.')[1];
+    if (!part) return null;
+    const json = JSON.parse(Buffer.from(part.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8'));
+    return typeof json.ref === 'string' && json.ref.trim() ? json.ref.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+function isLikelySupabaseApiUrl(url) {
+  const trimmed = String(url || '').trim();
+  if (!trimmed.startsWith('https://')) return false;
+  try {
+    const host = new URL(trimmed).hostname.toLowerCase();
+    return host.endsWith('.supabase.co') || host.includes('supabase');
+  } catch {
+    return false;
+  }
+}
+
+function resolveSupabaseUrl(envUrl, anonKey) {
+  const trimmedEnv = String(envUrl || '').trim().replace(/\/$/, '');
+  if (trimmedEnv && isLikelySupabaseApiUrl(trimmedEnv)) return trimmedEnv;
+  const ref = supabaseProjectRefFromAnonKey(anonKey);
+  if (ref) return `https://${ref}.supabase.co`;
+  return trimmedEnv;
 }
 
 /** @type {import('next').NextConfig} */
@@ -41,8 +78,11 @@ const nextConfig = {
     ];
   },
   async rewrites() {
-    const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!base || !String(base).startsWith('https://')) return [];
+    const base = resolveSupabaseUrl(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    );
+    if (!base || !String(base).startsWith('https://') || !isLikelySupabaseApiUrl(base)) return [];
     const origin = String(base).replace(/\/$/, '');
     return [
       {

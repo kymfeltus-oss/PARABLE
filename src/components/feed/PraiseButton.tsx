@@ -18,13 +18,21 @@ type PraiseButtonProps = {
   onPraise: () => void;
   /** Brief glow ring after each action (parent can drive). */
   pulse?: boolean;
+  variant?: "dark" | "light";
 };
 
 /**
  * Feed praise control: Tailwind “spring” pop on press, count label, and a short CSS-only
  * heart burst (5–10 particles) rising from the button when the user adds praise.
  */
-export default function PraiseButton({ liked, count, disabled, onPraise, pulse }: PraiseButtonProps) {
+export default function PraiseButton({
+  liked,
+  count,
+  disabled,
+  onPraise,
+  pulse,
+  variant = "dark",
+}: PraiseButtonProps) {
   const likedRef = useRef(liked);
   likedRef.current = liked;
 
@@ -53,6 +61,8 @@ export default function PraiseButton({ liked, count, disabled, onPraise, pulse }
     onPraise();
   };
 
+  const isLight = variant === "light";
+
   return (
     <div className="relative flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-0">
       <button
@@ -61,7 +71,7 @@ export default function PraiseButton({ liked, count, disabled, onPraise, pulse }
         onClick={handleClick}
         aria-pressed={liked}
         aria-label={liked ? "Unlike" : "Praise"}
-        className="relative inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full p-1 transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] will-change-transform hover:scale-105 active:scale-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
+        className="relative inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full p-1 transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] will-change-transform hover:scale-105 active:scale-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00f2ff]/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
       >
         {pulse && (
           <span
@@ -93,14 +103,27 @@ export default function PraiseButton({ liked, count, disabled, onPraise, pulse }
         <Heart
           size={24}
           className={`relative z-[1] transition-colors duration-200 ${
-            liked ? "fill-red-500 text-red-500" : "text-white hover:text-neutral-400"
+            liked
+              ? "fill-red-500 text-red-500"
+              : isLight
+                ? "text-[#262626] hover:text-[#8e8e8e]"
+                : "text-white hover:text-neutral-400"
           }`}
           strokeWidth={2}
         />
       </button>
 
-      <span className="text-xs font-bold text-white sm:ml-2 sm:text-sm sm:font-normal sm:text-neutral-300">
-        {count} <span className="text-neutral-500">{count === 1 ? "praise" : "praises"}</span>
+      <span
+        className={
+          isLight
+            ? "text-xs font-semibold text-[#262626] sm:ml-2 sm:text-sm sm:font-normal"
+            : "text-xs font-bold text-white sm:ml-2 sm:text-sm sm:font-normal sm:text-neutral-300"
+        }
+      >
+        {count}{" "}
+        <span className={isLight ? "text-[#8e8e8e]" : "text-neutral-500"}>
+          {count === 1 ? "praise" : "praises"}
+        </span>
       </span>
 
       <style jsx>{`

@@ -10,6 +10,7 @@ const POSTS_FEED_SELECT = [
   "content",
   "created_at",
   "media_url",
+  "post_type",
   "profile_id",
   "profiles:profile_id(id, full_name, avatar_url, username, status_text, is_live)",
   "post_likes(count)",
@@ -192,6 +193,7 @@ export function useFeed(userId?: string) {
         let q = supabase
           .from("posts")
           .select(POSTS_FEED_SELECT)
+          .neq("post_type", "story")
           .order("created_at", { ascending: false })
           .limit(POSTS_PER_PAGE);
 
@@ -217,7 +219,9 @@ export function useFeed(userId?: string) {
         }
 
         const rows = (data ?? []) as unknown as Record<string, unknown>[];
-        const normalized = rows.map(normalizeRow);
+        const normalized = rows
+          .filter((row) => row.media_type !== "story" && row.post_type !== "story")
+          .map(normalizeRow);
 
         if (mode === "initial") {
           setPosts(normalized);
@@ -254,6 +258,10 @@ export function useFeed(userId?: string) {
   );
 
   const refresh = useCallback(() => fetchPage("initial"), [fetchPage]);
+
+  const removePost = useCallback((postId: string) => {
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+  }, []);
 
   const loadMore = useCallback(() => {
     if (!hasMore || loading || loadingMore) return;
@@ -304,7 +312,9 @@ export function useFeed(userId?: string) {
           return;
         }
         if (!data) return;
-        const row = normalizeRow(data as unknown as Record<string, unknown>);
+        const raw = data as unknown as Record<string, unknown>;
+        if (raw.media_type === "story" || raw.post_type === "story") return;
+        const row = normalizeRow(raw);
         setPosts((prev) => {
           if (prev.some((p) => p.id === row.id)) return prev;
           return [row, ...prev];
@@ -371,6 +381,17 @@ export function useFeed(userId?: string) {
 
       ch.on(
         "postgres_changes",
+        { event: "DELETE", schema: "public", table: "posts" },
+        (payload) => {
+          if (cancelled) return;
+          const postId = (payload.old as { id?: string })?.id;
+          if (!postId) return;
+          setPosts((prev) => prev.filter((p) => p.id !== postId));
+        },
+      );
+
+      ch.on(
+        "postgres_changes",
         { event: "UPDATE", schema: "public", table: "profiles" },
         (payload) => {
           if (cancelled) return;
@@ -427,5 +448,6 @@ export function useFeed(userId?: string) {
     hasMore,
     refresh,
     loadMore,
+    removePost,
   };
 }

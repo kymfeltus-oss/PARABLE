@@ -8,7 +8,7 @@ export type ShellColumnKind = "default" | "sanctuary" | "mySanctuary";
 /** Main content column: borders + max-width by route kind */
 export function shellKindFromPathname(pathname: string | null | undefined): ShellColumnKind {
   const p = pathname ?? "";
-  if (p.startsWith("/my-sanctuary")) return "mySanctuary";
+  if (p.startsWith("/my-sanctuary") || p === "/profile" || p.startsWith("/reels")) return "mySanctuary";
   if (p.startsWith("/sanctuary")) return "sanctuary";
   return "default";
 }
@@ -20,7 +20,7 @@ export function shellColumnClass(kind: ShellColumnKind): string {
   switch (kind) {
     case "mySanctuary":
       return [
-        base,
+        "flex w-full min-h-0 min-w-0 flex-col bg-[#01040A]",
         "h-full flex-1 overflow-hidden",
         "max-w-full",
         "lg:max-w-[min(100%,1200px)] xl:max-w-[min(100%,1320px)]",

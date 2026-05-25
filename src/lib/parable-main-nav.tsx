@@ -59,7 +59,7 @@ export const STUDY_AI_MAIN_NAV: MainNavItem[] = [
 export const PARABLE_MAIN_NAV: MainNavItem[] = [
   {
     label: "Sanctuary",
-    href: "/sanctuary",
+    href: "/my-sanctuary",
     icon: (active) => (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className={active ? "text-[#00f2fe]" : "text-white/70"}>
         <path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
@@ -139,6 +139,8 @@ export function getMainNavItems(): MainNavItem[] {
 
 export function isMainNavItemActive(pathname: string | null, href: string): boolean {
   if (!pathname) return false;
+  if (href === "/profile") return pathname === "/profile";
+  if (href === "/my-sanctuary") return pathname === "/my-sanctuary";
   if (pathname === href) return true;
   if (href !== "/" && pathname.startsWith(href + "/")) return true;
   if (href === "/parables" && (pathname === "/writers-hub" || pathname === "/studio-hub")) return true;

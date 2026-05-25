@@ -8,8 +8,8 @@ import { LiveBadge } from "./InstagramPost";
  * Ring gradient: PARABLE Cyan + Streamers action red (see LiveRolodexBrowse).
  */
 
-const CYAN = "#00f2fe";
-const ACTION_RED = "#ff6b2c";
+const CYAN = "#00f2ff";
+const PURPLE = "#7c3aed";
 
 export type FellowshipSeed = {
   id: string;
@@ -28,38 +28,51 @@ type Props = {
   onSelect?: (seed: FellowshipSeed) => void;
   /** Extra classes on the outer `<section>` (e.g. padding when embedded in `Stories`). */
   className?: string;
+  variant?: "dark" | "light";
 };
 
 const circleClass =
-  "group flex shrink-0 flex-col items-center gap-2 text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00f2ff]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black";
+  "group flex shrink-0 flex-col items-center gap-2 text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00f2ff]/50 focus-visible:ring-offset-2";
 
-export default function FellowshipCircles({ seeds, onSelect, className = "" }: Props) {
+export default function FellowshipCircles({
+  seeds,
+  onSelect,
+  className = "",
+  variant = "dark",
+}: Props) {
+  const isLight = variant === "light";
+
   return (
-    <section className={["mb-6 w-full", className].filter(Boolean).join(" ")}>
-      <div className="mb-3 px-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-[#00f2fe]/70">
-          Fellowship Circles
+    <section className={["mb-2 w-full", className].filter(Boolean).join(" ")}>
+      <div className="mb-2 px-1">
+        <p
+          className={`text-[11px] font-semibold uppercase tracking-[0.2em] ${
+            isLight ? "text-[#8e8e8e]" : "text-[#00f2ff]/70"
+          }`}
+        >
+          Stories
         </p>
       </div>
-      <div className="scrollbar-hide flex gap-2 overflow-x-auto overflow-y-hidden px-0.5 pb-4 pt-1">
+      <div className="scrollbar-hide flex gap-3 overflow-x-auto overflow-y-hidden px-0.5 pb-2 pt-1">
         {seeds.map((seed) => {
           const href = seed.profileId ? `/profile/${seed.profileId}` : null;
           const inner = (
             <>
               <div className="relative inline-flex flex-col items-center">
                 <div
-                  className="rounded-full p-[3px] transition-transform duration-200 ease-in-out group-hover:scale-110"
+                  className="rounded-full p-[2px] transition-transform duration-200 ease-in-out group-hover:scale-105"
                   style={{
-                    background: `linear-gradient(135deg, ${CYAN}, ${ACTION_RED})`,
+                    background: `linear-gradient(135deg, ${CYAN}, ${PURPLE})`,
                   }}
                 >
-                  <div className="rounded-full bg-black p-[2px]">
+                  <div className={`rounded-full p-[2px] ${isLight ? "bg-white" : "bg-black"}`}>
                     <div
                       className={[
-                        "h-16 w-16 overflow-hidden rounded-full",
+                        "h-14 w-14 overflow-hidden rounded-full sm:h-16 sm:w-16",
                         seed.isLive
-                          ? "ring-2 ring-red-500 ring-offset-2 ring-offset-black shadow-[0_0_16px_rgba(239,68,68,0.55)] animate-pulse"
+                          ? "ring-2 ring-red-500 ring-offset-2 shadow-[0_0_12px_rgba(239,68,68,0.45)] animate-pulse"
                           : "",
+                        isLight ? "ring-offset-white" : "ring-offset-black",
                       ]
                         .filter(Boolean)
                         .join(" ")}
@@ -68,7 +81,13 @@ export default function FellowshipCircles({ seeds, onSelect, className = "" }: P
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={seed.imageUrl} alt="" className="h-full w-full object-cover" />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white/10 to-black text-lg font-bold text-[#00f2fe]/90">
+                        <div
+                          className={`flex h-full w-full items-center justify-center text-base font-bold sm:text-lg ${
+                            isLight
+                              ? "bg-[#efefef] text-[#7c3aed]"
+                              : "bg-gradient-to-br from-white/10 to-black text-[#00f2ff]/90"
+                          }`}
+                        >
                           {(seed.initials || seed.label.slice(0, 2)).toUpperCase()}
                         </div>
                       )}
@@ -81,18 +100,25 @@ export default function FellowshipCircles({ seeds, onSelect, className = "" }: P
                   </div>
                 ) : null}
               </div>
-              <span className="max-w-[76px] truncate text-[11px] font-medium text-white/80">{seed.label}</span>
+              <span
+                className={`max-w-[72px] truncate text-[11px] font-medium ${
+                  isLight ? "text-[#262626]" : "text-white/80"
+                }`}
+              >
+                {seed.label}
+              </span>
             </>
           );
+          const itemClass = `${circleClass} ${isLight ? "focus-visible:ring-offset-white" : "focus-visible:ring-offset-black"}`;
           if (href) {
             return (
-              <Link key={seed.id} href={href} className={circleClass}>
+              <Link key={seed.id} href={href} className={itemClass}>
                 {inner}
               </Link>
             );
           }
           return (
-            <button key={seed.id} type="button" onClick={() => onSelect?.(seed)} className={circleClass}>
+            <button key={seed.id} type="button" onClick={() => onSelect?.(seed)} className={itemClass}>
               {inner}
             </button>
           );

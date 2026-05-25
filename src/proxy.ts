@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { isParableDevGuestAllowed } from "@/lib/parable-dev-guest";
+import { resolveSupabaseUrl } from "@/utils/supabase/resolve-url";
 
 /**
  * IMPORTANT:
@@ -13,6 +14,8 @@ function isPublic(pathname: string) {
   if (pathname.startsWith("/favicon")) return true;
   if (pathname.startsWith("/robots")) return true;
   if (pathname.startsWith("/sitemap")) return true;
+  // Dev browser relay → Supabase (must not redirect to /login or responses become HTML)
+  if (pathname.startsWith("/supabase-proxy")) return true;
 
   // allow common static file types anywhere (prevents /logo.svg being redirected)
   if (
@@ -66,7 +69,7 @@ export default async function proxy(req: NextRequest) {
       return NextResponse.next();
     }
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+    const url = resolveSupabaseUrl().trim();
     const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
     if (!url || !anon) {
       // Avoid throwing in middleware (would surface as Internal Server Error)

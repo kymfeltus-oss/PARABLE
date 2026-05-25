@@ -5,6 +5,11 @@ import { useParams } from "next/navigation";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
+import {
+  POST_COMMENT_SELECT,
+  buildCommentInsert,
+} from "@/lib/post-comments";
+import { commentsAllowedForPost, parsePostContent } from "@/lib/post-content-meta";
 
 type ProfileLite = {
   full_name: string | null;
@@ -14,7 +19,7 @@ type ProfileLite = {
 type CommentRow = {
   id: string;
   post_id: string;
-  profile_id: string;
+  user_id: string;
   content: string;
   created_at: string;
   profiles?: ProfileLite | ProfileLite[] | null;
@@ -25,11 +30,17 @@ type PostRow = {
   profile_id: string;
   content: string | null;
   media_url: string | null;
-  media_type: "image" | "video" | null;
-  is_praise_break: boolean | null;
+  post_type: string | null;
   created_at: string;
   profiles?: ProfileLite | ProfileLite[] | null;
 };
+
+function resolveMediaType(row: PostRow): "image" | "video" | "story" {
+  const pt = row.post_type?.toLowerCase();
+  if (pt === "video" || pt === "story") return pt === "story" ? "image" : "video";
+  if (row.media_url && /\.(mp4|webm|mov|m4v)(\?|$)/i.test(row.media_url.split("?")[0] ?? "")) return "video";
+  return "image";
+}
 
 function fmtTime(ts: string) {
   const d = new Date(ts);
@@ -61,7 +72,7 @@ export default function SanctuaryPostPage() {
       const { data: p, error: pErr } = await supabase
         .from("posts")
         .select(
-          "id, profile_id, content, media_url, media_type, is_praise_break, created_at, profiles:profile_id(full_name, avatar_url)",
+          "id, profile_id, content, media_url, post_type, created_at, profiles:profile_id(full_name, avatar_url)",
         )
         .eq("id", postId)
         .single();
@@ -71,9 +82,7 @@ export default function SanctuaryPostPage() {
 
       const { data: c, error: cErr } = await supabase
         .from("post_comments")
-        .select(
-          "id, post_id, profile_id, content, created_at, profiles:profile_id(full_name, avatar_url)",
-        )
+        .select(POST_COMMENT_SELECT)
         .eq("post_id", postId)
         .order("created_at", { ascending: true });
 
@@ -92,9 +101,13 @@ export default function SanctuaryPostPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId]);
 
+  const parsedContent = useMemo(() => parsePostContent(post?.content), [post?.content]);
+  const commentsEnabled = commentsAllowedForPost(post?.content);
+  const mediaType = post ? resolveMediaType(post) : "image";
+
   async function addComment() {
     setErr(null);
-    if (!content.trim()) return;
+    if (!content.trim() || !commentsEnabled) return;
 
     setSending(true);
     try {
@@ -104,11 +117,9 @@ export default function SanctuaryPostPage() {
         return;
       }
 
-      const { error } = await supabase.from("post_comments").insert({
-        post_id: postId,
-        profile_id: u.user.id,
-        content: content.trim(),
-      });
+      const { error } = await supabase
+        .from("post_comments")
+        .insert(buildCommentInsert(postId, u.user.id, content.trim()));
 
       if (error) throw error;
 
@@ -158,22 +169,22 @@ export default function SanctuaryPostPage() {
                       {fmtTime(post.created_at)}
                     </div>
                   </div>
-                  {post.is_praise_break ? (
+                  {post.post_type === "story" ? (
                     <div className="ml-auto rounded-full border border-[#00f2fe]/25 bg-[#00f2fe]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[3px] text-[#00f2fe]">
-                      Praise Break
+                      Story
                     </div>
                   ) : null}
                 </div>
 
-                {post.content ? (
+                {parsedContent.display ? (
                   <div className="mt-4 text-[14px] leading-relaxed text-white/80 whitespace-pre-wrap">
-                    {post.content}
+                    {parsedContent.display}
                   </div>
                 ) : null}
 
                 {post.media_url ? (
                   <div className="mt-5 overflow-hidden rounded-[28px] border border-white/10 bg-black/60">
-                    {post.media_type === "video" ? (
+                    {mediaType === "video" ? (
                       <video src={post.media_url} controls className="w-full max-h-[520px] object-contain bg-black" />
                     ) : (
                       <img src={post.media_url} alt="Post media" className="w-full max-h-[520px] object-cover" />
@@ -186,6 +197,10 @@ export default function SanctuaryPostPage() {
                     Comments
                   </div>
 
+                  {!commentsEnabled ? (
+                    <p className="mt-4 text-sm text-white/45">Comments are turned off for this post.</p>
+                  ) : (
+                  <>
                   <div className="mt-4 space-y-3">
                     {comments.map((c) => {
                       const cp = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
@@ -255,6 +270,8 @@ export default function SanctuaryPostPage() {
                       )}
                     </AnimatePresence>
                   </div>
+                  </>
+                  )}
                 </div>
               </>
             ) : (

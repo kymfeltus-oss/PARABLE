@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import Posts from "./Posts";
-import Stories from "./Stories";
 import MiniProfile from "./MiniProfile";
 import { useFeed } from "@/hooks/useFeed";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,10 +14,11 @@ type FeedProps = {
 };
 
 /**
- * Instagram-clone feed shell: stories + {@link useFeed} posts + optional aside (xl).
+ * Instagram-clone feed shell: {@link useFeed} posts + optional aside (xl).
+ * Stories live in {@link @/components/sanctuary-stories/SanctuaryStoryTray} on `/sanctuary`.
  */
 export default function Feed({ hideMiniProfile = false, userId }: FeedProps) {
-  const { posts, loading, loadingMore, hasMore, loadMore, refresh } = useFeed(userId);
+  const { posts, loading, loadingMore, hasMore, loadMore, refresh, removePost } = useFeed(userId);
   const { userProfile } = useAuth();
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -42,20 +42,19 @@ export default function Feed({ hideMiniProfile = false, userId }: FeedProps) {
   return (
     <div
       className={[
-        "min-h-[200px] w-full bg-black text-white",
+        "min-h-[200px] w-full bg-[#fafafa] text-[#262626]",
         hideMiniProfile ? "px-0 pt-0 pb-2" : "rounded-lg p-3 md:p-4",
       ].join(" ")}
     >
       <div
         className={
           hideMiniProfile
-            ? "w-full"
+            ? "ig-feed-column w-full px-0 sm:px-4"
             : "w-full lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start lg:gap-5"
         }
       >
         <section className="min-w-0 xl:max-w-6xl xl:justify-self-stretch">
-          <Stories />
-          <div className="mt-1">
+          <div>
             <Posts
               posts={posts}
               sentinelRef={sentinelRef}
@@ -64,6 +63,7 @@ export default function Feed({ hideMiniProfile = false, userId }: FeedProps) {
               hasMore={hasMore}
               profileUserId={userId}
               onFollowed={refresh}
+              onPostDeleted={removePost}
             />
           </div>
         </section>
