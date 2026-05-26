@@ -44,7 +44,7 @@ import { fallbackAvatarOnError } from "@/lib/avatar-display";
 import { createClient } from "@/utils/supabase/client";
 import { CommandCenterSanctuaryRoom } from "@/components/command-center/CommandCenterSanctuaryRoom";
 import { broadcastFellowshipHubStreamStart } from "@/lib/fellowship-hub-broadcast";
-import type { LiveKitEdgeTokenResponse } from "@/lib/livekit-supabase-edge";
+import { fetchLiveKitPublisherToken } from "@/lib/livekit-supabase-edge";
 import { unifiedStreamRoomName } from "@/lib/livekit-unified-room";
 
 const MODES = [
@@ -293,20 +293,15 @@ export default function StreamerHub() {
         return;
       }
 
-      const profileUsername =
-        (typeof userProfile?.username === "string" && userProfile.username.trim()) || displayName;
-
       const unifiedRoom = unifiedStreamRoomName(user.id);
 
-      const { data: lk, error: fnError } = await supabase.functions.invoke<LiveKitEdgeTokenResponse>(
-        "get-livekit-token",
-        {
-          body: { room: unifiedRoom, username: profileUsername },
-        },
+      const { data: lk, error: tokenError } = await fetchLiveKitPublisherToken(
+        supabase,
+        unifiedRoom,
       );
 
-      if (fnError || !lk?.token || !lk?.url) {
-        const msg = fnError?.message ?? "Could not start LiveKit session.";
+      if (tokenError || !lk?.token || !lk?.url) {
+        const msg = tokenError ?? "Could not start LiveKit session.";
         console.error("openStudioLive: LiveKit token", msg);
         setLiveKitCmdError(msg);
         return;

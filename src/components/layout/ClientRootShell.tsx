@@ -9,8 +9,6 @@ import { installDevReactDevToolsGuard } from "@/lib/dev-react-devtools-guard";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { MessagesProvider } from "@/providers/MessagesProvider";
 
-installDevReactDevToolsGuard();
-
 const APP_TITLE =
   process.env.NEXT_PUBLIC_APP_VARIANT === "parable-study-ai"
     ? "PARABLE Study AI"
@@ -41,6 +39,7 @@ export default function ClientRootShell({
 
   useEffect(() => {
     document.title = APP_TITLE;
+    installDevReactDevToolsGuard();
   }, []);
 
   useEffect(() => {

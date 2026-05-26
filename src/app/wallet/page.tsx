@@ -2,15 +2,15 @@
 
 import dynamic from 'next/dynamic';
 
-const ContributionTiersClient = dynamic(() => import('./ContributionTiersClient'), {
+const WalletClient = dynamic(() => import('./WalletClient'), {
   ssr: false,
   loading: () => (
     <div className="flex min-h-[40vh] items-center justify-center bg-[#050508] text-sm text-white/50">
-      Loading contribution tiers…
+      Loading wallet…
     </div>
   ),
 });
 
-export default function ContributionTiersPage() {
-  return <ContributionTiersClient />;
+export default function WalletPage() {
+  return <WalletClient />;
 }
