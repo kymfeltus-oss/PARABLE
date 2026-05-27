@@ -14,7 +14,8 @@ export default function ParableGlobalLayout({ children }: { children: React.Reac
   const hideGlobalTopStack =
     (pathname ?? "").startsWith("/my-sanctuary") ||
     (pathname ?? "") === "/profile" ||
-    (pathname ?? "").startsWith("/profile/");
+    (pathname ?? "").startsWith("/profile/") ||
+    (pathname ?? "").startsWith("/live-studio");
 
   return (
     <GlobalPulseProvider>

@@ -13,7 +13,7 @@ export async function fetchHomeFeed(limit = 20, offset = 0) {
     .select(
       `
       id, profile_id, content, post_type, media_url, created_at,
-      profiles:profile_id ( id, full_name, avatar_url ),
+      profiles:profile_id ( id, username, display_name, avatar_url ),
       post_likes(count),
       post_comments(count)
     `
@@ -48,7 +48,7 @@ export async function fetchProfileFeed(profileId: string, limit = 20, offset = 0
     .select(
       `
       id, profile_id, content, post_type, media_url, created_at,
-      profiles:profile_id ( id, full_name, avatar_url ),
+      profiles:profile_id ( id, username, display_name, avatar_url ),
       post_likes(count),
       post_comments(count)
     `

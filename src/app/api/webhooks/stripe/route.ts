@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 
+import { resolveStripeSecretKey } from "@/lib/stripe-config";
+
 export const runtime = "nodejs";
 
 function jsonError(message: string, status = 400) {
@@ -9,9 +11,9 @@ function jsonError(message: string, status = 400) {
 }
 
 function getStripe(): Stripe {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const secretKey = resolveStripeSecretKey();
   if (!secretKey) {
-    throw new Error("Server misconfiguration: STRIPE_SECRET_KEY missing.");
+    throw new Error("Server misconfiguration: STRIPE_SECRET_KEY missing or invalid.");
   }
   return new Stripe(secretKey, {
     apiVersion: "2026-04-22.dahlia",
@@ -21,23 +23,38 @@ function getStripe(): Stripe {
 function getSupabaseAdmin(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceRoleKey) {
+  if (!url || !serviceRoleKey || serviceRoleKey.includes("your_private")) {
     throw new Error("Server misconfiguration: Supabase admin credentials missing.");
   }
   return createClient(url, serviceRoleKey);
 }
 
-export async function POST(request: Request) {
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!webhookSecret) {
-    console.error("[WEBHOOK] STRIPE_WEBHOOK_SECRET missing");
-    return jsonError("Webhook not configured.", 500);
+async function ledgerReferenceExists(
+  supabaseAdmin: SupabaseClient,
+  referenceId: string,
+): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from("creator_ledger_entries")
+    .select("id")
+    .eq("reference_id", referenceId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[WEBHOOK] Ledger idempotency lookup failed:", error);
+    throw error;
   }
 
+  return Boolean(data?.id);
+}
+
+export async function POST(request: Request) {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
-  if (!signature) {
-    return jsonError("Missing stripe-signature header.", 400);
+
+  if (!signature || !webhookSecret || webhookSecret.includes("_goes_here")) {
+    console.error("[SECURITY WARNING] Blocked unsigned or unconfigured webhook attempt.");
+    return jsonError("Missing security verification signatures.", 401);
   }
 
   let event: Stripe.Event;
@@ -46,42 +63,50 @@ export async function POST(request: Request) {
     event = getStripe().webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Invalid signature";
-    console.error(`[WEBHOOK SIGNATURE ERROR]: ${message}`);
-    return jsonError(`Webhook Error: ${message}`, 400);
+    console.error(`[SECURITY FAILURE] Cryptographic signature mismatch: ${message}`);
+    return jsonError(`Signature Verification Failed: ${message}`, 400);
   }
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
+    const referenceId = session.id;
 
-    if (session.metadata?.paymentType === "coin_purchase") {
-      const userId = session.metadata.userId?.trim();
-      const coinAmount = Number.parseInt(session.metadata.coinAmount ?? "", 10);
-      const amountCents = session.amount_total ?? 0;
+    if (referenceId) {
+      try {
+        const supabaseAdmin = getSupabaseAdmin();
+        const alreadyProcessed = await ledgerReferenceExists(supabaseAdmin, referenceId);
+        if (alreadyProcessed) {
+          return NextResponse.json({ received: true, status: "duplicate_ignored" });
+        }
 
-      if (userId && Number.isFinite(coinAmount) && coinAmount > 0 && session.id) {
-        try {
-          const supabaseAdmin = getSupabaseAdmin();
-          const { error: ledgerError } = await supabaseAdmin.from("creator_ledger_entries").insert({
-            creator_id: userId,
-            amount_cents: amountCents,
-            coin_amount: coinAmount,
-            source_type: "coin_purchase",
-            reference_id: session.id,
-            description: `Deposited ${coinAmount} platform coins into system wallet ledger.`,
-          });
+        if (session.metadata?.paymentType === "coin_purchase") {
+          const userId = session.metadata.userId?.trim();
+          const coinAmount = Number.parseInt(session.metadata.coinAmount ?? "", 10);
+          const amountCents = session.amount_total ?? 0;
 
-          if (ledgerError) {
-            if (ledgerError.code === "23505") {
-              console.info("[WEBHOOK COIN DEPOSIT] Duplicate session ignored:", session.id);
-            } else {
+          if (userId && Number.isFinite(coinAmount) && coinAmount > 0) {
+            const { error: ledgerError } = await supabaseAdmin.from("creator_ledger_entries").insert({
+              creator_id: userId,
+              amount_cents: amountCents,
+              coin_amount: coinAmount,
+              source_type: "coin_purchase",
+              reference_id: referenceId,
+              description: `Deposited ${coinAmount} platform coins into system wallet ledger.`,
+            });
+
+            if (ledgerError) {
+              if (ledgerError.code === "23505") {
+                console.info("[WEBHOOK COIN DEPOSIT] Duplicate session ignored:", referenceId);
+                return NextResponse.json({ received: true, status: "duplicate_ignored" });
+              }
               console.error("[WEBHOOK COIN DEPOSIT FAILURE]:", ledgerError);
               return jsonError("Database update rejected.", 500);
             }
           }
-        } catch (coinErr) {
-          console.error("[WEBHOOK COIN DEPOSIT CRASH]:", coinErr);
-          return jsonError("Coin deposit processing failed.", 500);
         }
+      } catch (coinErr) {
+        console.error("[WEBHOOK COIN DEPOSIT CRASH]:", coinErr);
+        return jsonError("Coin deposit processing failed.", 500);
       }
     }
 

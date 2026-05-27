@@ -243,6 +243,9 @@ export function getDemoPersonaByUsername(username: string): DemoPersona | null {
 }
 
 export function getDemoPersonaById(id: string): DemoPersona | null {
+  if (id === "test_broadcaster_4k") {
+    return byUsername.get("kingdom_gamer") ?? null;
+  }
   return byId.get(id) ?? null;
 }
 

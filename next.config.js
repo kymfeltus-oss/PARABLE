@@ -62,6 +62,8 @@ function resolveSupabaseUrl(envUrl, anonKey) {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Playwright hits 127.0.0.1 while Next dev listens on localhost — allow HMR/assets cross-origin.
+  allowedDevOrigins: ['127.0.0.1', 'localhost'],
   env: {
     NEXT_PUBLIC_GIT_SHA: resolveGitSha(),
     // Ensure browser bundle gets Supabase URL/key after .env.local loads (avoids stale/empty NEXT_PUBLIC_* in dev).
@@ -130,6 +132,14 @@ const nextConfig = {
     ],
   },
   reactStrictMode: false,
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      'framer-motion',
+      '@livekit/components-react',
+      '@tanstack/react-query',
+    ],
+  },
 };
 
 module.exports = nextConfig;

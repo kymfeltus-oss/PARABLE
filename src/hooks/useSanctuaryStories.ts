@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import type { StoriesFeedResponse, StoryUserGroup } from "@/lib/sanctuary-stories/types";
 import { STORY_MAX_BYTES } from "@/lib/sanctuary-stories/constants";
 import { STORIES_SCHEMA_SETUP_HINT } from "@/lib/sanctuary-stories/schema-errors";
@@ -17,6 +18,7 @@ type UseSanctuaryStoriesResult = {
 };
 
 export function useSanctuaryStories(): UseSanctuaryStoriesResult {
+  const { loading: authLoading } = useAuth();
   const [groups, setGroups] = useState<StoryUserGroup[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,8 +34,8 @@ export function useSanctuaryStories(): UseSanctuaryStoriesResult {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/stories", { cache: "no-store" });
-        if (!res.ok) {
+      const res = await fetch("/api/stories", { cache: "no-store", credentials: "same-origin" });
+      if (!res.ok) {
           if (res.status === 401) {
             setGroups([]);
             setCurrentUserId(null);
@@ -56,8 +58,9 @@ export function useSanctuaryStories(): UseSanctuaryStoriesResult {
   }, []);
 
   useEffect(() => {
+    if (authLoading) return;
     void refresh();
-  }, [refresh]);
+  }, [refresh, authLoading]);
 
   useEffect(() => {
     const onStoryPublished = () => {

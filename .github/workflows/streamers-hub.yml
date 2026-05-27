@@ -1,0 +1,68 @@
+# Streamers Hub (/streamers) — focused CI for Kick-style discovery layout + flows.
+name: Streamers Hub CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/app/streamers/**"
+      - "src/components/streamers/**"
+      - "src/components/StreamWorkspace*.tsx"
+      - "src/components/StreamWorkspace.tsx"
+      - "src/lib/stream-interactions.ts"
+      - "tests/streamers-hub.spec.ts"
+      - "tests/fixtures/streamers-hub-helpers.ts"
+      - "playwright.config.ts"
+      - "docs/KICK_STREAMERS_HOME.md"
+      - ".github/workflows/streamers-hub.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/app/streamers/**"
+      - "src/components/streamers/**"
+      - "src/components/StreamWorkspace*.tsx"
+      - "src/components/StreamWorkspace.tsx"
+      - "src/lib/stream-interactions.ts"
+      - "tests/streamers-hub.spec.ts"
+      - "tests/fixtures/streamers-hub-helpers.ts"
+      - "playwright.config.ts"
+      - "docs/KICK_STREAMERS_HOME.md"
+      - ".github/workflows/streamers-hub.yml"
+
+jobs:
+  streamers-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck and production build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+          LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+          NEXT_PUBLIC_LIVEKIT_URL: ${{ secrets.NEXT_PUBLIC_LIVEKIT_URL }}
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Streamers Hub E2E
+        run: npx playwright test tests/streamers-hub.spec.ts
+        env:
+          CI: "true"
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_PARABLE_DEV_GUEST: "1"

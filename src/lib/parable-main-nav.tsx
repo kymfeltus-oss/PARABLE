@@ -133,14 +133,14 @@ export const PARABLE_MAIN_NAV: MainNavItem[] = [
   },
 ];
 
-/** Streamers tab: signed-in creators land on their unified watch room; guests use the hub. */
-export function resolveStreamersNavHref(authUserId?: string | null): string {
-  return authUserId ? `/stream/${authUserId}` : "/streamers";
+/** Streamers tab — always the Kick-style discovery hub (`/streamers`). */
+export function resolveStreamersNavHref(_authUserId?: string | null): string {
+  return "/streamers";
 }
 
 export function getMainNavItems(authUserId?: string | null): MainNavItem[] {
   const base = IS_STUDY_AI ? STUDY_AI_MAIN_NAV : PARABLE_MAIN_NAV;
-  if (IS_STUDY_AI || !authUserId) return base;
+  if (IS_STUDY_AI) return base;
   return base.map((item) =>
     item.label === "Streamers" ? { ...item, href: resolveStreamersNavHref(authUserId) } : item,
   );

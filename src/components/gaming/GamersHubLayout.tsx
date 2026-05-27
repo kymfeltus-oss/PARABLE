@@ -242,7 +242,7 @@ export default function GamersHubLayout() {
         authUser.email ||
         "Gamer";
 
-      const { data, error } = await fetchLiveKitTokenFromEdge(supabase, GAMING_LOBBY_ROOM, display);
+      const { data, error } = await fetchLiveKitTokenFromEdge(supabase, GAMING_LOBBY_ROOM);
       if (cancelled) return;
       if (error || !data?.token || !data.url) {
         setVcError(error ?? "Could not join voice.");

@@ -1,4 +1,5 @@
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import ClientRootShell from "@/components/layout/ClientRootShell";
 
@@ -13,7 +14,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <head>
         {process.env.NODE_ENV === "development" ? (
-          <script src="/dev-react-devtools-guard.js" />
+          <Script src="/dev-react-devtools-guard.js" strategy="lazyOnload" />
         ) : null}
       </head>
       <body

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isParableDevGuestClientEnabled } from "@/lib/parable-dev-guest";
 
 export type LiveKitEdgeTokenResponse = {
   token: string;
@@ -20,17 +21,28 @@ export async function fetchLiveKitPublisherToken(
     error: sessionError,
   } = await supabase.auth.getSession();
 
-  if (sessionError || !session?.access_token) {
-    return { data: null, error: sessionError?.message ?? "Sign in required to go live." };
+  const guestAllowed = isParableDevGuestClientEnabled();
+  const accessToken = session?.access_token;
+
+  if (!accessToken && !guestAllowed) {
+    return {
+      data: null,
+      error: sessionError?.message ?? "Sign in required to go live.",
+    };
   }
 
   try {
+    const headers: Record<string, string> = {
+      "content-type": "application/json",
+    };
+    if (accessToken) {
+      headers.authorization = `Bearer ${accessToken}`;
+    }
+
     const res = await fetch("/api/livekit/token", {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${session.access_token}`,
-      },
+      headers,
+      credentials: "same-origin",
       body: JSON.stringify({ room, roomName: room }),
     });
 

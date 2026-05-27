@@ -9,6 +9,11 @@ import {
 } from "@/lib/demo-personas";
 import { createClient } from "@/utils/supabase/server";
 
+/** PostgREST profile columns — use `display_name` (not `full_name`) for parable-app schema. */
+const PROFILE_PUBLIC_SELECT = "id, username, display_name, avatar_url, role, is_live";
+const PROFILE_EMBED_SELECT =
+  "profiles:profile_id(id, username, display_name, avatar_url, role)";
+
 export type SanctuaryHomeServerPayload = {
   posts: DemoHomeFeedPost[];
   liveStreams: DemoHomeTrayItem[];
@@ -28,14 +33,14 @@ type PostRow = {
     | {
         id: string;
         username: string | null;
-        full_name: string | null;
+        display_name: string | null;
         avatar_url: string | null;
         role: string | null;
       }
     | {
         id: string;
         username: string | null;
-        full_name: string | null;
+        display_name: string | null;
         avatar_url: string | null;
         role: string | null;
       }[]
@@ -47,7 +52,7 @@ type PostRow = {
 type LiveProfileRow = {
   id: string;
   username: string | null;
-  full_name: string | null;
+  display_name: string | null;
   avatar_url: string | null;
   role: string | null;
   is_live: boolean | null;
@@ -87,7 +92,8 @@ function normalizeProfile<T>(raw: T | T[] | null | undefined): T | null {
 function mapPostRow(row: PostRow): DemoHomeFeedPost | null {
   const profile = normalizeProfile(row.profiles);
   if (!profile) return null;
-  const username = profile.username?.trim() || profile.full_name?.trim() || "member";
+  const username =
+    profile.username?.trim() || profile.display_name?.trim() || "member";
   const persona =
     getDemoPersonaByUsername(username) ?? getDemoPersonaById(profile.id) ?? null;
   const isVideo = row.post_type === "video";
@@ -166,7 +172,7 @@ export async function fetchSanctuaryHomePayload(): Promise<SanctuaryHomeServerPa
   const [liveRes, eventsRes] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, username, full_name, avatar_url, role, is_live")
+      .select(PROFILE_PUBLIC_SELECT)
       .eq("is_live", true)
       .limit(12),
     supabase
@@ -175,6 +181,27 @@ export async function fetchSanctuaryHomePayload(): Promise<SanctuaryHomeServerPa
       .order("scheduled_for", { ascending: true })
       .limit(10),
   ]);
+
+  // #region agent log
+  fetch("http://127.0.0.1:7923/ingest/97e0e67f-884b-4805-ae3c-197b09fd740e", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "7d4ac5" },
+    body: JSON.stringify({
+      sessionId: "7d4ac5",
+      runId: "post-fix-2",
+      hypothesisId: "H6-display_name",
+      location: "home-data.ts:fetchSanctuaryHomePayload:live",
+      message: "live profiles query result",
+      data: {
+        ok: !liveRes.error,
+        code: liveRes.error?.code ?? null,
+        errMsg: liveRes.error?.message?.slice(0, 200) ?? null,
+        rowCount: liveRes.data?.length ?? 0,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
 
   if (liveRes.error) {
     console.error("fetchSanctuaryHomePayload live:", liveRes.error.message);
@@ -232,7 +259,7 @@ export async function fetchSanctuaryHomePostsPage(
   let q = supabase
     .from("posts")
     .select(
-      "id, content, media_url, post_type, created_at, profile_id, profiles:profile_id(id, username, full_name, avatar_url, role), post_likes(count), post_comments(count)",
+      `id, content, media_url, post_type, created_at, profile_id, ${PROFILE_EMBED_SELECT}, post_likes(count), post_comments(count)`,
     )
     .in("post_type", ["image", "video", "carousel", "gallery"])
     .order("created_at", { ascending: false })
@@ -263,7 +290,7 @@ export async function fetchSanctuaryHomePostsPageWithCursor(
   let q = supabase
     .from("posts")
     .select(
-      "id, content, media_url, post_type, created_at, profile_id, profiles:profile_id(id, username, full_name, avatar_url, role), post_likes(count), post_comments(count)",
+      `id, content, media_url, post_type, created_at, profile_id, ${PROFILE_EMBED_SELECT}, post_likes(count), post_comments(count)`,
     )
     .in("post_type", ["image", "video", "carousel", "gallery"])
     .order("created_at", { ascending: false })
@@ -274,6 +301,27 @@ export async function fetchSanctuaryHomePostsPageWithCursor(
   }
 
   const { data, error } = await q;
+
+  // #region agent log
+  fetch("http://127.0.0.1:7923/ingest/97e0e67f-884b-4805-ae3c-197b09fd740e", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "7d4ac5" },
+    body: JSON.stringify({
+      sessionId: "7d4ac5",
+      runId: "post-fix-2",
+      hypothesisId: "H1-H5",
+      location: "home-data.ts:fetchSanctuaryHomePostsPageWithCursor",
+      message: "posts feed query result",
+      data: {
+        ok: !error,
+        code: error?.code ?? null,
+        errMsg: error?.message?.slice(0, 200) ?? null,
+        rowCount: data?.length ?? 0,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
 
   if (error) {
     console.error("fetchSanctuaryHomePostsPageWithCursor:", error.message);

@@ -2,19 +2,95 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { supabaseProjectRefFromAnonKey } from "@/utils/supabase/resolve-url";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const POSTS_PER_PAGE = 20;
 
-const POSTS_FEED_SELECT = [
+const PROFILE_SELECT = "id, username, display_name, avatar_url, role, is_live";
+
+const POSTS_BASE_SELECT = [
   "id",
   "content",
   "created_at",
   "media_url",
   "post_type",
   "profile_id",
-  "profiles:profile_id(id, full_name, avatar_url, username, status_text, is_live)",
   "post_likes(count)",
 ].join(", ");
+
+const POSTS_FEED_SELECT = [
+  POSTS_BASE_SELECT,
+  `profiles:profile_id(${PROFILE_SELECT})`,
+].join(", ");
+
+function isMissingPostsProfileFk(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  if (error.code === "PGRST200") return true;
+  const msg = error.message ?? "";
+  return msg.includes("profile_id") && msg.includes("relationship");
+}
+
+async function attachProfilesToPostRows(
+  supabase: SupabaseClient,
+  rows: Record<string, unknown>[],
+): Promise<Record<string, unknown>[]> {
+  const ids = [
+    ...new Set(
+      rows
+        .map((r) => r.profile_id)
+        .filter((id): id is string => typeof id === "string" && id.length > 0),
+    ),
+  ];
+  if (ids.length === 0) return rows;
+
+  const { data: profiles, error } = await supabase
+    .from("profiles")
+    .select(PROFILE_SELECT)
+    .in("id", ids);
+
+  if (error) throw error;
+
+  const byId = new Map((profiles ?? []).map((p) => [String(p.id), p]));
+  return rows.map((row) => ({
+    ...row,
+    profiles: row.profile_id ? (byId.get(String(row.profile_id)) ?? null) : null,
+  }));
+}
+
+type PostsQueryResult = {
+  data: unknown;
+  error: { code?: string; message?: string } | null;
+};
+
+function rowsFromPostsResult(data: unknown): Record<string, unknown>[] {
+  if (data == null) return [];
+  if (Array.isArray(data)) return data as Record<string, unknown>[];
+  return [data as Record<string, unknown>];
+}
+
+async function fetchPostsWithAuthors(
+  supabase: SupabaseClient,
+  runQuery: (select: string) => PromiseLike<PostsQueryResult>,
+): Promise<{ rows: Record<string, unknown>[]; usedFallback: boolean }> {
+  const embedded = await runQuery(POSTS_FEED_SELECT);
+  if (!embedded.error) {
+    return {
+      rows: rowsFromPostsResult(embedded.data),
+      usedFallback: false,
+    };
+  }
+
+  if (!isMissingPostsProfileFk(embedded.error)) {
+    throw embedded.error;
+  }
+
+  const base = await runQuery(POSTS_BASE_SELECT);
+  if (base.error) throw base.error;
+
+  const rows = await attachProfilesToPostRows(supabase, rowsFromPostsResult(base.data));
+  return { rows, usedFallback: true };
+}
 
 function inferMediaTypeFromUrl(url: string | null): "video" | "image" | null {
   if (!url) return null;
@@ -70,7 +146,7 @@ function pickAuthor(row: Record<string, unknown>): FeedAuthor | null {
   if (id == null) return null;
   return {
     id: String(id),
-    full_name: (o.full_name as string) ?? null,
+    full_name: (o.full_name as string) ?? (o.display_name as string) ?? null,
     avatar_url: (o.avatar_url as string) ?? null,
     username: (o.username as string) ?? null,
     status_text: (o.status_text as string | undefined) ?? null,
@@ -190,26 +266,56 @@ export function useFeed(userId?: string) {
           }
         }
 
-        let q = supabase
-          .from("posts")
-          .select(POSTS_FEED_SELECT)
-          .neq("post_type", "story")
-          .order("created_at", { ascending: false })
-          .limit(POSTS_PER_PAGE);
+        const runQuery = (select: string) => {
+          let q = supabase
+            .from("posts")
+            .select(select)
+            .neq("post_type", "story")
+            .order("created_at", { ascending: false })
+            .limit(POSTS_PER_PAGE);
 
-        if (userId) {
-          q = q.eq("profile_id", userId);
-        } else if (filterProfileIds) {
-          q = q.in("profile_id", filterProfileIds);
-        }
+          if (userId) {
+            q = q.eq("profile_id", userId);
+          } else if (filterProfileIds) {
+            q = q.in("profile_id", filterProfileIds);
+          }
 
-        if (mode === "more" && cursorRef.current) {
-          q = q.lt("created_at", cursorRef.current);
-        }
+          if (mode === "more" && cursorRef.current) {
+            q = q.lt("created_at", cursorRef.current);
+          }
 
-        const { data, error } = await q;
-        if (error) {
-          console.error("useFeed fetch failed:", describeFeedError(error));
+          return q;
+        };
+
+        let rows: Record<string, unknown>[];
+        let usedFallback = false;
+        try {
+          const result = await fetchPostsWithAuthors(supabase, runQuery);
+          rows = result.rows;
+          usedFallback = result.usedFallback;
+        } catch (error) {
+          const described = describeFeedError(error);
+          // #region agent log
+          fetch("http://127.0.0.1:7923/ingest/97e0e67f-884b-4805-ae3c-197b09fd740e", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "7d4ac5" },
+            body: JSON.stringify({
+              sessionId: "7d4ac5",
+              runId: "post-fix-3",
+              hypothesisId: "H7-fk-fallback",
+              location: "useFeed.ts:fetchPage",
+              message: "useFeed fetch failed",
+              data: {
+                ref: supabaseProjectRefFromAnonKey(
+                  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+                ),
+                err: described.slice(0, 240),
+              },
+              timestamp: Date.now(),
+            }),
+          }).catch(() => {});
+          // #endregion
+          console.error("useFeed fetch failed:", described);
           if (mode === "initial") {
             setPosts([]);
             cursorRef.current = null;
@@ -218,7 +324,27 @@ export function useFeed(userId?: string) {
           return;
         }
 
-        const rows = (data ?? []) as unknown as Record<string, unknown>[];
+        // #region agent log
+        fetch("http://127.0.0.1:7923/ingest/97e0e67f-884b-4805-ae3c-197b09fd740e", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "7d4ac5" },
+          body: JSON.stringify({
+            sessionId: "7d4ac5",
+            runId: "post-fix-3",
+            hypothesisId: "H7-fk-fallback",
+            location: "useFeed.ts:fetchPage",
+            message: "useFeed fetch ok",
+            data: {
+              ref: supabaseProjectRefFromAnonKey(
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+              ),
+              usedFallback,
+              rowCount: rows.length,
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
         const normalized = rows
           .filter((row) => row.media_type !== "story" && row.post_type !== "story")
           .map(normalizeRow);
@@ -302,17 +428,17 @@ export function useFeed(userId?: string) {
 
         const id = newRow.id as string | undefined;
         if (!id) return;
-        const { data, error } = await supabase
-          .from("posts")
-          .select(POSTS_FEED_SELECT)
-          .eq("id", id)
-          .maybeSingle();
-        if (error) {
+        let raw: Record<string, unknown> | null = null;
+        try {
+          const { rows } = await fetchPostsWithAuthors(supabase, (select) =>
+            supabase.from("posts").select(select).eq("id", id).maybeSingle(),
+          );
+          raw = rows[0] ?? null;
+        } catch (error) {
           console.error("useFeed realtime row:", describeFeedError(error));
           return;
         }
-        if (!data) return;
-        const raw = data as unknown as Record<string, unknown>;
+        if (!raw) return;
         if (raw.media_type === "story" || raw.post_type === "story") return;
         const row = normalizeRow(raw);
         setPosts((prev) => {

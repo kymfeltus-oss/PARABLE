@@ -1,5 +1,9 @@
 -- Direct messaging: conversations, participants, messages, reactions.
 -- Enable tables in Supabase Dashboard → Database → Replication (Realtime).
+-- Applied to Supabase project rmerwwmamddqrqtxvkrx (migration: direct_messages_conversations).
+-- If upgrading from legacy public.messages (sender_id/receiver_id), run:
+--   DROP TABLE IF EXISTS public.messages CASCADE;
+-- before this script on fresh databases that still have the old table.
 
 create table if not exists public.conversations (
   id uuid primary key default gen_random_uuid(),
@@ -48,16 +52,30 @@ alter table public.conversation_participants enable row level security;
 alter table public.messages enable row level security;
 alter table public.message_reactions enable row level security;
 
+-- Membership check bypasses RLS to avoid circular policies on conversation_participants.
+create or replace function public.is_conversation_member(conv_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1
+    from public.conversation_participants cp
+    where cp.conversation_id = conv_id
+      and cp.user_id = auth.uid()
+  );
+$$;
+
+revoke all on function public.is_conversation_member(uuid) from public;
+grant execute on function public.is_conversation_member(uuid) to authenticated;
+
 -- Participants can read their conversations
 drop policy if exists "Participants read conversations" on public.conversations;
 create policy "Participants read conversations"
   on public.conversations for select to authenticated
-  using (
-    exists (
-      select 1 from public.conversation_participants cp
-      where cp.conversation_id = conversations.id and cp.user_id = auth.uid()
-    )
-  );
+  using (public.is_conversation_member(id));
 
 drop policy if exists "Authenticated create conversations" on public.conversations;
 create policy "Authenticated create conversations"
@@ -67,13 +85,7 @@ create policy "Authenticated create conversations"
 drop policy if exists "Participants read conversation_participants" on public.conversation_participants;
 create policy "Participants read conversation_participants"
   on public.conversation_participants for select to authenticated
-  using (
-    exists (
-      select 1 from public.conversation_participants cp
-      where cp.conversation_id = conversation_participants.conversation_id
-        and cp.user_id = auth.uid()
-    )
-  );
+  using (public.is_conversation_member(conversation_id));
 
 drop policy if exists "Authenticated insert conversation_participants" on public.conversation_participants;
 create policy "Authenticated insert conversation_participants"
@@ -89,22 +101,14 @@ create policy "Users update own participant row"
 drop policy if exists "Participants read messages" on public.messages;
 create policy "Participants read messages"
   on public.messages for select to authenticated
-  using (
-    exists (
-      select 1 from public.conversation_participants cp
-      where cp.conversation_id = messages.conversation_id and cp.user_id = auth.uid()
-    )
-  );
+  using (public.is_conversation_member(conversation_id));
 
 drop policy if exists "Participants insert own messages" on public.messages;
 create policy "Participants insert own messages"
   on public.messages for insert to authenticated
   with check (
     auth.uid() = sender_id
-    and exists (
-      select 1 from public.conversation_participants cp
-      where cp.conversation_id = messages.conversation_id and cp.user_id = auth.uid()
-    )
+    and public.is_conversation_member(conversation_id)
   );
 
 drop policy if exists "Senders delete own messages" on public.messages;
@@ -119,8 +123,8 @@ create policy "Participants read message_reactions"
     exists (
       select 1
       from public.messages m
-      join public.conversation_participants cp on cp.conversation_id = m.conversation_id
-      where m.id = message_reactions.message_id and cp.user_id = auth.uid()
+      where m.id = message_reactions.message_id
+        and public.is_conversation_member(m.conversation_id)
     )
   );
 

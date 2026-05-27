@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Wallet } from 'lucide-react';
 import HubBackground from '@/components/HubBackground';
 import { useAuth } from '@/hooks/useAuth';
+import { isParableDevGuestClientEnabled } from '@/lib/parable-dev-guest';
 import { createClient } from '@/utils/supabase/client';
 
 interface LedgerEntry {
@@ -30,6 +31,7 @@ export default function WalletClient() {
   const [funding, setFunding] = useState<string | null>(null);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [checkoutCanceled, setCheckoutCanceled] = useState(false);
+  const [ledgerNotice, setLedgerNotice] = useState<string | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -43,22 +45,39 @@ export default function WalletClient() {
     let cancelled = false;
 
     async function loadLedgerData() {
-      const { data, error } = await supabase
-        .from('creator_ledger_entries')
-        .select('id, amount_cents, coin_amount, source_type, description, created_at')
-        .eq('creator_id', userProfile.id)
-        .order('created_at', { ascending: false });
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
+      const ledgerUrl =
+        session?.access_token || !isParableDevGuestClientEnabled()
+          ? '/api/wallet/ledger'
+          : `/api/wallet/ledger?userId=${encodeURIComponent(userProfile.id)}`;
+
+      const res = await fetch(ledgerUrl, { credentials: 'same-origin', headers });
+      const payload = (await res.json().catch(() => ({}))) as {
+        entries?: LedgerEntry[];
+        error?: string;
+        notice?: string;
+      };
 
       if (cancelled) return;
 
-      if (!error && data) {
-        const rows = data as LedgerEntry[];
-        setHistory(rows);
-        setBalanceCents(rows.reduce((acc, curr) => acc + curr.amount_cents, 0));
-        setCoinBalance(rows.reduce((acc, curr) => acc + (curr.coin_amount ?? 0), 0));
-      } else if (error) {
-        console.error('[wallet] Failed to load ledger:', error);
+      if (!res.ok) {
+        console.error('[wallet] Failed to load ledger:', payload.error ?? res.status);
+        return;
       }
+
+      const rows = payload.entries ?? [];
+      setLedgerNotice(typeof payload.notice === 'string' ? payload.notice : null);
+      setHistory(rows);
+      setBalanceCents(rows.reduce((acc, curr) => acc + curr.amount_cents, 0));
+      setCoinBalance(rows.reduce((acc, curr) => acc + (curr.coin_amount ?? 0), 0));
     }
 
     void loadLedgerData();
@@ -170,6 +189,12 @@ export default function WalletClient() {
         {checkoutCanceled ? (
           <p className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
             Checkout was canceled. You can buy coin bundles whenever you are ready.
+          </p>
+        ) : null}
+
+        {ledgerNotice ? (
+          <p className="mb-6 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/55">
+            {ledgerNotice}
           </p>
         ) : null}
 

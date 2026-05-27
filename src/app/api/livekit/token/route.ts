@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 // Aliasing prevents "defined multiple times" errors in Next.js 16/Turbopack
 import { AccessToken as LiveKitAccessToken } from "livekit-server-sdk";
 import { createClient } from "@supabase/supabase-js";
+import {
+  getParableGuestUserId,
+  isParableDevGuestAllowed,
+  PARABLE_GUEST_PROFILE,
+} from "@/lib/parable-dev-guest";
 
 export const runtime = "nodejs";
 
@@ -27,29 +32,34 @@ export async function POST(req: Request) {
       return jsonError("Missing Supabase environment variables.", 500);
     }
 
-    // 3. Authenticate Supabase User
+    // 3. Authenticate Supabase User (JWT or dev guest on allowed hosts)
     const authHeader = req.headers.get("authorization") || "";
     const jwt = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
 
-    if (!jwt) {
+    let identity: string;
+    let name: string;
+
+    if (jwt) {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const { data, error } = await supabase.auth.getUser(jwt);
+
+      if (error || !data?.user) {
+        return jsonError("Unauthorized: Invalid session.", 401);
+      }
+
+      identity = data.user.id;
+      name = data.user.user_metadata?.display_name || data.user.email || "Creator";
+    } else if (isParableDevGuestAllowed(req)) {
+      identity = getParableGuestUserId();
+      name = PARABLE_GUEST_PROFILE.full_name || PARABLE_GUEST_PROFILE.username || "Creator";
+    } else {
       return jsonError("Unauthorized: Missing token.", 401);
     }
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const { data, error } = await supabase.auth.getUser(jwt);
-
-    if (error || !data?.user) {
-      return jsonError("Unauthorized: Invalid session.", 401);
-    }
-
-    const user = data.user;
 
     // 4. Prepare Token Data
     const body = await req.json().catch(() => ({}));
     const roomRaw = body?.roomName ?? body?.room ?? "parable-live";
     const room = String(roomRaw).trim() || "parable-live";
-    const identity = user.id;
-    const name = user.user_metadata?.display_name || user.email || "Creator";
 
     console.log(`[LiveKit Publisher] session room=${room} identity=${identity}`);
 

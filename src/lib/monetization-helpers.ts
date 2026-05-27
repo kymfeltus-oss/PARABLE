@@ -48,7 +48,7 @@ export async function getUserChatPerks(userId: string): Promise<UserChatDisplayP
 
     if (error || !data) return DEFAULT_CHAT_PERKS;
 
-    const row = data as SubscriptionPerksRow;
+    const row = data as unknown as SubscriptionPerksRow;
     if (!row.subscription_tiers?.perks) return DEFAULT_CHAT_PERKS;
 
     return normalizePerks(row.subscription_tiers.perks);

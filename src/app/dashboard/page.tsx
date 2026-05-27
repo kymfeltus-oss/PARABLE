@@ -28,9 +28,10 @@ export default function DashboardPage() {
   const [groupsLoading, setGroupsLoading] = useState(true);
 
   const userId = userProfile?.id ?? null;
+  const isStudyAI = process.env.NEXT_PUBLIC_APP_VARIANT === "parable-study-ai";
 
   useEffect(() => {
-    if (!userId) {
+    if (!isStudyAI || !userId) {
       setGroupsLoading(false);
       return;
     }
@@ -48,12 +49,54 @@ export default function DashboardPage() {
           ) as StudyGroup[];
         setGroups(list);
       });
-  }, [userId]);
+  }, [isStudyAI, userId]);
 
-  const isStudyAI = process.env.NEXT_PUBLIC_APP_VARIANT === "parable-study-ai";
   if (!isStudyAI) {
-    router.replace("/profile");
-    return null;
+    return (
+      <div className="relative min-h-screen bg-[#02040A] p-6 font-inter text-[#F8FAFC]">
+        <div className="pointer-events-none absolute left-1/2 top-0 h-[300px] w-[500px] -translate-x-1/2 rounded-full bg-cyan-500/10 blur-[120px]" />
+        <main className="relative z-10 mx-auto max-w-3xl space-y-6 pt-4">
+          <div>
+            <h1 className="bg-gradient-to-r from-[#00F2FE] to-[#0EA5E9] bg-clip-text text-2xl font-black tracking-tight text-transparent sm:text-3xl">
+              Creator Dashboard
+            </h1>
+            <p className="mt-2 text-sm text-[#94A3B8]">
+              Manage broadcasts, schedules, and payout setup from one place.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => router.push("/dashboard/streamers")}
+              className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 text-left transition hover:border-cyan-500/40 hover:bg-slate-900"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wider text-cyan-400">
+                Streamer Hub
+              </p>
+              <p className="mt-2 text-lg font-bold text-white">Operational Command Center</p>
+              <p className="mt-1 text-sm text-slate-400">
+                Schedules, amen reactions, and live broadcast tools.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.push("/dashboard/payouts")}
+              className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 text-left transition hover:border-cyan-500/40 hover:bg-slate-900"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wider text-cyan-400">
+                Payouts
+              </p>
+              <p className="mt-2 text-lg font-bold text-white">Stripe Connect Setup</p>
+              <p className="mt-1 text-sm text-slate-400">
+                Onboard your account to receive creator earnings.
+              </p>
+            </button>
+          </div>
+        </main>
+      </div>
+    );
   }
 
   return (

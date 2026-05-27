@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
-import { fetchActiveStoryGroups } from "@/lib/sanctuary-stories/story-queries";
+import { createClient } from "@/utils/supabase/server";import { fetchActiveStoryGroups } from "@/lib/sanctuary-stories/story-queries";
 import {
   isStoriesSchemaUnavailable,
   STORIES_SCHEMA_SETUP_HINT,
 } from "@/lib/sanctuary-stories/schema-errors";
 import { uploadStoryMediaFromFile } from "@/lib/sanctuary-stories/upload-story-media";
 import { STORY_MAX_BYTES } from "@/lib/sanctuary-stories/constants";
+import { isParableDevGuestAllowed, getParableGuestUserId } from "@/lib/parable-dev-guest";
 
 export const runtime = "nodejs";
 
@@ -14,18 +14,26 @@ function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const guestAllowed = isParableDevGuestAllowed(request);
+
     const supabase = await createClient();
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
 
+    if (guestAllowed && !user) {
+      return NextResponse.json({
+        groups: [],
+        currentUserId: getParableGuestUserId(),
+      });
+    }
+
     if (authError || !user) {
       return jsonError("Not signed in.", 401);
     }
-
     const feed = await fetchActiveStoryGroups(supabase, user.id);
     return NextResponse.json(feed);
   } catch (err) {

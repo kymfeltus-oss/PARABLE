@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import {
   DEFAULT_CHAT_PERKS,
   getUserChatPerks,
   type UserChatDisplayPerks,
 } from "@/lib/monetization-helpers";
+import { AMEN_REACTION_EVENT, streamInteractionChannelName } from "@/lib/stream-interactions";
+import { createClient } from "@/utils/supabase/client";
 import GiftOverlayCanvas from "@/components/GiftOverlayCanvas";
 
 export interface StreamChatMessage {
@@ -35,6 +37,8 @@ export default function StreamWorkspace({
   initialViewMode = "clean",
 }: StreamWorkspaceProps) {
   const { userProfile } = useAuth();
+  const supabase = useMemo(() => createClient(), []);
+  const interactionChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const [viewMode, setViewMode] = useState<"clean" | "gamer">(initialViewMode);
   const [messages, setMessages] = useState<StreamChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
@@ -87,6 +91,27 @@ export default function StreamWorkspace({
   };
 
   useEffect(() => {
+    if (viewMode !== "gamer" || !streamId) {
+      if (interactionChannelRef.current) {
+        void supabase.removeChannel(interactionChannelRef.current);
+        interactionChannelRef.current = null;
+      }
+      return;
+    }
+
+    const channel = supabase.channel(streamInteractionChannelName(streamId));
+    interactionChannelRef.current = channel;
+    channel.subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+      if (interactionChannelRef.current === channel) {
+        interactionChannelRef.current = null;
+      }
+    };
+  }, [viewMode, streamId, supabase]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadChatPerks() {
@@ -136,6 +161,17 @@ export default function StreamWorkspace({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ streamId, message: newMessage }),
     }).catch((err) => console.error("Background logging omitted crash risk:", err));
+  };
+
+  const emitGlobalAmenReaction = () => {
+    const channel = interactionChannelRef.current;
+    if (!channel) return;
+
+    void channel.send({
+      type: "broadcast",
+      event: AMEN_REACTION_EVENT,
+      payload: { timestamp: new Date().toISOString() },
+    });
   };
 
   return (
@@ -214,6 +250,13 @@ export default function StreamWorkspace({
                   </button>
                 ))}
               </div>
+              <button
+                type="button"
+                onClick={emitGlobalAmenReaction}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/20 to-orange-600/20 py-3 text-sm font-bold text-amber-200 shadow-md transition-all hover:from-amber-500/30 hover:to-orange-600/30 active:scale-[0.98]"
+              >
+                🙏 Trigger Global Community Amen Reaction
+              </button>
             </div>
           ) : null}
 

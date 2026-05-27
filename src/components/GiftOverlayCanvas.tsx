@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
+import { AMEN_REACTION_EVENT, streamInteractionChannelName } from '@/lib/stream-interactions';
 
 interface FloatingParticle {
   id: string;
@@ -20,6 +21,20 @@ const GIFT_EMOJI_MAP: Record<string, string> = {
 };
 
 const PARTICLE_BURST_COUNT = 12;
+
+const AMEN_WAVE_COUNT = 8;
+
+function spawnAmenWave(): FloatingParticle[] {
+  return Array.from({ length: AMEN_WAVE_COUNT }, () => ({
+    id: crypto.randomUUID(),
+    emoji: '🙏',
+    x: 10 + Math.random() * 80,
+    y: 90,
+    scale: 1.2 + Math.random() * 1.8,
+    speed: 1.5 + Math.random() * 3,
+    opacity: 0.9,
+  }));
+}
 
 function spawnParticleBurst(emoji: string): FloatingParticle[] {
   return Array.from({ length: PARTICLE_BURST_COUNT }, () => ({
@@ -76,6 +91,21 @@ export default function GiftOverlayCanvas({ streamId, enabled }: GiftOverlayCanv
 
     return () => {
       void supabase.removeChannel(giftChannel);
+    };
+  }, [enabled, streamId, supabase]);
+
+  useEffect(() => {
+    if (!enabled || !streamId) return;
+
+    const interactionChannel = supabase
+      .channel(streamInteractionChannelName(streamId))
+      .on('broadcast', { event: AMEN_REACTION_EVENT }, () => {
+        setParticles((prev) => [...prev, ...spawnAmenWave()]);
+      })
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(interactionChannel);
     };
   }, [enabled, streamId, supabase]);
 
