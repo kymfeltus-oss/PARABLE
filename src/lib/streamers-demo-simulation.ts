@@ -100,6 +100,34 @@ export const LIVE_RAIL_CHAT_ROOM_IDS: Record<string, string> = Object.fromEntrie
   STREAMERS_LIVE_RAIL_SLOTS.map((slot) => [slot.id, DEMO_PERSONA_IDS[slot.persona]]),
 );
 
+/** Discovery grid order: rail `lr1`…`lr6` then extra slots (stable e2e + dense widescreen grid). */
+export const STREAMERS_DISCOVERY_GRID_IDS: string[] = [
+  ...STREAMERS_LIVE_RAIL_SLOTS.map((s) => s.id),
+  ...STREAMERS_DISCOVERY_EXTRA_SLOTS.map((s) => s.id),
+];
+
+/** Client-side viewer jitter (see `useLiveSimulation`) — API payloads stay static. */
+export const SIM_VIEWER_JITTER_MS = 4500;
+export const SIM_VIEWER_JITTER_MIN_VIEWERS = 50;
+
+export type StreamersSimChatSpeaker = {
+  slotId: string;
+  displayName: string;
+  avatarUrl: string;
+};
+
+/** Display names + avatars for simulated chat — aligned with `lr1`…`lr6` rail slots. */
+export function getStreamersSimChatSpeakers(): StreamersSimChatSpeaker[] {
+  return STREAMERS_LIVE_RAIL_SLOTS.map((slot) => {
+    const persona = getDemoPersonaByUsername(slot.persona);
+    return {
+      slotId: slot.id,
+      displayName: persona?.full_name ?? slot.persona,
+      avatarUrl: persona?.avatar_url ?? "",
+    };
+  });
+}
+
 function slotToRecord(slot: StreamersDemoSlot): StreamerProfileRecord {
   const persona = getDemoPersonaByUsername(slot.persona);
   if (!persona) {

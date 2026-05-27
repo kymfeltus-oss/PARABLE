@@ -2,19 +2,31 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { DEMO_HLS_STREAM_URL, DEMO_MP4_FALLBACK_URL } from "@/lib/demo-hls-stream";
 
 export type ParableHeroVideoProps = {
-  streamUrl: string;
+  streamUrl?: string;
+  mp4FallbackUrl?: string;
   className?: string;
   poster?: string;
+  videoRef?: React.RefObject<HTMLVideoElement | null>;
 };
 
 /**
  * Native HTML5 hero player — HLS via hls.js where MSE is required; Safari uses native HLS.
+ * Falls back to MP4 loop when HLS is unsupported or fatally errors.
  */
-export default function ParableHeroVideo({ streamUrl, className = "", poster }: ParableHeroVideoProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+export default function ParableHeroVideo({
+  streamUrl = DEMO_HLS_STREAM_URL,
+  mp4FallbackUrl = DEMO_MP4_FALLBACK_URL,
+  className = "",
+  poster,
+  videoRef: externalVideoRef,
+}: ParableHeroVideoProps) {
+  const internalVideoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = externalVideoRef ?? internalVideoRef;
   const hlsRef = useRef<{ destroy: () => void } | null>(null);
+  const usedMp4Ref = useRef(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,15 +37,24 @@ export default function ParableHeroVideo({ streamUrl, className = "", poster }: 
     let cancelled = false;
     setReady(false);
     setError(null);
+    usedMp4Ref.current = false;
 
     const onCanPlay = () => {
       if (!cancelled) setReady(true);
     };
     video.addEventListener("canplay", onCanPlay);
 
+    function attachMp4(el: HTMLVideoElement) {
+      hlsRef.current?.destroy();
+      hlsRef.current = null;
+      usedMp4Ref.current = true;
+      el.src = mp4FallbackUrl;
+      void el.play().catch(() => undefined);
+    }
+
     async function attach() {
       const el = videoRef.current;
-      if (!el) return;
+      if (!el || cancelled) return;
 
       hlsRef.current?.destroy();
       hlsRef.current = null;
@@ -46,6 +67,10 @@ export default function ParableHeroVideo({ streamUrl, className = "", poster }: 
         const { default: Hls } = await import("hls.js");
         if (cancelled) return;
         if (!Hls.isSupported()) {
+          if (mp4FallbackUrl) {
+            attachMp4(el);
+            return;
+          }
           setError("HLS not supported in this browser");
           return;
         }
@@ -56,7 +81,13 @@ export default function ParableHeroVideo({ streamUrl, className = "", poster }: 
           if (!cancelled) void el.play().catch(() => undefined);
         });
         hls.on(Hls.Events.ERROR, (_, data) => {
-          if (data.fatal && !cancelled) setError("Stream playback failed");
+          if (!data.fatal || cancelled) return;
+          if (mp4FallbackUrl && !usedMp4Ref.current) {
+            setError(null);
+            attachMp4(el);
+            return;
+          }
+          setError("Stream playback failed");
         });
         hlsRef.current = hls;
       } else {
@@ -76,10 +107,10 @@ export default function ParableHeroVideo({ streamUrl, className = "", poster }: 
       video.removeAttribute("src");
       video.load();
     };
-  }, [streamUrl]);
+  }, [streamUrl, mp4FallbackUrl, videoRef]);
 
   return (
-    <div className={["relative h-full w-full overflow-hidden bg-black", className].filter(Boolean).join(" ")}>
+    <div className={["relative h-full w-full min-w-0 overflow-hidden bg-black", className].filter(Boolean).join(" ")}>
       <div
         className={`absolute inset-0 z-10 flex items-center justify-center bg-[#0b0e11] transition-opacity duration-300 ${
           ready ? "pointer-events-none opacity-0" : "opacity-100"
@@ -98,7 +129,7 @@ export default function ParableHeroVideo({ streamUrl, className = "", poster }: 
         poster={poster}
       />
       {error ? (
-        <p className="absolute right-3 top-3 z-20 rounded border border-red-500/40 bg-red-950/90 px-2 py-1 text-[10px] text-red-200">
+        <p className="absolute right-3 top-3 z-20 max-w-[min(100%,14rem)] truncate rounded border border-red-500/40 bg-red-950/90 px-2 py-1 text-[10px] text-red-200">
           {error}
         </p>
       ) : null}

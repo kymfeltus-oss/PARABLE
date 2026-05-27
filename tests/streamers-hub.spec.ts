@@ -29,14 +29,12 @@ async function skipIfScheduleApiUnavailable(
   baseURL: string | undefined,
 ) {
   test.skip(!baseURL, "Playwright baseURL is required.");
-  const probe = await fetchGuestSchedule(request, baseURL);
+  const probe = await fetchGuestSchedule(request, baseURL!);
   test.skip(
     !scheduleApiAvailable(probe),
     probe.error ?? "Schedule API unavailable (set SUPABASE_SERVICE_ROLE_KEY).",
   );
 }
-
-test.describe.configure({ mode: "serial" });
 
 test.use({ viewport: { width: 1440, height: 900 } });
 
@@ -50,8 +48,26 @@ test.describe("Streamers Hub — discovery (/streamers)", () => {
     await expect(page.getByText("Worship", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("heading", { name: /recommended streams/i })).toBeVisible();
 
-    await search.fill("Zion");
-    await expect(page.getByText("Gaming for Ministry")).toBeVisible({ timeout: 10_000 });
+    await search.fill("Kingdom");
+    const center = page.getByTestId("stream-center");
+    await expect(
+      center.getByRole("link", { name: /Gaming for Ministry/i }),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(
+      center.getByRole("link", { name: /Gaming for Ministry/i }).getByText("Kingdom Gamer"),
+    ).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("filters the high-density grid when using the search bar", async ({ page }) => {
+    await gotoStreamersHub(page);
+
+    const searchInput = page.getByPlaceholder(/search live streams/i);
+    await searchInput.fill("Kingdom");
+
+    const center = page.getByTestId("stream-center");
+    const channelCard = center.getByRole("link", { name: /Gaming for Ministry/i });
+    await expect(channelCard).toBeVisible({ timeout: 10_000 });
+    await expect(channelCard.getByText("Kingdom Gamer")).toBeVisible();
   });
 
   test("category card navigates to gaming hub", async ({ page }) => {
@@ -64,7 +80,7 @@ test.describe("Streamers Hub — discovery (/streamers)", () => {
 
   test("recommended stream card opens watch page", async ({ page }) => {
     await gotoStreamersHub(page);
-    const card = page.getByRole("button").filter({ hasText: "WORSHIP NIGHT LIVE" }).first();
+    const card = page.getByRole("link").filter({ hasText: "WORSHIP NIGHT LIVE" }).first();
     await expect(card).toBeVisible({ timeout: 15_000 });
     await card.click();
     await expect(page).toHaveURL(/\/watch\//);
@@ -74,7 +90,7 @@ test.describe("Streamers Hub — discovery (/streamers)", () => {
     await gotoStreamersHub(page);
     await page
       .locator("aside")
-      .getByRole("button")
+      .getByRole("link")
       .filter({ hasText: "Gospel Vibe Collective" })
       .first()
       .click();
@@ -130,6 +146,8 @@ test.describe("Streamers Hub — creator tools (/streamer-hub)", () => {
 });
 
 test.describe("Streamers Hub — dev guest operational dashboard", () => {
+  test.describe.configure({ mode: "serial" });
+
   test("guest dashboard loads schedule form and agenda", async ({ page, request, baseURL }) => {
     await skipIfScheduleApiUnavailable(request, baseURL);
 
@@ -229,9 +247,45 @@ test.describe("Streamers Hub — recommended sidebar", () => {
   test("lists live channels from discovery API", async ({ page }) => {
     await gotoStreamersHub(page);
 
-    const sidebar = page.locator("aside").filter({ hasText: "Recommended Channels" });
+    const sidebar = page.getByTestId("stream-sidebar");
     await expect(sidebar).toBeVisible();
+    await expect(sidebar.getByText("Recommended")).toBeVisible();
     await expect(sidebar.getByText("Gospel Vibe Collective")).toBeVisible({ timeout: 15_000 });
     await expect(sidebar.getByText("WORSHIP")).toBeVisible();
+  });
+});
+
+test.describe("Streamers Hub — viewport shell", () => {
+  test("mobile: full-bleed workspace, bottom nav, sidebar off-canvas", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await gotoStreamersHub(page);
+
+    await expect(page.getByTestId("stream-workspace")).toBeVisible();
+    await expect(page.getByTestId("stream-center")).toBeVisible();
+    await expect(page.getByTestId("stream-sidebar")).toBeHidden();
+    await expect(page.getByTestId("app-bottom-nav")).toBeVisible();
+    await expect(page.getByTestId("stream-hero-carousel")).toBeVisible();
+  });
+
+  test("tablet: workspace visible with collapsible sidebar rail", async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await gotoStreamersHub(page);
+
+    await expect(page.getByTestId("stream-workspace")).toBeVisible();
+    await expect(page.getByTestId("stream-center")).toBeVisible();
+    const sidebar = page.getByTestId("stream-sidebar");
+    await expect(sidebar).toBeVisible();
+    await expect(page.getByTestId("stream-chat-rail")).toBeHidden();
+  });
+
+  test("widescreen desktop: sidebar + chat rail, no bottom nav", async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await gotoStreamersHub(page);
+
+    await expect(page.getByTestId("stream-workspace")).toBeVisible();
+    await expect(page.getByTestId("stream-sidebar")).toBeVisible();
+    await expect(page.getByTestId("stream-chat-rail")).toBeVisible();
+    await expect(page.getByTestId("app-bottom-nav")).toBeHidden();
+    await expect(page.locator("[data-parable-streaming-shell]")).toBeVisible();
   });
 });

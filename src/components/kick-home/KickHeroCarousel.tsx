@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Eye, Play } from "lucide-react";
+import KickHeroPreviewControls from "@/components/kick-home/KickHeroPreviewControls";
 import ParableHeroVideo from "@/components/kick-home/ParableHeroVideo";
 import { DEMO_HLS_STREAM_URL } from "@/lib/streamers-demo-simulation";
 import type { KickStreamCardData } from "@/lib/kick-home-data";
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export default function KickHeroCarousel({ slides, onWatch }: Props) {
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [index, setIndex] = useState(0);
   const count = slides.length;
   const active = slides[index];
@@ -39,9 +41,24 @@ export default function KickHeroCarousel({ slides, onWatch }: Props) {
   }
 
   return (
-    <section className="relative w-full overflow-hidden rounded-xl border border-[#24272c] bg-black">
-      <div className="relative aspect-[21/9] min-h-[200px] w-full sm:min-h-[260px]">
-        <ParableHeroVideo streamUrl={DEMO_HLS_STREAM_URL} className="absolute inset-0 h-full w-full" />
+    <section
+      data-testid="stream-hero-carousel"
+      className="relative w-full min-w-0 overflow-hidden rounded-xl border border-[#24272c] bg-black"
+    >
+      <div
+        data-hero-player-root
+        className="relative aspect-[21/9] min-h-[clamp(200px,28vw,360px)] w-full"
+      >
+        <ParableHeroVideo
+          streamUrl={DEMO_HLS_STREAM_URL}
+          className="absolute inset-0 h-full w-full"
+          videoRef={videoRef}
+        />
+        <KickHeroPreviewControls
+          videoRef={videoRef}
+          isLive={active.isLive}
+          viewerLabel={`${active.viewers} watching`}
+        />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0b0e11]/90 via-[#0b0e11]/35 to-transparent" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0b0e11]/85 via-transparent to-transparent" />
 

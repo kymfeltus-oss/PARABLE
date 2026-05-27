@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import KickFollowingSection from "@/components/kick-home/KickFollowingSection";
 import KickSidebarBrand from "@/components/kick-home/KickSidebarBrand";
 import SidebarItem from "@/components/kick-home/SidebarItem";
 import StreamersChannelSkeleton from "@/components/streamers/StreamersChannelSkeleton";
@@ -37,13 +38,16 @@ export default function KickRecommendedSidebar({
       ) : null}
 
       <aside
-        className={`fixed bottom-0 left-0 top-14 z-40 flex w-64 shrink-0 flex-col overflow-hidden border-r border-[#24272c] bg-[#191b1f] transition-[transform,width] duration-200 md:static md:translate-x-0 ${
+        data-testid="stream-sidebar"
+        className={`fixed bottom-0 left-0 top-14 z-40 flex w-64 shrink-0 flex-col overflow-hidden border-r border-[#24272c] bg-[#191b1f] transition-[transform,width] duration-300 ease-in-out will-change-[width,transform] md:static md:translate-x-0 ${
           sidebarCollapsed ? "md:w-[72px]" : "md:w-64"
         } ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} ${
           sidebarOpen ? "flex" : "hidden md:flex"
         }`}
       >
         <KickSidebarBrand collapsed={sidebarCollapsed} />
+
+        <KickFollowingSection collapsed={sidebarCollapsed} />
 
         <div className="flex shrink-0 items-center justify-between gap-2 px-3 pb-2 pt-3">
           {!sidebarCollapsed ? (

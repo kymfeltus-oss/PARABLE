@@ -3,29 +3,55 @@
 import { usePathname } from "next/navigation";
 import GlobalPulseTicker from "@/components/GlobalPulseTicker";
 import MainHeader from "@/components/MainHeader";
+import {
+  getShellProfile,
+  isStreamingRoute,
+  shouldHideGlobalTopStack,
+} from "@/lib/app-shell-profiles";
 import { GlobalPulseProvider } from "@/providers/GlobalPulseProvider";
 
 /**
- * Global in-app shell (same role as a root `App.tsx` in CRA): top stack is
- * `GlobalPulseTicker` (z-index 100) → `MainHeader` → scrollable `children`.
+ * Global in-app shell: optional top stack → profile-aware main workspace.
+ * `FULL_BLEED` (streaming / watch / stream) drops header/ticker and max-width constraints.
  */
 export default function ParableGlobalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const hideGlobalTopStack =
-    (pathname ?? "").startsWith("/my-sanctuary") ||
-    (pathname ?? "") === "/profile" ||
-    (pathname ?? "").startsWith("/profile/") ||
-    (pathname ?? "").startsWith("/live-studio");
+  const profile = getShellProfile(pathname);
+  const fullBleed = profile === "FULL_BLEED";
+  const streamingFullBleed = isStreamingRoute(pathname);
+  const hideGlobalTopStack = shouldHideGlobalTopStack(pathname);
 
   return (
     <GlobalPulseProvider>
-      {!hideGlobalTopStack ? (
-        <div className="flex min-w-0 shrink-0 flex-col">
-          <GlobalPulseTicker />
-          <MainHeader />
-        </div>
-      ) : null}
-      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
+      <div
+        className={[
+          "flex min-h-0 min-w-0 flex-1 flex-col",
+          fullBleed
+            ? [
+                "min-h-screen w-full overflow-hidden bg-[#0b0e11]",
+                streamingFullBleed ? "h-dvh" : "h-full",
+              ].join(" ")
+            : "",
+        ].join(" ")}
+      >
+        {!hideGlobalTopStack ? (
+          <div className="flex min-w-0 shrink-0 flex-col">
+            <GlobalPulseTicker />
+            <MainHeader />
+          </div>
+        ) : null}
+        <main
+          data-parable-shell-profile={profile}
+          className={[
+            "relative flex min-h-0 min-w-0 flex-1 flex-col",
+            fullBleed
+              ? "h-full w-full overflow-hidden"
+              : "overflow-hidden",
+          ].join(" ")}
+        >
+          {children}
+        </main>
+      </div>
     </GlobalPulseProvider>
   );
 }

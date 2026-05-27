@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Loader2, MessageSquare } from "lucide-react";
 import { useStreamChat } from "@/hooks/useStreamChat";
+import { useSimulatedChatFeed } from "@/hooks/useSimulatedChatFeed";
+import { isStreamersSimChatEnabled } from "@/lib/streamers-sim-config";
+import { fallbackAvatarOnError } from "@/lib/avatar-display";
 
 type Props = {
   streamKey: string | null | undefined;
@@ -37,11 +40,30 @@ export default function StreamersHubLiveChat({
     sendChatMessage,
   } = useStreamChat({ streamKey, senderDisplayName });
 
+  const simChatEnabled = isStreamersSimChatEnabled();
+  const simMessages = useSimulatedChatFeed({
+    enabled: simChatEnabled && chatEnabled,
+    streamKey,
+  });
+
+  const displayMessages = useMemo(() => {
+    if (simMessages.length === 0) return chatMessages;
+    const seen = new Set<string>();
+    const merged = [...chatMessages, ...simMessages];
+    const out = [];
+    for (const m of merged) {
+      if (seen.has(m.id)) continue;
+      seen.add(m.id);
+      out.push(m);
+    }
+    return out;
+  }, [chatMessages, simMessages]);
+
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
-  }, [chatMessages.length]);
+  }, [displayMessages.length]);
 
   return (
     <div
@@ -72,7 +94,7 @@ export default function StreamersHubLiveChat({
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-2 text-sm custom-scrollbar"
+        className="min-h-0 min-w-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto px-3 py-2 text-sm custom-scrollbar"
       >
         {!chatEnabled ? (
           <p className="px-1 text-center text-xs italic text-white/45">
@@ -90,16 +112,27 @@ export default function StreamersHubLiveChat({
               ) : null}
               .
             </p>
-            {chatMessages.length === 0 ? (
+            {displayMessages.length === 0 ? (
               <p className="text-center text-xs text-white/35">No messages yet — say hello.</p>
             ) : (
-              chatMessages.map((msg) => (
+              displayMessages.map((msg) => (
                 <div
                   key={msg.id}
-                  className="break-words rounded-xl border border-white/[0.08] bg-black/40 p-2.5 transition-colors hover:border-[#00f2ff]/20"
+                  className="min-w-0 break-words rounded-xl border border-white/[0.08] bg-black/40 p-2.5 transition-colors hover:border-[#00f2ff]/20"
                 >
-                  <span className="mb-0.5 block text-xs font-bold text-[#00f2ff]">{msg.user}</span>
-                  <span className="text-white/85">{msg.text}</span>
+                  <div className="mb-0.5 flex min-w-0 items-center gap-2">
+                    {msg.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={msg.avatarUrl}
+                        alt=""
+                        className="h-6 w-6 shrink-0 rounded-full object-cover"
+                        onError={fallbackAvatarOnError}
+                      />
+                    ) : null}
+                    <span className="min-w-0 truncate text-xs font-bold text-[#00f2fe]">{msg.user}</span>
+                  </div>
+                  <span className="block min-w-0 break-words text-white/85">{msg.text}</span>
                 </div>
               ))
             )}

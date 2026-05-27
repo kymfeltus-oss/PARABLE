@@ -26,6 +26,7 @@ export default function ParableLiveChatRail({ streamKey, streamLabel, senderDisp
       ) : null}
 
       <aside
+        data-testid="stream-chat-rail"
         className={`fixed bottom-0 right-0 top-14 z-40 w-[min(100vw,20rem)] shrink-0 flex-col overflow-hidden border-l border-[#24272c] bg-[#191b1f] transition-transform duration-200 sm:w-80 lg:static lg:z-0 lg:flex lg:w-80 lg:translate-x-0 ${
           chatOpen ? "flex translate-x-0" : "hidden translate-x-full"
         }`}

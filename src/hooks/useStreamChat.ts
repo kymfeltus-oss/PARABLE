@@ -8,6 +8,9 @@ export type StreamChatMessage = {
   id: string;
   user: string;
   text: string;
+  avatarUrl?: string;
+  /** Synthetic demo line — not from `stream_chat_messages`. */
+  simulated?: boolean;
 };
 
 type UseStreamChatOptions = {

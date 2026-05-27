@@ -11,6 +11,7 @@ import {
 } from "@/lib/parable-main-nav";
 import { useAuth } from "@/hooks/useAuth";
 import { shellBottomNavInnerClass, shellKindFromPathname } from "@/lib/app-shell-widths";
+import { isFullBleedRoute } from "@/lib/app-shell-profiles";
 import { dispatchSanctuaryCreateMenu } from "@/lib/sanctuary-home-interactions";
 
 const STUDY_AI_ACCENT_ACTIVE = "bg-amber-500/15 border-amber-500/30 shadow-[0_0_22px_rgba(234,179,8,0.2)]";
@@ -64,9 +65,16 @@ export default function BottomNav() {
   const colClass = items.length <= 4 ? "grid-cols-4" : items.length <= 5 ? "grid-cols-5" : "grid-cols-7";
   const navInner = shellBottomNavInnerClass(shellKindFromPathname(pathname));
   const isMySanctuary = (pathname ?? "").startsWith("/my-sanctuary");
+  const hideOnDesktopStreaming = isFullBleedRoute(pathname);
 
   return (
-    <div className="relative z-50 flex w-full shrink-0 justify-center border-t border-white/[0.06] bg-[#070708]/98 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1 backdrop-blur-md">
+    <div
+      className={[
+        "relative z-50 flex w-full shrink-0 justify-center border-t border-white/[0.06] bg-[#070708]/98 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1 backdrop-blur-md",
+        hideOnDesktopStreaming ? "md:hidden" : "",
+      ].join(" ")}
+      data-testid="app-bottom-nav"
+    >
       {isMySanctuary ? (
         <button
           type="button"

@@ -17,6 +17,11 @@ import {
   type StreamersApiErrorResponse,
   type StreamersApiResponse,
 } from "@/lib/streamers-types";
+import { useLiveSimulation } from "@/hooks/useLiveSimulation";
+import {
+  STREAMERS_DISCOVERY_GRID_IDS,
+  STREAMERS_LIVE_RAIL_SLOTS,
+} from "@/lib/streamers-demo-simulation";
 import { useStreamersUiStore } from "@/stores/streamers-ui-store";
 
 export default function StreamersKickHome() {
@@ -61,17 +66,34 @@ export default function StreamersKickHome() {
     };
   }, []);
 
-  const liveRail = useMemo(() => streamers.map(streamerToKickChannel), [streamers]);
+  const simulatedStreamers = useLiveSimulation(streamers);
+
+  const liveRail = useMemo(() => {
+    const byId = new Map(simulatedStreamers.map((row) => [row.id, row]));
+    return STREAMERS_LIVE_RAIL_SLOTS.map((slot) => byId.get(slot.id))
+      .filter((row): row is StreamerProfileRecord => Boolean(row))
+      .map(streamerToKickChannel);
+  }, [simulatedStreamers]);
 
   const activeChatLabel = useMemo(() => {
-    const row = streamers.find((s) => s.id === activeChannelId);
+    const row = simulatedStreamers.find((s) => s.id === activeChannelId);
     return row?.username;
-  }, [streamers, activeChannelId]);
+  }, [simulatedStreamers, activeChannelId]);
 
-  const allStreams = useMemo(
-    (): KickStreamCardData[] => streamers.map(streamerToCardData),
-    [streamers],
-  );
+  const allStreams = useMemo((): KickStreamCardData[] => {
+    const byId = new Map(simulatedStreamers.map((row) => [row.id, streamerToCardData(row)]));
+    const ordered: KickStreamCardData[] = [];
+    for (const id of STREAMERS_DISCOVERY_GRID_IDS) {
+      const card = byId.get(id);
+      if (card) ordered.push(card);
+    }
+    for (const row of simulatedStreamers) {
+      if (!STREAMERS_DISCOVERY_GRID_IDS.includes(row.id)) {
+        ordered.push(streamerToCardData(row));
+      }
+    }
+    return ordered;
+  }, [simulatedStreamers]);
 
   const filteredStreams = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -90,9 +112,11 @@ export default function StreamersKickHome() {
   );
 
   const goWatch = (id: string) => router.push(`/watch/${id}`);
+  const searchActive = query.trim().length > 0;
+  const showEmptySearch = !isLoading && searchActive && filteredStreams.length === 0;
 
   const centerContent = (
-    <div className="space-y-8 p-4 pb-6 sm:p-6">
+    <div className="min-w-0 space-y-8 p-4 pb-6 sm:p-6">
       <KickHeroCarousel slides={featuredSlides} onWatch={goWatch} />
 
       <section>
@@ -106,7 +130,7 @@ export default function StreamersKickHome() {
             View all
           </button>
         </div>
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className="grid min-w-0 grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 md:grid-cols-3 md:gap-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-6 3xl:grid-cols-8">
           {KICK_LIVE_CATEGORIES.map((cat) => (
             <CategoryCard key={cat.id} category={cat} />
           ))}
@@ -119,7 +143,7 @@ export default function StreamersKickHome() {
           <span className="text-xs tabular-nums text-[#64748b]">{filteredStreams.length} channels</span>
         </div>
         {isLoading ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-6 3xl:grid-cols-8">
             {Array.from({ length: 8 }, (_, i) => (
               <div
                 key={i}
@@ -133,10 +157,17 @@ export default function StreamersKickHome() {
               </div>
             ))}
           </div>
+        ) : showEmptySearch ? (
+          <div
+            className="flex min-h-[200px] w-full items-center justify-center rounded-xl border border-[#24272c] bg-[#191b1f] px-6 py-12 text-center"
+            data-testid="stream-search-empty"
+          >
+            <p className="text-sm font-semibold text-[#94a3b8]">No channels match your search</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-6 3xl:grid-cols-8">
             {filteredStreams.map((stream) => (
-              <StreamCard key={stream.id} stream={stream} onWatch={goWatch} />
+              <StreamCard key={stream.id} stream={stream} />
             ))}
           </div>
         )}
@@ -168,7 +199,10 @@ export default function StreamersKickHome() {
             channels={liveRail}
             activeChannelId={activeChannelId}
             isLoading={isLoading}
-            onSelectChannel={(id) => setActiveChannelId(id)}
+            onSelectChannel={(id) => {
+              setActiveChannelId(id);
+              router.push(`/watch/${id}`);
+            }}
           />
         }
         main={centerContent}
@@ -180,17 +214,6 @@ export default function StreamersKickHome() {
           />
         }
       />
-
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          height: 6px;
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(0, 242, 255, 0.22);
-          border-radius: 10px;
-        }
-      `}</style>
     </>
   );
 }
