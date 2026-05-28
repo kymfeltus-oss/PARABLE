@@ -12,10 +12,20 @@ export type FollowProfileRow = {
 const FK_FOLLOWING = "follows_following_id_fkey";
 const FK_FOLLOWER = "follows_follower_id_fkey";
 
-function profileFields(withLive: boolean): string {
-  return withLive
-    ? "id, username, full_name, avatar_url, is_live"
-    : "id, username, full_name, avatar_url";
+const PROFILE_SELECT_WITH_LIVE =
+  "id, username, full_name, avatar_url, is_live" as const;
+
+const PROFILE_SELECT_BASIC = "id, username, full_name, avatar_url" as const;
+
+function isFollowProfileRow(row: unknown): row is FollowProfileRow {
+  if (!row || typeof row !== "object") return false;
+  const r = row as Record<string, unknown>;
+  return typeof r.id === "string";
+}
+
+function mapProfileRows(data: unknown): FollowProfileRow[] {
+  if (!Array.isArray(data)) return [];
+  return data.filter(isFollowProfileRow);
 }
 
 function flattenFollowProfiles(data: unknown[]): FollowProfileRow[] {
@@ -35,13 +45,18 @@ async function fetchProfilesByIds(
 ): Promise<FollowProfileRow[]> {
   if (ids.length === 0) return [];
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .select(profileFields(withLive))
-    .in("id", ids);
+  const { data, error } = withLive
+    ? await supabase
+        .from("profiles")
+        .select(PROFILE_SELECT_WITH_LIVE)
+        .in("id", ids)
+    : await supabase
+        .from("profiles")
+        .select(PROFILE_SELECT_BASIC)
+        .in("id", ids);
 
   if (error) throw error;
-  return (data ?? []) as FollowProfileRow[];
+  return mapProfileRows(data);
 }
 
 /**
@@ -53,20 +68,13 @@ export async function fetchProfilesUserFollows(
   options?: { includeIsLive?: boolean },
 ): Promise<FollowProfileRow[]> {
   const withLive = options?.includeIsLive !== false;
-  const fields = profileFields(withLive);
+  const embedSelect = withLive
+    ? `id, follower_id, following_id, profiles!${FK_FOLLOWING} (${PROFILE_SELECT_WITH_LIVE})`
+    : `id, follower_id, following_id, profiles!${FK_FOLLOWING} (${PROFILE_SELECT_BASIC})`;
 
   const { data, error } = await supabase
     .from("follows")
-    .select(
-      `
-      id,
-      follower_id,
-      following_id,
-      profiles!${FK_FOLLOWING} (
-        ${fields}
-      )
-    `,
-    )
+    .select(embedSelect)
     .eq("follower_id", followerId);
 
   if (!error) {
@@ -100,20 +108,11 @@ export async function fetchFollowListForProfile(
 ): Promise<FollowProfileRow[]> {
   const filterColumn = mode === "followers" ? "following_id" : "follower_id";
   const fk = mode === "followers" ? FK_FOLLOWER : FK_FOLLOWING;
-  const fields = profileFields(false);
+  const embedSelect = `id, follower_id, following_id, profiles!${fk} (${PROFILE_SELECT_BASIC})`;
 
   const { data, error } = await supabase
     .from("follows")
-    .select(
-      `
-      id,
-      follower_id,
-      following_id,
-      profiles!${fk} (
-        ${fields}
-      )
-    `,
-    )
+    .select(embedSelect)
     .eq(filterColumn, profileUserId);
 
   if (!error) {
