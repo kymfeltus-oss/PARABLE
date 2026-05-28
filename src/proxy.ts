@@ -20,7 +20,7 @@ function isPublic(pathname: string) {
   // allow common static file types anywhere (prevents /logo.svg being redirected)
   if (
     pathname.match(
-      /\.(?:svg|png|jpg|jpeg|webp|gif|ico|css|js|map|txt|woff|woff2|ttf|eot)$/i,
+      /\.(?:svg|png|jpg|jpeg|webp|gif|ico|css|js|map|txt|woff|woff2|ttf|eot|mp4|webm)$/i,
     )
   ) {
     return true;

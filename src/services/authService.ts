@@ -4,9 +4,9 @@ export const handleFlashNavigation = async () => {
   try {
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
-    return session ? "/hub" : "/welcome";
+    return session ? "/hub" : "/";
   } catch (error) {
     console.error("Auth Failure:", error);
-    return "/welcome"; // Default fallback so the app doesn't crash
+    return "/"; // Default fallback so the app doesn't crash
   }
 };

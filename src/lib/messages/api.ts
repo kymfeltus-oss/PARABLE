@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { fetchProfilesUserFollows } from "@/lib/follows-queries";
 import {
   DM_MESSAGE_SELECT,
   type DmInboxThread,
@@ -185,21 +186,10 @@ export async function fetchDmRecipients(
   supabase: SupabaseClient,
   currentUserId: string,
 ): Promise<DmProfileSnippet[]> {
-  const { data, error } = await supabase
-    .from("follows")
-    .select("following_id, profiles:following_id ( id, username, full_name, avatar_url )")
-    .eq("follower_id", currentUserId);
-
-  if (error) throw error;
-
-  const rows = (data ?? [])
-    .map((row) => {
-      const p = row.profiles;
-      return (Array.isArray(p) ? p[0] : p) as DmProfileSnippet | null;
-    })
-    .filter(Boolean) as DmProfileSnippet[];
-
-  return rows;
+  const profiles = await fetchProfilesUserFollows(supabase, currentUserId, {
+    includeIsLive: false,
+  });
+  return profiles as DmProfileSnippet[];
 }
 
 export async function fetchConversationPartner(

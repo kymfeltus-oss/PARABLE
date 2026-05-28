@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { fallbackAvatarOnError } from "@/lib/avatar-display";
+import { fetchProfilesUserFollows } from "@/lib/follows-queries";
 
 type FollowProfile = {
   id: string;
@@ -22,7 +23,7 @@ export default function KickFollowingSection({ collapsed }: Props) {
   const [rows, setRows] = useState<FollowProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
+  const loadFollowingData = useCallback(async () => {
     setLoading(true);
     const supabase = createClient();
     const {
@@ -34,44 +35,30 @@ export default function KickFollowingSection({ collapsed }: Props) {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("follows")
-      .select(
-        `
-        following_id,
-        profiles:following_id ( id, username, full_name, avatar_url, is_live )
-      `,
-      )
-      .eq("follower_id", user.id);
-
-    if (error) {
-      console.error("KickFollowingSection:", error.message);
+    try {
+      // Explicit profiles!follows_following_id_fkey embed (see follows-queries.ts); falls back if FK missing in API cache
+      const profiles = await fetchProfilesUserFollows(supabase, user.id);
+      const formatted = profiles.map((item) => ({
+        id: item.id,
+        username: item.username ?? null,
+        full_name: item.full_name ?? null,
+        avatar_url: item.avatar_url ?? null,
+        is_live: typeof item.is_live === "boolean" ? item.is_live : null,
+      }));
+      setRows(formatted);
+    } catch (err) {
+      console.error(
+        "KickFollowingSection: failed loading following records:",
+        err instanceof Error ? err.message : err,
+      );
       setRows([]);
-      setLoading(false);
-      return;
     }
-
-    const out: FollowProfile[] = [];
-    for (const row of data ?? []) {
-      const raw = (row as { profiles?: FollowProfile | FollowProfile[] }).profiles;
-      const p = Array.isArray(raw) ? raw[0] : raw;
-      if (p?.id) {
-        out.push({
-          id: p.id,
-          username: p.username ?? null,
-          full_name: p.full_name ?? null,
-          avatar_url: p.avatar_url ?? null,
-          is_live: typeof p.is_live === "boolean" ? p.is_live : null,
-        });
-      }
-    }
-    setRows(out);
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void loadFollowingData();
+  }, [loadFollowingData]);
 
   if (!collapsed) {
     return (

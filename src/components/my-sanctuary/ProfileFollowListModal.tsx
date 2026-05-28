@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { fetchFollowListForProfile } from "@/lib/follows-queries";
 
 type FollowProfile = {
   id: string;
@@ -36,29 +37,16 @@ export default function ProfileFollowListModal({ open, mode, profileUserId, onCl
     setLoading(true);
     const supabase = createClient();
 
-    const select =
-      mode === "followers"
-        ? "follower_id, profiles:follower_id ( id, username, full_name, avatar_url )"
-        : "following_id, profiles:following_id ( id, username, full_name, avatar_url )";
-
-    const filterColumn = mode === "followers" ? "following_id" : "follower_id";
-
-    const { data, error } = await supabase.from("follows").select(select).eq(filterColumn, profileUserId);
-
-    if (error) {
-      console.error("ProfileFollowListModal:", error.message);
+    try {
+      const profiles = await fetchFollowListForProfile(supabase, profileUserId, mode);
+      setRows(profiles);
+    } catch (error) {
+      console.error(
+        "ProfileFollowListModal:",
+        error instanceof Error ? error.message : error,
+      );
       setRows([]);
-      setLoading(false);
-      return;
     }
-
-    const out: FollowProfile[] = [];
-    for (const row of data ?? []) {
-      const raw = (row as { profiles?: FollowProfile | FollowProfile[] }).profiles;
-      const p = Array.isArray(raw) ? raw[0] : raw;
-      if (p?.id) out.push(p);
-    }
-    setRows(out);
     setLoading(false);
   }, [mode, profileUserId]);
 

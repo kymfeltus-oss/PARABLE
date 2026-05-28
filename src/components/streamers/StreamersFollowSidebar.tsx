@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Loader2, Users } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { fallbackAvatarOnError } from "@/lib/avatar-display";
+import { fetchProfilesUserFollows } from "@/lib/follows-queries";
 
 type FollowProfile = {
   id: string;
@@ -37,37 +38,24 @@ export default function StreamersFollowSidebar({ className = "" }: Props) {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("follows")
-      .select(
-        `
-        following_id,
-        profiles:following_id ( id, username, full_name, avatar_url, is_live )
-      `,
-      )
-      .eq("follower_id", user.id);
-
-    if (error) {
-      console.error("StreamersFollowSidebar:", error.message);
-      setRows([]);
-      setLoading(false);
-      return;
-    }
-
-    const out: FollowProfile[] = [];
-    for (const row of data ?? []) {
-      const raw = (row as { profiles?: FollowProfile | FollowProfile[] }).profiles;
-      const p = Array.isArray(raw) ? raw[0] : raw;
-      if (p?.id)
-        out.push({
+    try {
+      const profiles = await fetchProfilesUserFollows(supabase, user.id);
+      setRows(
+        profiles.map((p) => ({
           id: p.id,
           username: p.username ?? null,
           full_name: p.full_name ?? null,
           avatar_url: p.avatar_url ?? null,
           is_live: typeof p.is_live === "boolean" ? p.is_live : null,
-        });
+        })),
+      );
+    } catch (error) {
+      console.error(
+        "StreamersFollowSidebar:",
+        error instanceof Error ? error.message : error,
+      );
+      setRows([]);
     }
-    setRows(out);
     setLoading(false);
   }, []);
 

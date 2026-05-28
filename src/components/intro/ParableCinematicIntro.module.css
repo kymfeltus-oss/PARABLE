@@ -40,11 +40,10 @@
   );
 }
 
-/* Tune to align over the baked-in ENTER in parable-intro.mp4 */
 .enterZone {
   --enter-bottom: 10vh;
-  --enter-width: 280px;
-  --enter-height: 68px;
+  --enter-width: min(300px, 82vw);
+  --enter-height: 64px;
 
   position: absolute;
   inset: 0;
@@ -63,44 +62,27 @@
   justify-content: center;
   width: var(--enter-width);
   height: var(--enter-height);
-  padding: 0 12px;
+  padding: 0 16px;
   border: 2px solid #00f2fe;
   border-radius: 8px;
-  background-color: #061218;
-  background-image: linear-gradient(
-    180deg,
-    rgba(0, 242, 254, 0.14) 0%,
-    #061218 55%,
-    #040c12 100%
-  );
+  background: rgba(0, 242, 254, 0.1);
   color: #fff;
   font-size: 1.05rem;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-indent: 0;
   cursor: pointer;
   overflow: hidden;
   pointer-events: auto;
-  backdrop-filter: none;
+  backdrop-filter: blur(6px);
   box-shadow:
-    0 0 20px rgba(0, 242, 254, 0.45),
-    inset 0 0 18px rgba(0, 242, 254, 0.08);
+    0 0 20px rgba(0, 242, 254, 0.5),
+    inset 0 0 16px rgba(0, 242, 254, 0.1);
   transition:
     transform 0.25s ease,
     background 0.25s ease,
     box-shadow 0.25s ease;
   animation: enterReveal 1.2s ease both;
-}
-
-/* Opaque bleed hides the video’s baked-in button edges/glow */
-.enter::before {
-  content: "";
-  position: absolute;
-  inset: -6px;
-  z-index: -1;
-  border-radius: 10px;
-  background: #020406;
-  pointer-events: none;
 }
 
 .enterLabel {

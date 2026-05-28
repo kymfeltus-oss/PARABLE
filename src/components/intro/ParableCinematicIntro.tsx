@@ -25,8 +25,8 @@ type ParableCinematicIntroProps = {
 };
 
 /**
- * Cinematic MP4 intro — fullscreen video background.
- * ENTER wired through onEnter (auth routing in welcome page).
+ * Cinematic MP4 flash intro — fullscreen video at app entry (`/`).
+ * ENTER wired through onEnter (auth routing on flash page).
  */
 export default function ParableCinematicIntro({
   onEnter,
