@@ -6,10 +6,13 @@ import { useAuth } from "@/hooks/useAuth";
 import KickTopNav from "@/components/kick-home/KickTopNav";
 import KickRecommendedSidebar from "@/components/kick-home/KickRecommendedSidebar";
 import KickHeroCarousel from "@/components/kick-home/KickHeroCarousel";
+import KickHorizontalStreamRow from "@/components/kick-home/KickHorizontalStreamRow";
+import KickHorizontalCategoryRow from "@/components/kick-home/KickHorizontalCategoryRow";
+import KickMobilePromoBanner from "@/components/kick-home/KickMobilePromoBanner";
 import CategoryCard from "@/components/kick-home/CategoryCard";
 import StreamCard from "@/components/kick-home/StreamCard";
 import ParableLiveWorkspaceLayout from "@/components/kick-home/ParableLiveWorkspaceLayout";
-import ParableLiveChatRail, { ParableLiveChatMobile } from "@/components/kick-home/ParableLiveChatRail";
+import ParableLiveChatRail from "@/components/kick-home/ParableLiveChatRail";
 import { useCategoryActivitySimulation } from "@/hooks/useCategoryActivitySimulation";
 import { KICK_LIVE_CATEGORIES, streamerToCardData, type KickStreamCardData } from "@/lib/kick-home-data";
 import {
@@ -162,13 +165,81 @@ export default function StreamersKickHome() {
     [filteredStreams],
   );
 
+  const mobileFeaturedStreams = useMemo(
+    () => filteredStreams.filter((s) => s.isLive).slice(0, 8),
+    [filteredStreams],
+  );
+
+  const streamsByCategory = useMemo(() => {
+    const map = new Map<string, KickStreamCardData[]>();
+    for (const stream of filteredStreams.filter((s) => s.isLive)) {
+      const key = stream.category?.trim() || "Live";
+      const list = map.get(key) ?? [];
+      list.push(stream);
+      map.set(key, list);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredStreams]);
+
   const goWatch = (id: string) => router.push(`/watch/${id}`);
   const searchActive = query.trim().length > 0;
   const showEmptySearch = searchActive && filteredStreams.length === 0;
   const showStreamSkeleton = streamers.length === 0 && isRefreshing;
 
-  const centerContent = (
-    <div className="min-w-0 space-y-8 p-4 pb-6 sm:p-6">
+  const mobileDiscovery = (
+    <div className="min-w-0 space-y-5 bg-black pb-8 pt-2 md:hidden">
+      {loadError ? (
+        <p className="mx-4 rounded-lg border border-[#00f2fe]/25 bg-[#00f2fe]/10 px-3 py-2 text-center text-xs text-[#94a3b8]">
+          {loadError}
+        </p>
+      ) : null}
+
+      {showStreamSkeleton ? (
+        <div className="flex gap-3 overflow-hidden px-4">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div
+              key={i}
+              className="h-48 w-[min(88vw,340px)] shrink-0 animate-pulse rounded-lg border border-[#24272c] bg-[#191b1f]"
+            />
+          ))}
+        </div>
+      ) : showEmptySearch ? (
+        <div
+          className="mx-4 flex min-h-[160px] items-center justify-center rounded-xl border border-[#24272c] bg-[#191b1f] px-6 py-10 text-center"
+          data-testid="stream-search-empty"
+        >
+          <p className="text-sm font-semibold text-[#94a3b8]">No channels match your search</p>
+        </div>
+      ) : (
+        <KickHorizontalStreamRow streams={mobileFeaturedStreams} />
+      )}
+
+      <section>
+        <div className="mb-3 flex items-center justify-between gap-3 px-4">
+          <h2 className="text-base font-black tracking-tight text-white">Top Live Categories</h2>
+          <button
+            type="button"
+            onClick={() => router.push("/browse")}
+            className="shrink-0 text-xs font-bold text-slate-400 hover:text-white"
+          >
+            View all
+          </button>
+        </div>
+        <KickHorizontalCategoryRow categories={liveCategories} />
+      </section>
+
+      <KickMobilePromoBanner />
+
+      {!showStreamSkeleton && !showEmptySearch
+        ? streamsByCategory.map(([category, streams]) => (
+            <KickHorizontalStreamRow key={category} title={category} streams={streams} />
+          ))
+        : null}
+    </div>
+  );
+
+  const desktopDiscovery = (
+    <div className="hidden min-w-0 space-y-8 p-4 pb-6 sm:p-6 md:block">
       {loadError ? (
         <p className="rounded-lg border border-[#00f2fe]/25 bg-[#00f2fe]/10 px-3 py-2 text-center text-xs text-[#94a3b8]">
           {loadError}
@@ -243,16 +314,14 @@ export default function StreamersKickHome() {
           </div>
         )}
       </section>
-
-      <div className="lg:hidden">
-        <ParableLiveChatMobile
-          streamKey={activeChannelId}
-          streamLabel={activeChatLabel}
-          senderDisplayName={displayName}
-          variant={chatVariant}
-        />
-      </div>
     </div>
+  );
+
+  const centerContent = (
+    <>
+      {mobileDiscovery}
+      {desktopDiscovery}
+    </>
   );
 
   return (

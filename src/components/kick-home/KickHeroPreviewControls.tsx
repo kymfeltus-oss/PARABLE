@@ -92,18 +92,10 @@ export default function KickHeroPreviewControls({
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex flex-col"
-    >
-      <div
-        className="pointer-events-auto px-3 pb-3 pt-10"
-        style={{
-          background: "linear-gradient(to top, rgba(11,14,17,0.95) 0%, transparent 100%)",
-        }}
-      >
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+    <div ref={containerRef} className="pointer-events-none relative w-full shrink-0">
+      <div className="pointer-events-auto border-t border-white/[0.06] bg-[#0b0e11]/95 px-3 py-2.5 sm:px-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
               onClick={togglePlay}
@@ -131,7 +123,7 @@ export default function KickHeroPreviewControls({
               aria-label="Volume"
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {isLive ? (
               <span className="flex items-center gap-1.5 text-xs font-bold uppercase text-red-500">
                 <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
@@ -139,12 +131,19 @@ export default function KickHeroPreviewControls({
               </span>
             ) : null}
             {viewerLabel ? (
-              <span className="text-xs font-semibold tabular-nums text-[#94a3b8]">{viewerLabel}</span>
+              <span className="hidden text-xs font-semibold tabular-nums text-[#94a3b8] sm:inline">
+                {viewerLabel}
+              </span>
+            ) : null}
+            {viewerLabel ? (
+              <span className="text-[10px] font-semibold tabular-nums text-[#94a3b8] sm:hidden">
+                {viewerLabel.replace(/\s*watching$/i, "")}
+              </span>
             ) : null}
             <button
               type="button"
               onClick={toggleFullscreen}
-              className="flex h-8 w-8 items-center justify-center rounded-md bg-[#191b1f]/90 text-white hover:bg-[#24272c]"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#191b1f]/90 text-white hover:bg-[#24272c]"
               aria-label="Fullscreen"
             >
               <Maximize2 size={16} />

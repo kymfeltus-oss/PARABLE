@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Eye, Play } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, Play } from "lucide-react";
 import KickHeroPreviewControls from "@/components/kick-home/KickHeroPreviewControls";
 import ParableHeroVideo from "@/components/kick-home/ParableHeroVideo";
 import { demoStreamMp4ForChannel } from "@/lib/demo-hls-stream";
@@ -58,37 +59,37 @@ export default function KickHeroCarousel({ slides, onWatch }: Props) {
             className="absolute inset-0 h-full w-full"
             videoRef={videoRef}
           />
-          <KickHeroPreviewControls
-            syncKey={active.id}
-            videoRef={videoRef}
-            isLive={active.isLive}
-            viewerLabel={`${active.viewers} watching`}
-          />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0b0e11]/90 via-[#0b0e11]/35 to-transparent" />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0b0e11]/85 via-transparent to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0b0e11]/90 via-[#0b0e11]/50 to-transparent" />
 
-          <div className="absolute bottom-0 left-0 z-20 max-w-lg p-4 sm:p-6">
-            <span className="inline-flex items-center gap-1 rounded bg-[#00f2fe] px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-black">
-              Featured Live
-            </span>
-            <h2 className="mt-2 text-xl font-black tracking-tight text-white sm:text-3xl">{active.title}</h2>
-            <p className="mt-1 text-sm text-[#e2e8f0]">
-              <span className="font-semibold text-[#00f2fe]">{active.creator}</span>
-              {" · "}
-              {active.category}
-            </p>
-            <p className="mt-1 inline-flex items-center gap-1 text-xs text-[#94a3b8]">
-              <Eye size={12} className="text-[#00f2fe]" />
-              {active.viewers} watching
-            </p>
-            <button
-              type="button"
-              onClick={() => onWatch(active.id)}
-              className="pointer-events-auto mt-4 inline-flex items-center gap-2 rounded-lg bg-[#00f2fe] px-5 py-2.5 text-sm font-black text-black transition hover:brightness-110 active:scale-[0.98]"
-            >
-              <Play size={16} fill="currentColor" />
-              Watch now
-            </button>
+          {/* Stacked overlay: metadata → transport (no overlapping layers) */}
+          <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-end">
+            <div className="pointer-events-auto px-4 pb-3 pt-8 sm:px-6 sm:pb-4">
+              <span className="inline-flex items-center gap-1 rounded bg-[#00f2fe] px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-black">
+                Featured Live
+              </span>
+              <h2 className="mt-2 text-xl font-black tracking-tight text-white sm:text-3xl">{active.title}</h2>
+              <p className="mt-1 text-sm text-[#e2e8f0]">
+                <span className="font-semibold text-[#00f2fe]">{active.creator}</span>
+                {" · "}
+                {active.category}
+              </p>
+              <Link
+                href={`/watch/${active.id}`}
+                onClick={() => onWatch(active.id)}
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#00f2fe] px-5 py-2.5 text-sm font-black text-black transition hover:brightness-110 active:scale-[0.98]"
+              >
+                <Play size={16} fill="currentColor" />
+                Watch now
+              </Link>
+            </div>
+
+            <KickHeroPreviewControls
+              syncKey={active.id}
+              videoRef={videoRef}
+              isLive={active.isLive}
+              viewerLabel={`${active.viewers} watching`}
+            />
           </div>
         </div>
 
@@ -97,7 +98,7 @@ export default function KickHeroCarousel({ slides, onWatch }: Props) {
             <button
               type="button"
               onClick={() => go(-1)}
-              className="absolute left-3 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#24272c] bg-[#191b1f]/80 text-white transition hover:border-[#00f2fe]/50 hover:text-[#00f2fe]"
+              className="absolute left-3 top-1/2 z-40 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#24272c] bg-[#191b1f]/80 text-white transition hover:border-[#00f2fe]/50 hover:text-[#00f2fe]"
               aria-label="Previous slide"
             >
               <ChevronLeft size={18} />
@@ -105,12 +106,12 @@ export default function KickHeroCarousel({ slides, onWatch }: Props) {
             <button
               type="button"
               onClick={() => go(1)}
-              className="absolute right-3 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#24272c] bg-[#191b1f]/80 text-white transition hover:border-[#00f2fe]/50 hover:text-[#00f2fe]"
+              className="absolute right-3 top-1/2 z-40 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#24272c] bg-[#191b1f]/80 text-white transition hover:border-[#00f2fe]/50 hover:text-[#00f2fe]"
               aria-label="Next slide"
             >
               <ChevronRight size={18} />
             </button>
-            <div className="absolute bottom-3 right-4 z-20 flex gap-1.5">
+            <div className="absolute bottom-[5.5rem] right-4 z-30 flex gap-1.5">
               {slides.map((s, i) => (
                 <button
                   key={`hero-dot-${i}`}

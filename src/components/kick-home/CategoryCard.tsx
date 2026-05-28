@@ -11,15 +11,21 @@ import type { KickCategoryItem } from "@/lib/kick-home-data";
 
 type Props = {
   category: KickCategoryItem;
+  className?: string;
 };
 
-export default function CategoryCard({ category }: Props) {
+export default function CategoryCard({ category, className = "" }: Props) {
   const [src, setSrc] = useState(() => categoryCoverImage(category.id));
 
   return (
     <Link
       href={category.href}
-      className="group relative block min-w-0 overflow-hidden rounded-lg border border-[#24272c] bg-[#191b1f] transition-all duration-200 hover:scale-[1.02] hover:border-[#00f2fe]/45 hover:shadow-[0_12px_36px_rgba(0,242,254,0.18)]"
+      className={[
+        "group relative block min-w-0 overflow-hidden rounded-lg border border-[#24272c] bg-[#191b1f] transition-all duration-200 hover:scale-[1.02] hover:border-[#00f2fe]/45 hover:shadow-[0_12px_36px_rgba(0,242,254,0.18)]",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       <div className="relative aspect-[3/4] w-full overflow-hidden">
         <div
