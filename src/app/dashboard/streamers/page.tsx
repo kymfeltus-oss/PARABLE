@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { isParableDevGuestClientEnabled } from '@/lib/parable-dev-guest';
 import { AMEN_REACTION_EVENT, streamInteractionChannelName } from '@/lib/stream-interactions';
 import { createClient } from '@/utils/supabase/client';
+import StreamCategorySelector from '@/components/live-studio/StreamCategorySelector';
 
 interface ScheduledBroadcast {
   id: string;
@@ -241,6 +242,18 @@ export default function StreamerDashboardPage() {
             {scheduleNotice}
           </p>
         ) : null}
+
+        <section className="rounded-2xl border border-slate-800 bg-[#06111E]/60 p-6 shadow-xl backdrop-blur-md">
+          <h3 className="mb-1 text-sm font-bold tracking-wide text-[#F8FAFC]">Stream category</h3>
+          <p className="mb-4 text-xs text-[#94A3B8]">
+            Classifies your channel on discovery and category browse pages (
+            <code className="text-[#00F2FE]">profiles.category_id</code>).
+          </p>
+          <StreamCategorySelector
+            userId={userProfile.id}
+            initialCategoryId={userProfile.category_id ?? null}
+          />
+        </section>
 
         <div className="grid gap-6 md:grid-cols-3">
           <div className="flex flex-col justify-between rounded-2xl border border-slate-800 bg-[#06111E]/60 p-6 shadow-xl backdrop-blur-md">

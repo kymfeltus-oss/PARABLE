@@ -1,25 +1,32 @@
 import { NextResponse } from "next/server";
+import { profileRowToStreamerRecord } from "@/lib/categories";
 import { getAllStreamersDemoRecords } from "@/lib/streamers-demo-simulation";
+import { createClient } from "@/utils/supabase/server";
 import type { StreamersApiResponse } from "@/lib/streamers-types";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    // Production: replace demo simulation with Supabase/PostgreSQL discovery query.
-    // const supabase = await createClient();
-    // const { data, error } = await supabase
-    //   .from("profiles")
-    //   .select(
-    //     "id, username, avatar_url, viewer_count, current_category, is_live, stream_title"
-    //   )
-    //   .eq("is_live", true)
-    //   .order("viewer_count", { ascending: false })
-    //   .limit(48);
-    // if (error) throw error;
-    // const streamers = (data ?? []).map((row) => ({ ... }));
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select(
+        "id, username, avatar_url, viewer_count, current_category, is_live, stream_title, category_id, display_name, full_name",
+      )
+      .eq("is_live", true)
+      .gte("viewer_count", 0)
+      .order("viewer_count", { ascending: false })
+      .limit(48);
 
-    const streamers = getAllStreamersDemoRecords();
+    let streamers =
+      error || !data?.length
+        ? getAllStreamersDemoRecords()
+        : data.map(profileRowToStreamerRecord);
+
+    if (streamers.length === 0) {
+      streamers = getAllStreamersDemoRecords();
+    }
 
     const payload: StreamersApiResponse = {
       ok: true,

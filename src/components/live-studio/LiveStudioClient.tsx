@@ -30,6 +30,7 @@ import {
 import { fetchLiveKitPublisherToken } from "@/lib/livekit-supabase-edge";
 import { unifiedStreamRoomName } from "@/lib/livekit-unified-room";
 import { setProfileLiveStatus } from "@/lib/studio-session";
+import StreamCategorySelector from "@/components/live-studio/StreamCategorySelector";
 import { useLiveBroadcastStore } from "@/stores/live-broadcast-store";
 
 const HubBackground = dynamic(() => import("@/components/HubBackground"), {
@@ -103,6 +104,10 @@ export default function LiveStudioClient() {
 
   const idSeed = useRef(0);
   const makeId = () => `${Date.now()}-${++idSeed.current}`;
+
+  const creatorId =
+    userProfile?.id ??
+    (isParableDevGuestClientEnabled() ? getParableGuestUserId() : null);
 
   const phoneShell =
     "relative z-10 mx-auto w-full min-w-0 max-w-full px-4 pb-28 pt-parable-header";
@@ -355,6 +360,12 @@ export default function LiveStudioClient() {
                 </div>
               )}
             </div>
+
+            <StreamCategorySelector
+              userId={creatorId}
+              initialCategoryId={userProfile?.category_id ?? null}
+              disabled={!creatorId}
+            />
 
             <div className="mt-3 grid grid-cols-3 gap-2">
               <button

@@ -47,7 +47,13 @@ import {
   WORSHIP_REACTION_EVENT,
   streamInteractionChannelName,
 } from "@/lib/stream-interactions";
+import { resolveStreamChatRoomId } from "@/lib/stream-chat-room";
+import { isParableAdminProfile, profileRowToStreamerRecord } from "@/lib/categories";
+import AdminCategoryOverrideHud from "@/components/kick-home/AdminCategoryOverrideHud";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+
+const PROFILE_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Props = {
   channelId: string;
@@ -68,8 +74,16 @@ export default function KickWatchExperience({ channelId }: Props) {
   const [lkToken, setLkToken] = useState("");
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"chat" | "about">("chat");
+  const [broadcasterCategoryId, setBroadcasterCategoryId] = useState<string | null>(null);
 
   const observerId = userProfile?.id ?? null;
+  const isAdmin = isParableAdminProfile(userProfile);
+  const broadcasterProfileId = useMemo(() => {
+    const resolved = resolveStreamChatRoomId(channelId);
+    if (resolved) return resolved;
+    if (PROFILE_UUID_RE.test(channelId)) return channelId;
+    return null;
+  }, [channelId]);
   const unifiedRoomName = channelId ? unifiedStreamRoomName(channelId) : "";
   const liveKitClientUrl = getLiveKitClientUrl();
   const displayName = userProfile?.username || "Guest";
@@ -122,6 +136,66 @@ export default function KickWatchExperience({ channelId }: Props) {
   useEffect(() => {
     void loadStreamer();
   }, [loadStreamer]);
+
+  useEffect(() => {
+    if (!broadcasterProfileId) return;
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select(
+          "id, username, avatar_url, viewer_count, current_category, is_live, stream_title, category_id, display_name, full_name",
+        )
+        .eq("id", broadcasterProfileId)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      setBroadcasterCategoryId(data.category_id ?? null);
+      if (data.is_live) {
+        setStreamer(profileRowToStreamerRecord(data));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [broadcasterProfileId, supabase]);
+
+  useEffect(() => {
+    if (!broadcasterProfileId) return;
+    const ch = supabase
+      .channel(`profile-category-${broadcasterProfileId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+          filter: `id=eq.${broadcasterProfileId}`,
+        },
+        (payload) => {
+          const row = payload.new as {
+            current_category?: string | null;
+            category_id?: string | null;
+            stream_title?: string | null;
+            viewer_count?: number | null;
+          };
+          if (row.category_id != null) setBroadcasterCategoryId(row.category_id);
+          setStreamer((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              liveCategory: row.current_category?.trim() || prev.liveCategory,
+              streamTitle: row.stream_title?.trim() || prev.streamTitle,
+              currentViewers:
+                typeof row.viewer_count === "number" ? row.viewer_count : prev.currentViewers,
+            };
+          });
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(ch);
+    };
+  }, [broadcasterProfileId, supabase]);
 
   useEffect(() => {
     if (!channelId) return;
@@ -316,6 +390,19 @@ export default function KickWatchExperience({ channelId }: Props) {
     personaBio?.bio ??
     `Watch ${streamer.username} live on PARABLE — worship, prayer, and community.`;
 
+  const adminOverlay =
+    isAdmin && broadcasterProfileId && isLive ? (
+      <AdminCategoryOverrideHud
+        broadcasterProfileId={broadcasterProfileId}
+        currentCategoryId={broadcasterCategoryId}
+        currentCategoryName={streamer?.liveCategory}
+        onCategoryChange={(name, categoryId) => {
+          setBroadcasterCategoryId(categoryId);
+          setStreamer((prev) => (prev ? { ...prev, liveCategory: name } : prev));
+        }}
+      />
+    ) : null;
+
   const livePanelProps = {
     streamId: streamer.id,
     username: streamer.username,
@@ -333,6 +420,7 @@ export default function KickWatchExperience({ channelId }: Props) {
     loadingVideo: !lkToken && !useDemoTheatrePlayer && !tokenError,
     videoError: tokenError && !useDemoTheatrePlayer ? tokenError : null,
     videoSlot,
+    adminOverlay,
   };
 
   return (

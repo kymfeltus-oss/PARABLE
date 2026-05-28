@@ -29,6 +29,8 @@ export type KickLiveWatchPanelProps = {
   videoError?: string | null;
   /** Mobile: sticky 16:9 player only. Desktop: player + meta bar. */
   shell?: KickLiveWatchPanelShell;
+  /** Admin moderation overlay (gear HUD). */
+  adminOverlay?: ReactNode;
 };
 
 /** Kick-style video shell + player chrome + meta bar (Follow, Gift Subs, Subscribe, stats). */
@@ -51,6 +53,7 @@ export default function KickLiveWatchPanel({
   loadingVideo,
   videoError,
   shell = "desktop",
+  adminOverlay,
 }: KickLiveWatchPanelProps) {
   const isMobileShell = shell === "mobile";
 
@@ -60,6 +63,7 @@ export default function KickLiveWatchPanel({
 
   const playerBlock = (
     <div className={playerRootClass} data-watch-player-root>
+      {adminOverlay}
       <GiftOverlayCanvas streamId={streamId} enabled clipToPlayer />
       {loadingVideo ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 text-sm text-slate-400">
