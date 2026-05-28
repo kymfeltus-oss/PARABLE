@@ -156,6 +156,20 @@ export function getStreamersDemoDiscoveryExtras(): StreamerProfileRecord[] {
   return STREAMERS_DISCOVERY_EXTRA_SLOTS.filter((s) => !railIds.has(s.id)).map(slotToRecord);
 }
 
+/** Spotlight / rail watch key (`lr1`…`lr6`, persona username, etc.) → live card for `/watch/[id]`. */
+export function getDemoWatchRecordById(watchId: string): StreamerProfileRecord | null {
+  const slot =
+    STREAMERS_LIVE_RAIL_SLOTS.find((s) => s.id === watchId) ??
+    STREAMERS_DISCOVERY_EXTRA_SLOTS.find((s) => s.id === watchId);
+  if (!slot) return null;
+  return slotToRecord(slot);
+}
+
+/** True when watch route should use demo MP4 theatre (not LiveKit) until a real token is available. */
+export function isDemoRailWatchChannel(channelId: string): boolean {
+  return getDemoWatchRecordById(channelId) !== null;
+}
+
 /** Full discovery payload for `/api/streamers` mock mode. */
 export function getAllStreamersDemoRecords(): StreamerProfileRecord[] {
   const seen = new Set<string>();

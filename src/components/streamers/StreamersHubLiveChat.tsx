@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import { Loader2, MessageSquare, Pin, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Loader2, MessageSquare, Pin, Trash2, Smile } from "lucide-react";
 import { useStreamChat } from "@/hooks/useStreamChat";
 import { useSimulatedChatFeed } from "@/hooks/useSimulatedChatFeed";
 import { isStreamersSimChatEnabled } from "@/lib/streamers-sim-config";
 import { fallbackAvatarOnError } from "@/lib/avatar-display";
 
 export type StreamersHubLiveChatVariant = "viewer" | "creator";
+
+export type StreamChatComposerPlacement = "inline" | "viewport-fixed";
 
 type Props = {
   streamKey: string | null | undefined;
@@ -17,6 +19,12 @@ type Props = {
   showHeader?: boolean;
   fillHeight?: boolean;
   variant?: StreamersHubLiveChatVariant;
+  /** Pin composer to viewport bottom (Kick mobile watch). */
+  composerPlacement?: StreamChatComposerPlacement;
+  /** Worship / emoji HUD rendered above the fixed composer. */
+  reactionHud?: ReactNode;
+  /** Toggle drawer for `reactionHud` when using viewport-fixed composer. */
+  showReactionToggle?: boolean;
 };
 
 export default function StreamersHubLiveChat({
@@ -27,8 +35,12 @@ export default function StreamersHubLiveChat({
   showHeader = true,
   fillHeight = false,
   variant = "viewer",
+  composerPlacement = "inline",
+  reactionHud,
+  showReactionToggle = false,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [reactionsOpen, setReactionsOpen] = useState(false);
   const {
     chatEnabled,
     chatMessages,
@@ -74,6 +86,65 @@ export default function StreamersHubLiveChat({
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   };
+
+  const fixedComposer = composerPlacement === "viewport-fixed";
+
+  const composerForm = (
+    <form
+      onSubmit={sendChatMessage}
+      className={
+        fixedComposer
+          ? "flex min-w-0 items-center gap-2"
+          : "shrink-0 border-t border-white/[0.06] bg-black/30 px-3 py-3"
+      }
+    >
+      <div className={fixedComposer ? "flex min-w-0 flex-1 items-center gap-2" : "flex min-w-0 gap-2"}>
+        {showReactionToggle ? (
+          <button
+            type="button"
+            aria-label={reactionsOpen ? "Hide reactions" : "Show reactions"}
+            aria-expanded={reactionsOpen}
+            onClick={() => setReactionsOpen((o) => !o)}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-700 bg-slate-800 text-slate-200 transition hover:border-green-500/50 hover:text-white"
+          >
+            <Smile className="h-5 w-5" />
+          </button>
+        ) : null}
+        <input
+          type="text"
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          disabled={!chatEnabled || sending}
+          placeholder={
+            chatEnabled
+              ? isCreatorVariant
+                ? "Moderate or reply as host…"
+                : fixedComposer
+                  ? "Send a message…"
+                  : "Send a respectful message…"
+              : "Pick a channel first"
+          }
+          className={
+            fixedComposer
+              ? "min-h-[44px] min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-base text-white placeholder:text-slate-500 focus:border-green-500/50 focus:outline-none focus:ring-1 focus:ring-green-500/30 disabled:opacity-50"
+              : "min-w-0 flex-1 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-[#00f2fe]/40 focus:outline-none focus:ring-1 focus:ring-[#00f2fe]/30 disabled:opacity-50"
+          }
+          style={fixedComposer ? { fontSize: "16px" } : undefined}
+        />
+        <button
+          type="submit"
+          disabled={!chatEnabled || sending || !newMessage.trim()}
+          className={
+            fixedComposer
+              ? "shrink-0 rounded-xl bg-green-500 px-4 py-2.5 text-sm font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+              : "shrink-0 rounded-xl bg-[#00f2fe] px-4 py-2 text-sm font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+          }
+        >
+          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
+        </button>
+      </div>
+    </form>
+  );
 
   return (
     <div
@@ -134,7 +205,12 @@ export default function StreamersHubLiveChat({
 
       <div
         ref={scrollRef}
-        className="min-h-0 min-w-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto px-3 py-2 text-sm custom-scrollbar"
+        className={[
+          "min-h-0 min-w-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto px-3 py-2 text-sm custom-scrollbar",
+          fixedComposer ? "pb-16" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
       >
         {!chatEnabled ? (
           <p className="break-words px-1 text-center text-xs italic text-white/45">
@@ -200,34 +276,16 @@ export default function StreamersHubLiveChat({
         ) : null}
       </div>
 
-      <form
-        onSubmit={sendChatMessage}
-        className="shrink-0 border-t border-white/[0.06] bg-black/30 px-3 py-3"
-      >
-        <div className="flex min-w-0 gap-2">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            disabled={!chatEnabled || sending}
-            placeholder={
-              chatEnabled
-                ? isCreatorVariant
-                  ? "Moderate or reply as host…"
-                  : "Send a respectful message…"
-                : "Pick a channel first"
-            }
-            className="min-w-0 flex-1 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-[#00f2fe]/40 focus:outline-none focus:ring-1 focus:ring-[#00f2fe]/30 disabled:opacity-50"
-          />
-          <button
-            type="submit"
-            disabled={!chatEnabled || sending || !newMessage.trim()}
-            className="shrink-0 rounded-xl bg-[#00f2fe] px-4 py-2 text-sm font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
-            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
-          </button>
+      {fixedComposer ? (
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-800 bg-slate-950 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden">
+          {reactionsOpen && reactionHud ? (
+            <div className="mb-2">{reactionHud}</div>
+          ) : null}
+          {composerForm}
         </div>
-      </form>
+      ) : (
+        composerForm
+      )}
     </div>
   );
 }

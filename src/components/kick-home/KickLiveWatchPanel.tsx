@@ -7,6 +7,8 @@ import GiftOverlayCanvas from "@/components/GiftOverlayCanvas";
 import WorshipReactionHud from "@/components/kick-home/WorshipReactionHud";
 import type { WorshipReactionKind } from "@/lib/worship-reactions";
 
+export type KickLiveWatchPanelShell = "desktop" | "mobile";
+
 export type KickLiveWatchPanelProps = {
   streamId: string;
   username: string;
@@ -25,6 +27,8 @@ export type KickLiveWatchPanelProps = {
   videoSlot: ReactNode;
   loadingVideo?: boolean;
   videoError?: string | null;
+  /** Mobile: sticky 16:9 player only. Desktop: player + meta bar. */
+  shell?: KickLiveWatchPanelShell;
 };
 
 /** Kick-style video shell + player chrome + meta bar (Follow, Gift Subs, Subscribe, stats). */
@@ -46,28 +50,49 @@ export default function KickLiveWatchPanel({
   videoSlot,
   loadingVideo,
   videoError,
+  shell = "desktop",
 }: KickLiveWatchPanelProps) {
-  return (
-    <div className="overflow-hidden rounded-none border-0 bg-black sm:rounded-lg">
-      <div className="relative aspect-video w-full bg-black" data-watch-player-root>
-        <GiftOverlayCanvas streamId={streamId} enabled />
-        {loadingVideo ? (
-          <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 text-sm text-slate-400">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            Connecting to stream…
-          </div>
-        ) : videoError ? (
-          <div className="absolute inset-0 z-10 flex items-center justify-center px-4 text-center text-sm text-red-300">
-            {videoError}
-          </div>
-        ) : (
-          videoSlot
-        )}
-        {onWorshipReaction ? (
-          <WorshipReactionHud onReaction={onWorshipReaction} disabled={giftBusy} />
-        ) : null}
-      </div>
+  const isMobileShell = shell === "mobile";
 
+  const playerRootClass = isMobileShell
+    ? "relative sticky top-0 z-50 w-full shrink-0 aspect-video overflow-hidden bg-black"
+    : "relative aspect-video w-full overflow-hidden bg-black";
+
+  const playerBlock = (
+    <div className={playerRootClass} data-watch-player-root>
+      <GiftOverlayCanvas streamId={streamId} enabled clipToPlayer />
+      {loadingVideo ? (
+        <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 text-sm text-slate-400">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          Connecting to stream…
+        </div>
+      ) : videoError ? (
+        <div className="absolute inset-0 z-10 flex items-center justify-center px-4 text-center text-sm text-red-300">
+          {videoError}
+        </div>
+      ) : (
+        videoSlot
+      )}
+      {!isMobileShell && onWorshipReaction ? (
+        <WorshipReactionHud onReaction={onWorshipReaction} disabled={giftBusy} layout="overlay" />
+      ) : null}
+      {isMobileShell && onWorshipReaction ? (
+        <WorshipReactionHud
+          onReaction={onWorshipReaction}
+          disabled={giftBusy}
+          layout="mobile-rail"
+        />
+      ) : null}
+    </div>
+  );
+
+  if (isMobileShell) {
+    return <div className="w-full shrink-0 bg-black">{playerBlock}</div>;
+  }
+
+  return (
+    <div className="overflow-hidden rounded-none border-0 bg-black md:rounded-lg">
+      {playerBlock}
       <KickStreamMetaBar
         username={username}
         avatarUrl={avatarUrl}

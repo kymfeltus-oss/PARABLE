@@ -11,11 +11,15 @@ export default function WatchChannelPage() {
 
   if (!id) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black text-slate-400">
+      <div className="flex h-[100dvh] items-center justify-center bg-slate-950 text-slate-400">
         Invalid channel.
       </div>
     );
   }
 
-  return <KickWatchExperience channelId={id} />;
+  return (
+    <div className="h-[100dvh] w-full overflow-hidden md:min-h-0 md:h-auto md:overflow-visible">
+      <KickWatchExperience channelId={id} />
+    </div>
+  );
 }

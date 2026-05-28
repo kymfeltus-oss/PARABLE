@@ -28,18 +28,18 @@ export default function ParableLiveChatRail({
         <button
           type="button"
           aria-label="Close chat"
-          className="fixed inset-0 z-30 bg-black/60 lg:hidden"
+          className="fixed inset-0 z-30 bg-black/60 md:hidden"
           onClick={() => setChatOpen(false)}
         />
       ) : null}
 
       <aside
         data-testid="stream-chat-rail"
-        className={`fixed bottom-0 right-0 top-14 z-40 w-[min(100vw,20rem)] shrink-0 flex-col overflow-hidden border-l border-[#24272c] bg-[#191b1f] transition-transform duration-200 sm:w-80 lg:static lg:z-0 lg:flex lg:w-80 lg:translate-x-0 ${
-          chatOpen ? "flex translate-x-0" : "hidden translate-x-full"
+        className={`fixed bottom-0 right-0 top-14 z-40 w-[min(100vw,20rem)] shrink-0 flex-col overflow-hidden border-l border-[#24272c] bg-[#191b1f] transition-transform duration-200 sm:w-80 md:static md:z-0 md:flex md:w-80 md:translate-x-0 ${
+          chatOpen ? "flex translate-x-0" : "hidden translate-x-full md:flex md:translate-x-0"
         }`}
       >
-        <div className="flex h-full min-h-0 flex-col pb-parable-bottom lg:pb-0">
+        <div className="flex h-full min-h-0 flex-col pb-parable-bottom md:pb-0">
           <StreamersHubLiveChat
             streamKey={streamKey}
             streamLabel={streamLabel}

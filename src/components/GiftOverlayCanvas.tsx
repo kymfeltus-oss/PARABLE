@@ -55,9 +55,15 @@ function spawnParticleBurst(emoji: string): FloatingParticle[] {
 type GiftOverlayCanvasProps = {
   streamId: string;
   enabled: boolean;
+  /** Keep particle animations inside the 16:9 player box (mobile watch). */
+  clipToPlayer?: boolean;
 };
 
-export default function GiftOverlayCanvas({ streamId, enabled }: GiftOverlayCanvasProps) {
+export default function GiftOverlayCanvas({
+  streamId,
+  enabled,
+  clipToPlayer = false,
+}: GiftOverlayCanvasProps) {
   const [particles, setParticles] = useState<FloatingParticle[]>([]);
   const supabase = useMemo(() => createClient(), []);
 
@@ -153,7 +159,12 @@ export default function GiftOverlayCanvas({ streamId, enabled }: GiftOverlayCanv
   if (!enabled || particles.length === 0) return null;
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden select-none">
+    <div
+      className={[
+        "pointer-events-none absolute inset-0 z-30 select-none",
+        clipToPlayer ? "overflow-hidden" : "overflow-hidden",
+      ].join(" ")}
+    >
       {particles.map((p) => (
         <span
           key={p.id}

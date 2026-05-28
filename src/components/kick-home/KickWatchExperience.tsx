@@ -5,13 +5,24 @@ import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import LiveVideoPlayer from "@/components/LiveVideoPlayer";
 import KickLiveWatchPanel from "@/components/kick-home/KickLiveWatchPanel";
-import ParableLiveChatRail, { ParableLiveChatMobile } from "@/components/kick-home/ParableLiveChatRail";
+import KickWatchAboutPanel from "@/components/kick-home/KickWatchAboutPanel";
+import ParableLiveChatRail from "@/components/kick-home/ParableLiveChatRail";
+import WorshipReactionHud from "@/components/kick-home/WorshipReactionHud";
+import StreamersHubLiveChat from "@/components/streamers/StreamersHubLiveChat";
 import ParableHeroVideo from "@/components/kick-home/ParableHeroVideo";
 import KickStreamPlayerChrome from "@/components/kick-home/KickStreamPlayerChrome";
 import CreatorCommandStrip from "@/components/kick-home/CreatorCommandStrip";
 import { useAuth } from "@/hooks/useAuth";
 import { useStreamWorkspaceMode } from "@/hooks/useStreamWorkspaceMode";
-import { DEMO_AVATAR_FALLBACK, getDemoPersonaById } from "@/lib/demo-personas";
+import {
+  DEMO_AVATAR_FALLBACK,
+  getDemoPersonaById,
+  getDemoPersonaByUsername,
+} from "@/lib/demo-personas";
+import {
+  getDemoWatchRecordById,
+  isDemoRailWatchChannel,
+} from "@/lib/streamers-demo-simulation";
 import { demoStreamMp4ForChannel } from "@/lib/demo-hls-stream";
 import { getLiveKitClientUrl } from "@/lib/livekit-env";
 import { unifiedStreamRoomName } from "@/lib/livekit-unified-room";
@@ -56,6 +67,7 @@ export default function KickWatchExperience({ channelId }: Props) {
   const [giftBusy, setGiftBusy] = useState(false);
   const [lkToken, setLkToken] = useState("");
   const [tokenError, setTokenError] = useState<string | null>(null);
+  const [mobileTab, setMobileTab] = useState<"chat" | "about">("chat");
 
   const observerId = userProfile?.id ?? null;
   const unifiedRoomName = channelId ? unifiedStreamRoomName(channelId) : "";
@@ -71,6 +83,13 @@ export default function KickWatchExperience({ channelId }: Props) {
 
   const loadStreamer = useCallback(async () => {
     setLoading(true);
+    const railDemo = getDemoWatchRecordById(channelId);
+    if (railDemo) {
+      setStreamer(railDemo);
+      setLoading(false);
+      return;
+    }
+
     const demo = getDemoPersonaById(channelId);
     if (demo) {
       setStreamer({
@@ -127,8 +146,16 @@ export default function KickWatchExperience({ channelId }: Props) {
     })();
   }, [channelId, observerId, supabase]);
 
+  const demoTheatreEligible =
+    isDemoRailWatchChannel(channelId) || Boolean(getDemoPersonaById(channelId));
+
   useEffect(() => {
     if (!streamer || streamer.status !== "live" || !unifiedRoomName) return;
+    if (demoTheatreEligible) {
+      setLkToken("");
+      setTokenError(null);
+      return;
+    }
     let cancelled = false;
 
     async function fetchToken() {
@@ -157,7 +184,7 @@ export default function KickWatchExperience({ channelId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [observerId, streamer, unifiedRoomName]);
+  }, [channelId, demoTheatreEligible, observerId, streamer, unifiedRoomName]);
 
   const toggleFollow = async () => {
     if (!observerId || !streamer) {
@@ -231,7 +258,7 @@ export default function KickWatchExperience({ channelId }: Props) {
     isCreatorHub && liveRoomCount > 0 ? liveRoomCount : (streamer?.currentViewers ?? 0);
 
   const useDemoTheatrePlayer = Boolean(
-    streamer?.status === "live" && !lkToken && getDemoPersonaById(channelId),
+    streamer?.status === "live" && !lkToken && demoTheatreEligible,
   );
 
   if (loading) {
@@ -281,76 +308,180 @@ export default function KickWatchExperience({ channelId }: Props) {
     </>
   ) : null;
 
-  return (
-    <div className="min-h-screen bg-black font-inter text-white">
-      <div className="mx-auto grid max-w-7xl gap-4 p-4 lg:grid-cols-4 lg:p-6">
-        <div className="min-w-0 space-y-4 lg:col-span-3">
-          <Link
-            href="/streamers"
-            className="inline-flex min-w-0 items-center gap-2 truncate text-xs text-white/50 hover:text-[#00f2fe]"
-          >
-            <ArrowLeft size={14} className="shrink-0" />
-            Streamers
-          </Link>
+  const personaBio =
+    getDemoPersonaById(channelId) ??
+    getDemoPersonaByUsername(streamer.username) ??
+    null;
+  const channelBio =
+    personaBio?.bio ??
+    `Watch ${streamer.username} live on PARABLE — worship, prayer, and community.`;
 
-          {isLive ? (
-            <div className="relative min-w-0">
-              <KickLiveWatchPanel
-                streamId={streamer.id}
-                username={streamer.username}
-                avatarUrl={avatarUrl}
-                streamTitle={streamer.streamTitle}
-                tags={tags}
-                viewerCount={displayViewerCount}
-                isFollowing={isFollowing}
-                followBusy={followBusy}
-                giftBusy={giftBusy}
-                onFollow={() => void toggleFollow()}
-                onGiftSubs={() => void sendGift("gift_clap")}
-                onWorshipReaction={emitWorshipReaction}
-                onSubscribe={() => alert("Subscriptions coming soon.")}
-                loadingVideo={!lkToken && !useDemoTheatrePlayer && !tokenError}
-                videoError={tokenError && !useDemoTheatrePlayer ? tokenError : null}
-                videoSlot={videoSlot}
-              />
-              {isCreatorHub ? <CreatorCommandStrip className="!top-14" /> : null}
-            </div>
-          ) : (
-            <div className="rounded-lg bg-[#191b1f] p-8 text-center text-slate-400">
-              <p className="truncate text-lg font-bold text-white">{streamer.username} is offline</p>
-              <p className="mt-2 text-sm">{followerCount.toLocaleString()} followers</p>
+  const livePanelProps = {
+    streamId: streamer.id,
+    username: streamer.username,
+    avatarUrl,
+    streamTitle: streamer.streamTitle,
+    tags,
+    viewerCount: displayViewerCount,
+    isFollowing,
+    followBusy,
+    giftBusy,
+    onFollow: () => void toggleFollow(),
+    onGiftSubs: () => void sendGift("gift_clap"),
+    onWorshipReaction: emitWorshipReaction,
+    onSubscribe: () => alert("Subscriptions coming soon."),
+    loadingVideo: !lkToken && !useDemoTheatrePlayer && !tokenError,
+    videoError: tokenError && !useDemoTheatrePlayer ? tokenError : null,
+    videoSlot,
+  };
+
+  return (
+    <>
+      {/* ——— Kick mobile watch (< md) ——— */}
+      <div className="flex h-[100dvh] w-screen flex-col overflow-hidden bg-slate-950 font-inter text-white md:hidden">
+        {isLive ? (
+          <>
+            <KickLiveWatchPanel {...livePanelProps} shell="mobile" />
+            {isCreatorHub ? <CreatorCommandStrip className="top-14!" /> : null}
+
+            <div
+              className="flex shrink-0 border-b border-slate-800 bg-slate-950"
+              role="tablist"
+              aria-label="Stream sections"
+            >
               <button
                 type="button"
-                onClick={() => void toggleFollow()}
-                disabled={followBusy}
-                className="mt-4 rounded-lg bg-[#00f2fe] px-6 py-2 text-sm font-bold text-black"
+                role="tab"
+                aria-selected={mobileTab === "chat"}
+                onClick={() => setMobileTab("chat")}
+                className={[
+                  "flex-1 py-3 text-center text-sm font-bold transition",
+                  mobileTab === "chat"
+                    ? "border-b-2 border-green-500 text-white"
+                    : "border-b-2 border-transparent text-slate-400",
+                ].join(" ")}
               >
-                {isFollowing ? "Following" : "Follow"}
+                Chat
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mobileTab === "about"}
+                onClick={() => setMobileTab("about")}
+                className={[
+                  "flex-1 py-3 text-center text-sm font-bold transition",
+                  mobileTab === "about"
+                    ? "border-b-2 border-green-500 text-white"
+                    : "border-b-2 border-transparent text-slate-400",
+                ].join(" ")}
+              >
+                About
               </button>
             </div>
-          )}
 
-          <div className="lg:hidden">
-            <ParableLiveChatMobile
-              streamKey={streamer.id}
-              streamLabel={streamer.username}
-              senderDisplayName={displayName}
-              variant={chatVariant}
-            />
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              {mobileTab === "chat" ? (
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                  <StreamersHubLiveChat
+                    streamKey={streamer.id}
+                    streamLabel={streamer.username}
+                    senderDisplayName={displayName}
+                    variant={chatVariant}
+                    fillHeight
+                    showHeader={false}
+                    composerPlacement="viewport-fixed"
+                    showReactionToggle
+                    reactionHud={
+                      <WorshipReactionHud
+                        layout="mobile-drawer"
+                        onReaction={emitWorshipReaction}
+                        disabled={giftBusy}
+                      />
+                    }
+                    className="min-h-0 flex-1 border-0 bg-transparent shadow-none"
+                  />
+                </div>
+              ) : (
+                <KickWatchAboutPanel
+                  username={streamer.username}
+                  avatarUrl={avatarUrl}
+                  streamTitle={streamer.streamTitle}
+                  tags={tags}
+                  viewerCount={displayViewerCount}
+                  followerCount={followerCount}
+                  bio={channelBio}
+                  liveCategory={streamer.liveCategory || "IRL"}
+                  isFollowing={isFollowing}
+                  followBusy={followBusy}
+                  giftBusy={giftBusy}
+                  onFollow={() => void toggleFollow()}
+                  onGiftSubs={() => void sendGift("gift_clap")}
+                  onSubscribe={() => alert("Subscriptions coming soon.")}
+                />
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center text-slate-400">
+            <p className="text-lg font-bold text-white">{streamer.username} is offline</p>
+            <p className="text-sm">{followerCount.toLocaleString()} followers</p>
+            <button
+              type="button"
+              onClick={() => void toggleFollow()}
+              disabled={followBusy}
+              className="rounded-lg bg-green-500 px-6 py-2 text-sm font-bold text-black"
+            >
+              {isFollowing ? "Following" : "Follow"}
+            </button>
           </div>
-        </div>
-
-        {isLive ? (
-          <aside className="hidden min-h-[500px] min-w-0 lg:flex">
-            <ParableLiveChatRail
-              streamKey={streamer.id}
-              streamLabel={streamer.username}
-              senderDisplayName={displayName}
-              variant={chatVariant}
-            />
-          </aside>
-        ) : null}
+        )}
       </div>
-    </div>
+
+      {/* ——— Desktop watch (≥ md) ——— */}
+      <div className="hidden min-h-screen bg-black md:block">
+        <div className="mx-auto grid max-w-7xl gap-4 p-4 md:grid-cols-4 md:p-6">
+          <div className="min-w-0 space-y-4 md:col-span-3">
+            <Link
+              href="/streamers"
+              className="inline-flex min-w-0 items-center gap-2 truncate text-xs text-white/50 hover:text-[#00f2fe]"
+            >
+              <ArrowLeft size={14} className="shrink-0" />
+              Streamers
+            </Link>
+
+            {isLive ? (
+              <div className="relative min-w-0">
+                <KickLiveWatchPanel {...livePanelProps} shell="desktop" />
+                {isCreatorHub ? <CreatorCommandStrip className="top-14!" /> : null}
+              </div>
+            ) : (
+              <div className="rounded-lg bg-[#191b1f] p-8 text-center text-slate-400">
+                <p className="truncate text-lg font-bold text-white">{streamer.username} is offline</p>
+                <p className="mt-2 text-sm">{followerCount.toLocaleString()} followers</p>
+                <button
+                  type="button"
+                  onClick={() => void toggleFollow()}
+                  disabled={followBusy}
+                  className="mt-4 rounded-lg bg-[#00f2fe] px-6 py-2 text-sm font-bold text-black"
+                >
+                  {isFollowing ? "Following" : "Follow"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {isLive ? (
+            <aside className="hidden min-h-[500px] min-w-0 md:flex">
+              <ParableLiveChatRail
+                streamKey={streamer.id}
+                streamLabel={streamer.username}
+                senderDisplayName={displayName}
+                variant={chatVariant}
+              />
+            </aside>
+          ) : null}
+        </div>
+      </div>
+    </>
   );
 }
