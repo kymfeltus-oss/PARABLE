@@ -1,5 +1,5 @@
 /**
- * Single demo simulation for Parable Live discovery (/streamers), API mock, chat FK, and HLS hero.
+ * Single demo simulation for Parable Live discovery (/streamers), API mock, chat FK, and hero video.
  * Rail ids (`lr1`…`lr6`) stay stable for watch routes; personas match `demo-personas` + seed SQL.
  */
 import {
@@ -30,7 +30,7 @@ export const STREAMERS_LIVE_RAIL_SLOTS: StreamersDemoSlot[] = [
     persona: "gospel_vibe",
     streamTitle: "WORSHIP NIGHT LIVE",
     liveCategory: "WORSHIP",
-    currentViewers: 3200,
+    currentViewers: 428_000,
     forceLive: true,
   },
   {
@@ -38,7 +38,7 @@ export const STREAMERS_LIVE_RAIL_SLOTS: StreamersDemoSlot[] = [
     persona: "sister_sarah",
     streamTitle: "PRAYER ROOM",
     liveCategory: "PRAYER",
-    currentViewers: 982,
+    currentViewers: 286_000,
     forceLive: true,
   },
   {
@@ -46,7 +46,7 @@ export const STREAMERS_LIVE_RAIL_SLOTS: StreamersDemoSlot[] = [
     persona: "prophetic_voices",
     streamTitle: "TESTIMONY STREAM",
     liveCategory: "TESTIFY",
-    currentViewers: 438,
+    currentViewers: 198_000,
     forceLive: true,
   },
   {
@@ -54,7 +54,7 @@ export const STREAMERS_LIVE_RAIL_SLOTS: StreamersDemoSlot[] = [
     persona: "pastor_james",
     streamTitle: "REVIVAL NIGHT",
     liveCategory: "REVIVAL",
-    currentViewers: 1800,
+    currentViewers: 312_000,
     forceLive: true,
   },
   {
@@ -62,7 +62,7 @@ export const STREAMERS_LIVE_RAIL_SLOTS: StreamersDemoSlot[] = [
     persona: "kingdom_gamer",
     streamTitle: "KINGDOM BUSINESS",
     liveCategory: "KINGDOM",
-    currentViewers: 611,
+    currentViewers: 124_000,
     forceLive: true,
   },
   {
@@ -70,7 +70,7 @@ export const STREAMERS_LIVE_RAIL_SLOTS: StreamersDemoSlot[] = [
     persona: "sister_sarah",
     streamTitle: "DELIVERANCE ROOM",
     liveCategory: "DELIVERANCE",
-    currentViewers: 721,
+    currentViewers: 156_000,
     forceLive: true,
   },
 ];
@@ -82,7 +82,7 @@ export const STREAMERS_DISCOVERY_EXTRA_SLOTS: StreamersDemoSlot[] = [
     persona: "kingdom_gamer",
     streamTitle: "Gaming for Ministry",
     liveCategory: "GAMING",
-    currentViewers: 980,
+    currentViewers: 89_000,
     forceLive: true,
   },
   {
@@ -90,7 +90,7 @@ export const STREAMERS_DISCOVERY_EXTRA_SLOTS: StreamersDemoSlot[] = [
     persona: "prophetic_voices",
     streamTitle: "Global Prayer Watch",
     liveCategory: "PRAYER",
-    currentViewers: 1100,
+    currentViewers: 112_000,
     forceLive: true,
   },
 ];

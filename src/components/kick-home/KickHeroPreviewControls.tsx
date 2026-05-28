@@ -13,6 +13,8 @@ type Props = {
   videoRef: React.RefObject<HTMLVideoElement | null>;
   viewerLabel?: string;
   isLive?: boolean;
+  /** Reset overlay state when carousel slide changes. */
+  syncKey?: string;
 };
 
 /** Hero preview overlay: play/pause, volume, live metric, fullscreen. */
@@ -20,11 +22,19 @@ export default function KickHeroPreviewControls({
   videoRef,
   viewerLabel,
   isLive = true,
+  syncKey,
 }: Props) {
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(true);
   const [volume, setVolume] = useState(0.6);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    setPaused(v?.paused ?? false);
+    setMuted(v?.muted ?? true);
+    if (v && !v.muted) setVolume(v.volume);
+  }, [syncKey, videoRef]);
 
   const syncPaused = useCallback(() => {
     const v = videoRef.current;

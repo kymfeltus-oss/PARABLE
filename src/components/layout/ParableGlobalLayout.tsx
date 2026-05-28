@@ -3,11 +3,7 @@
 import { usePathname } from "next/navigation";
 import GlobalPulseTicker from "@/components/GlobalPulseTicker";
 import MainHeader from "@/components/MainHeader";
-import {
-  getShellProfile,
-  isStreamingRoute,
-  shouldHideGlobalTopStack,
-} from "@/lib/app-shell-profiles";
+import { getShellProfile, shouldHideGlobalTopStack } from "@/lib/app-shell-profiles";
 import { GlobalPulseProvider } from "@/providers/GlobalPulseProvider";
 
 /**
@@ -18,7 +14,6 @@ export default function ParableGlobalLayout({ children }: { children: React.Reac
   const pathname = usePathname();
   const profile = getShellProfile(pathname);
   const fullBleed = profile === "FULL_BLEED";
-  const streamingFullBleed = isStreamingRoute(pathname);
   const hideGlobalTopStack = shouldHideGlobalTopStack(pathname);
 
   return (
@@ -27,10 +22,7 @@ export default function ParableGlobalLayout({ children }: { children: React.Reac
         className={[
           "flex min-h-0 min-w-0 flex-1 flex-col",
           fullBleed
-            ? [
-                "min-h-screen w-full overflow-hidden bg-[#0b0e11]",
-                streamingFullBleed ? "h-dvh" : "h-full",
-              ].join(" ")
+            ? "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#0b0e11]"
             : "",
         ].join(" ")}
       >

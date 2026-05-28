@@ -1,15 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import LiveVideoPlayer from "@/components/LiveVideoPlayer";
 import KickLiveWatchPanel from "@/components/kick-home/KickLiveWatchPanel";
 import ParableLiveChatRail, { ParableLiveChatMobile } from "@/components/kick-home/ParableLiveChatRail";
+import ParableHeroVideo from "@/components/kick-home/ParableHeroVideo";
+import KickStreamPlayerChrome from "@/components/kick-home/KickStreamPlayerChrome";
+import CreatorCommandStrip from "@/components/kick-home/CreatorCommandStrip";
 import { useAuth } from "@/hooks/useAuth";
+import { useStreamWorkspaceMode } from "@/hooks/useStreamWorkspaceMode";
 import { DEMO_AVATAR_FALLBACK, getDemoPersonaById } from "@/lib/demo-personas";
+import { demoStreamMp4ForChannel } from "@/lib/demo-hls-stream";
 import { getLiveKitClientUrl } from "@/lib/livekit-env";
 import { unifiedStreamRoomName } from "@/lib/livekit-unified-room";
+import { useLiveBroadcastStore } from "@/stores/live-broadcast-store";
 import {
   countFollowers,
   isUserFollowing,
@@ -29,6 +35,7 @@ type Props = {
 export default function KickWatchExperience({ channelId }: Props) {
   const { userProfile } = useAuth();
   const supabase = useMemo(() => createClient(), []);
+  const demoVideoRef = useRef<HTMLVideoElement>(null);
 
   const [streamer, setStreamer] = useState<StreamerProfileRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,13 +51,20 @@ export default function KickWatchExperience({ channelId }: Props) {
   const liveKitClientUrl = getLiveKitClientUrl();
   const displayName = userProfile?.username || "Guest";
 
+  const { isCreatorHub } = useStreamWorkspaceMode({
+    channelId,
+    userId: observerId,
+  });
+  const liveRoomCount = useLiveBroadcastStore((s) => s.viewerCount);
+  const chatVariant = isCreatorHub ? "creator" : "viewer";
+
   const loadStreamer = useCallback(async () => {
     setLoading(true);
     const demo = getDemoPersonaById(channelId);
     if (demo) {
       setStreamer({
-        id: demo.id,
-        username: demo.username,
+        id: channelId,
+        username: demo.full_name,
         profilePicture: demo.avatar_url,
         streamTitle: demo.posts[0]?.content?.slice(0, 56) || `${demo.full_name} Live`,
         currentViewers: demo.is_live ? 42_953 : 0,
@@ -111,6 +125,7 @@ export default function KickWatchExperience({ channelId }: Props) {
         if (!cancelled) setLkToken(data.token);
       } catch (err) {
         if (!cancelled) {
+          setLkToken("");
           setTokenError(err instanceof Error ? err.message : "Could not connect");
         }
       }
@@ -170,6 +185,13 @@ export default function KickWatchExperience({ channelId }: Props) {
   const avatarUrl =
     streamer?.profilePicture || getDemoPersonaById(channelId)?.avatar_url || DEMO_AVATAR_FALLBACK;
 
+  const displayViewerCount =
+    isCreatorHub && liveRoomCount > 0 ? liveRoomCount : (streamer?.currentViewers ?? 0);
+
+  const useDemoTheatrePlayer = Boolean(
+    streamer?.status === "live" && !lkToken && getDemoPersonaById(channelId),
+  );
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black text-slate-400">
@@ -182,7 +204,7 @@ export default function KickWatchExperience({ channelId }: Props) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-black text-white">
         <p>Channel not found.</p>
-        <Link href="/streamers" className="text-sm font-bold text-[#53fc18] hover:underline">
+        <Link href="/streamers" className="text-sm font-bold text-[#00f2fe] hover:underline">
           Back to streamers
         </Link>
       </div>
@@ -191,54 +213,74 @@ export default function KickWatchExperience({ channelId }: Props) {
 
   const isLive = streamer.status === "live";
 
+  const videoSlot = lkToken ? (
+    <LiveVideoPlayer
+      roomName={unifiedRoomName}
+      token={lkToken}
+      serverUrl={liveKitClientUrl}
+      className="h-full w-full"
+      showChrome
+      syncBroadcastTelemetry={isCreatorHub}
+    />
+  ) : useDemoTheatrePlayer ? (
+    <>
+      <ParableHeroVideo
+        streamUrl={demoStreamMp4ForChannel(channelId)}
+        mp4FallbackUrl={demoStreamMp4ForChannel(channelId)}
+        className="absolute inset-0 h-full w-full"
+        videoRef={demoVideoRef}
+      />
+      <KickStreamPlayerChrome
+        engine="html5"
+        videoRef={demoVideoRef}
+        isLive
+        playerRootSelector="[data-watch-player-root]"
+      />
+    </>
+  ) : null;
+
   return (
     <div className="min-h-screen bg-black font-inter text-white">
       <div className="mx-auto grid max-w-7xl gap-4 p-4 lg:grid-cols-4 lg:p-6">
-        <div className="space-y-4 lg:col-span-3">
+        <div className="min-w-0 space-y-4 lg:col-span-3">
           <Link
             href="/streamers"
-            className="inline-flex items-center gap-2 text-xs text-white/50 hover:text-[#53fc18]"
+            className="inline-flex min-w-0 items-center gap-2 truncate text-xs text-white/50 hover:text-[#00f2fe]"
           >
-            <ArrowLeft size={14} />
+            <ArrowLeft size={14} className="shrink-0" />
             Streamers
           </Link>
 
           {isLive ? (
-            <KickLiveWatchPanel
-              streamId={streamer.id}
-              username={streamer.username}
-              avatarUrl={avatarUrl}
-              streamTitle={streamer.streamTitle}
-              tags={tags}
-              viewerCount={streamer.currentViewers}
-              isFollowing={isFollowing}
-              followBusy={followBusy}
-              giftBusy={giftBusy}
-              onFollow={() => void toggleFollow()}
-              onGiftSubs={() => void sendGift("gift_applause")}
-              onSubscribe={() => alert("Subscriptions coming soon.")}
-              loadingVideo={!lkToken && !tokenError}
-              videoError={tokenError}
-              videoSlot={
-                lkToken ? (
-                  <LiveVideoPlayer
-                    roomName={unifiedRoomName}
-                    token={lkToken}
-                    serverUrl={liveKitClientUrl}
-                    className="h-full w-full"
-                  />
-                ) : null
-              }
-            />
+            <div className="relative min-w-0">
+              <KickLiveWatchPanel
+                streamId={streamer.id}
+                username={streamer.username}
+                avatarUrl={avatarUrl}
+                streamTitle={streamer.streamTitle}
+                tags={tags}
+                viewerCount={displayViewerCount}
+                isFollowing={isFollowing}
+                followBusy={followBusy}
+                giftBusy={giftBusy}
+                onFollow={() => void toggleFollow()}
+                onGiftSubs={() => void sendGift("gift_applause")}
+                onSubscribe={() => alert("Subscriptions coming soon.")}
+                loadingVideo={!lkToken && !useDemoTheatrePlayer && !tokenError}
+                videoError={tokenError && !useDemoTheatrePlayer ? tokenError : null}
+                videoSlot={videoSlot}
+              />
+              {isCreatorHub ? <CreatorCommandStrip className="!top-14" /> : null}
+            </div>
           ) : (
             <div className="rounded-lg bg-[#191b1f] p-8 text-center text-slate-400">
-              <p className="text-lg font-bold text-white">{streamer.username} is offline</p>
+              <p className="truncate text-lg font-bold text-white">{streamer.username} is offline</p>
               <p className="mt-2 text-sm">{followerCount.toLocaleString()} followers</p>
               <button
                 type="button"
                 onClick={() => void toggleFollow()}
                 disabled={followBusy}
-                className="mt-4 rounded-lg bg-[#53fc18] px-6 py-2 text-sm font-bold text-black"
+                className="mt-4 rounded-lg bg-[#00f2fe] px-6 py-2 text-sm font-bold text-black"
               >
                 {isFollowing ? "Following" : "Follow"}
               </button>
@@ -250,16 +292,18 @@ export default function KickWatchExperience({ channelId }: Props) {
               streamKey={streamer.id}
               streamLabel={streamer.username}
               senderDisplayName={displayName}
+              variant={chatVariant}
             />
           </div>
         </div>
 
         {isLive ? (
-          <aside className="hidden min-h-[500px] lg:flex">
+          <aside className="hidden min-h-[500px] min-w-0 lg:flex">
             <ParableLiveChatRail
               streamKey={streamer.id}
               streamLabel={streamer.username}
               senderDisplayName={displayName}
+              variant={chatVariant}
             />
           </aside>
         ) : null}

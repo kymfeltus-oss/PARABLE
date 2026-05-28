@@ -1,16 +1,24 @@
 "use client";
 
 import { MessageSquare } from "lucide-react";
-import StreamersHubLiveChat from "@/components/streamers/StreamersHubLiveChat";
+import StreamersHubLiveChat, {
+  type StreamersHubLiveChatVariant,
+} from "@/components/streamers/StreamersHubLiveChat";
 import { useStreamersUiStore } from "@/stores/streamers-ui-store";
 
 type Props = {
   streamKey: string | null;
   streamLabel?: string;
   senderDisplayName?: string;
+  variant?: StreamersHubLiveChatVariant;
 };
 
-export default function ParableLiveChatRail({ streamKey, streamLabel, senderDisplayName }: Props) {
+export default function ParableLiveChatRail({
+  streamKey,
+  streamLabel,
+  senderDisplayName,
+  variant = "viewer",
+}: Props) {
   const chatOpen = useStreamersUiStore((s) => s.chatOpen);
   const setChatOpen = useStreamersUiStore((s) => s.setChatOpen);
 
@@ -36,6 +44,7 @@ export default function ParableLiveChatRail({ streamKey, streamLabel, senderDisp
             streamKey={streamKey}
             streamLabel={streamLabel}
             senderDisplayName={senderDisplayName}
+            variant={variant}
             fillHeight
             className="h-full min-h-0"
           />
@@ -46,7 +55,12 @@ export default function ParableLiveChatRail({ streamKey, streamLabel, senderDisp
 }
 
 /** Center-column chat fallback below `lg` when the right rail is off-screen. */
-export function ParableLiveChatMobile({ streamKey, streamLabel, senderDisplayName }: Props) {
+export function ParableLiveChatMobile({
+  streamKey,
+  streamLabel,
+  senderDisplayName,
+  variant = "viewer",
+}: Props) {
   return (
     <div className="flex max-h-[320px] min-h-[240px] flex-col overflow-hidden rounded-xl border border-[#24272c] bg-[#191b1f]">
       <div className="flex items-center gap-2 border-b border-[#24272c] px-3 py-2">
@@ -58,6 +72,7 @@ export function ParableLiveChatMobile({ streamKey, streamLabel, senderDisplayNam
           streamKey={streamKey}
           streamLabel={streamLabel}
           senderDisplayName={senderDisplayName}
+          variant={variant}
           fillHeight
           showHeader={false}
           className="h-full min-h-0"

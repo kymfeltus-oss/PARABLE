@@ -30,6 +30,7 @@ import {
 import { fetchLiveKitPublisherToken } from "@/lib/livekit-supabase-edge";
 import { unifiedStreamRoomName } from "@/lib/livekit-unified-room";
 import { setProfileLiveStatus } from "@/lib/studio-session";
+import { useLiveBroadcastStore } from "@/stores/live-broadcast-store";
 
 const HubBackground = dynamic(() => import("@/components/HubBackground"), {
   ssr: false,
@@ -82,6 +83,12 @@ export default function LiveStudioClient() {
   const [isLive, setIsLive] = useState(false);
   const [camOn, setCamOn] = useState(true);
   const [micOn, setMicOn] = useState(true);
+  const setPublishing = useLiveBroadcastStore((s) => s.setPublishing);
+  const clearPublishing = useLiveBroadcastStore((s) => s.clearPublishing);
+  const setStoreMicOn = useLiveBroadcastStore((s) => s.setMicOn);
+  const setStoreCamOn = useLiveBroadcastStore((s) => s.setCamOn);
+  const storeMicOn = useLiveBroadcastStore((s) => s.micOn);
+  const storeCamOn = useLiveBroadcastStore((s) => s.camOn);
   const [lkToken, setLkToken] = useState<string | null>(null);
   const [lkUrl, setLkUrl] = useState<string | null>(null);
   const [lkRoom, setLkRoom] = useState("");
@@ -176,6 +183,7 @@ export default function LiveStudioClient() {
         }
       }
 
+      setPublishing({ userId: creatorId, roomName, railKey: "lr1" });
       setIsLive(true);
     } catch (e: unknown) {
       console.error("GO LIVE FAILED:", e);
@@ -184,6 +192,7 @@ export default function LiveStudioClient() {
           ? e.message.trim()
           : "Unknown error — see browser console.";
       setLkError(detail);
+      clearPublishing();
       setIsLive(false);
       setLkToken(null);
       setLkUrl(null);
@@ -349,7 +358,13 @@ export default function LiveStudioClient() {
 
             <div className="mt-3 grid grid-cols-3 gap-2">
               <button
-                onClick={() => setCamOn((v) => !v)}
+                onClick={() => {
+                  setCamOn((v) => {
+                    const next = !v;
+                    setStoreCamOn(next);
+                    return next;
+                  });
+                }}
                 className={`rounded-sm border px-3 py-3 text-[9px] font-black uppercase tracking-[4px] transition-all ${
                   camOn
                     ? "border-[#00f2ff]/25 bg-black/70 text-[#00f2ff]"
@@ -362,7 +377,13 @@ export default function LiveStudioClient() {
               </button>
 
               <button
-                onClick={() => setMicOn((v) => !v)}
+                onClick={() => {
+                  setMicOn((v) => {
+                    const next = !v;
+                    setStoreMicOn(next);
+                    return next;
+                  });
+                }}
                 className={`rounded-sm border px-3 py-3 text-[9px] font-black uppercase tracking-[4px] transition-all ${
                   micOn
                     ? "border-[#00f2ff]/25 bg-black/70 text-[#00f2ff]"

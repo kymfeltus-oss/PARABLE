@@ -1,0 +1,193 @@
+/* Cinematic MP4 intro — scoped to ParableCinematicIntro */
+
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  isolation: isolate;
+  width: 100%;
+  height: 100dvh;
+  min-height: 100svh;
+  overflow: hidden;
+  color: #fff;
+  background: #020406;
+}
+
+.videoWrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(2, 4, 6, 0.15) 0%,
+    rgba(2, 4, 6, 0.05) 40%,
+    rgba(2, 4, 6, 0.35) 100%
+  );
+}
+
+/* Tune to align over the baked-in ENTER in parable-intro.mp4 */
+.enterZone {
+  --enter-bottom: 10vh;
+  --enter-width: 280px;
+  --enter-height: 68px;
+
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.enter {
+  position: absolute;
+  left: 50%;
+  bottom: var(--enter-bottom);
+  transform: translateX(-50%);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--enter-width);
+  height: var(--enter-height);
+  padding: 0 12px;
+  border: 2px solid #00f2fe;
+  border-radius: 8px;
+  background-color: #061218;
+  background-image: linear-gradient(
+    180deg,
+    rgba(0, 242, 254, 0.14) 0%,
+    #061218 55%,
+    #040c12 100%
+  );
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-indent: 0;
+  cursor: pointer;
+  overflow: hidden;
+  pointer-events: auto;
+  backdrop-filter: none;
+  box-shadow:
+    0 0 20px rgba(0, 242, 254, 0.45),
+    inset 0 0 18px rgba(0, 242, 254, 0.08);
+  transition:
+    transform 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease;
+  animation: enterReveal 1.2s ease both;
+}
+
+/* Opaque bleed hides the video’s baked-in button edges/glow */
+.enter::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  z-index: -1;
+  border-radius: 10px;
+  background: #020406;
+  pointer-events: none;
+}
+
+.enterLabel {
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+.enter:disabled {
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.enter:hover:not(:disabled) {
+  transform: translateX(-50%) translateY(-3px);
+  background-image: linear-gradient(
+    180deg,
+    rgba(0, 242, 254, 0.22) 0%,
+    #081a22 55%,
+    #061218 100%
+  );
+  box-shadow:
+    0 0 28px rgba(0, 242, 254, 0.65),
+    inset 0 0 22px rgba(0, 242, 254, 0.12);
+}
+
+.footer {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  right: 1rem;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.35em;
+  color: rgba(255, 255, 255, 0.25);
+  pointer-events: auto;
+}
+
+@media (min-width: 640px) {
+  .footer {
+    justify-content: space-between;
+  }
+}
+
+@keyframes enterReveal {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .enterZone {
+    --enter-bottom: 9vh;
+    --enter-width: min(78vw, 268px);
+    --enter-height: 62px;
+  }
+
+  .enter {
+    font-size: 0.95rem;
+    letter-spacing: 0.1em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .video {
+    display: none;
+  }
+
+  .intro {
+    background:
+      radial-gradient(circle at center, rgba(0, 242, 254, 0.16), transparent 34%),
+      linear-gradient(180deg, #020406 0%, #0b0e11 48%, #020406 100%);
+  }
+
+  .enter {
+    animation: none !important;
+  }
+}

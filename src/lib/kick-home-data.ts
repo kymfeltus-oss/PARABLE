@@ -1,3 +1,4 @@
+import { streamThumbnailImage } from "@/lib/kick-discovery-media";
 import type { StreamerProfileRecord } from "@/lib/streamers-types";
 import { formatViewerCount } from "@/lib/streamers-types";
 
@@ -17,56 +18,56 @@ export const KICK_LIVE_CATEGORIES: KickCategoryItem[] = [
   {
     id: "worship",
     title: "Worship",
-    watching: "3.8K",
+    watching: "186K",
     href: "/music-hub",
     gradient: "linear-gradient(160deg, #0d1f24 0%, #0b0e11 55%, #00f2fe18 100%)",
   },
   {
     id: "prayer",
     title: "Prayer",
-    watching: "2.1K",
-    href: "/watch/lr2",
+    watching: "142K",
+    href: "/sanctuary",
     gradient: "linear-gradient(160deg, #121f2e 0%, #0b0e11 55%, #00f2fe12 100%)",
   },
   {
     id: "testimonies",
     title: "Stories",
-    watching: "1.6K",
+    watching: "98K",
     href: "/sanctuary",
     gradient: "linear-gradient(160deg, #1f1a2e 0%, #0b0e11 55%, #00f2fe16 100%)",
   },
   {
     id: "study",
     title: "Bible study",
-    watching: "1.3K",
+    watching: "76K",
     href: "/table",
     gradient: "linear-gradient(160deg, #2e281a 0%, #0b0e11 55%, #00f2fe14 100%)",
   },
   {
     id: "revival",
     title: "Revival",
-    watching: "4.2K",
-    href: "/watch/lr4",
+    watching: "214K",
+    href: "/browse",
     gradient: "linear-gradient(160deg, #2e1a1a 0%, #0b0e11 55%, #00f2fe20 100%)",
   },
   {
     id: "gaming",
     title: "Faith gaming",
-    watching: "2.7K",
+    watching: "128K",
     href: "/gaming",
     gradient: "linear-gradient(160deg, #1a1a2e 0%, #0b0e11 55%, #00f2fe18 100%)",
   },
   {
     id: "irl",
     title: "IRL",
-    watching: "1.9K",
+    watching: "91K",
     href: "/browse",
     gradient: "linear-gradient(160deg, #2e241a 0%, #0b0e11 55%, #00f2fe10 100%)",
   },
   {
     id: "music",
     title: "Music",
-    watching: "2.4K",
+    watching: "156K",
     href: "/music-hub",
     gradient: "linear-gradient(160deg, #1a2e2e 0%, #0b0e11 55%, #00f2fe16 100%)",
   },
@@ -81,6 +82,7 @@ export type KickStreamCardData = {
   isLive: boolean;
   profilePicture: string;
   thumbnailGradient: string;
+  thumbnailUrl: string;
 };
 
 const THUMB_GRADIENTS = [
@@ -107,6 +109,7 @@ export function streamerToCardData(row: StreamerProfileRecord): KickStreamCardDa
     isLive,
     profilePicture: row.profilePicture,
     thumbnailGradient: thumbGradientForId(row.id),
+    thumbnailUrl: streamThumbnailImage(row.id),
   };
 }
 

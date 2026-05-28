@@ -5,6 +5,7 @@ import "@livekit/components-styles";
 import { LiveKitRoom } from "@livekit/components-react";
 import type { RoomOptions } from "livekit-client";
 import LiveRoomStage from "@/components/livekit/LiveRoomStage";
+import BroadcastRoomTelemetry from "@/components/kick-home/BroadcastRoomTelemetry";
 
 type LiveStudioBroadcastProps = {
   token: string;
@@ -46,6 +47,7 @@ export default function LiveStudioBroadcast({
       className="absolute inset-0 relative z-0 h-full w-full min-h-0 min-w-0"
     >
       <LiveRoomStage camOn={camOn} micOn={micOn} onError={onMediaError} />
+      <BroadcastRoomTelemetry />
       <div className="absolute top-2 left-2 z-10 pointer-events-none rounded-sm border border-white/10 bg-black/55 px-2 py-1 backdrop-blur-sm">
         <p className="text-[9px] font-black uppercase tracking-[4px] text-[#00f2ff]/90">Live</p>
         <p className="text-[10px] font-bold italic text-white/70">{roomName}</p>

@@ -9,28 +9,38 @@ export type StreamChatMessage = {
   user: string;
   text: string;
   avatarUrl?: string;
-  /** Synthetic demo line — not from `stream_chat_messages`. */
   simulated?: boolean;
 };
 
 type UseStreamChatOptions = {
   streamKey: string | null | undefined;
   senderDisplayName?: string;
+  /** Creator hub: enables pin + clear display queue. */
+  variant?: "viewer" | "creator";
 };
 
-export function useStreamChat({ streamKey, senderDisplayName = "You" }: UseStreamChatOptions) {
+export function useStreamChat({
+  streamKey,
+  senderDisplayName = "You",
+  variant = "viewer",
+}: UseStreamChatOptions) {
   const [chatMessages, setChatMessages] = useState<StreamChatMessage[]>([]);
+  const [displayCleared, setDisplayCleared] = useState(false);
+  const [pinnedMessageId, setPinnedMessageId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [chatError, setChatError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
   const roomId = useMemo(() => resolveStreamChatRoomId(streamKey), [streamKey]);
   const chatEnabled = Boolean(roomId);
+  const isCreatorVariant = variant === "creator";
 
   useEffect(() => {
     if (!roomId) {
       setChatMessages([]);
       setChatError(null);
+      setDisplayCleared(false);
+      setPinnedMessageId(null);
       return;
     }
 
@@ -65,6 +75,7 @@ export function useStreamChat({ streamKey, senderDisplayName = "You" }: UseStrea
           text: row.body,
         })),
       );
+      setDisplayCleared(false);
     }
 
     void fetchChatHistory();
@@ -97,6 +108,7 @@ export function useStreamChat({ streamKey, senderDisplayName = "You" }: UseStrea
             if (prev.some((m) => m.id === incoming.id)) return prev;
             return [...prev, incoming];
           });
+          setDisplayCleared(false);
         },
       )
       .subscribe();
@@ -106,6 +118,15 @@ export function useStreamChat({ streamKey, senderDisplayName = "You" }: UseStrea
       void supabase.removeChannel(chatChannel);
     };
   }, [roomId]);
+
+  const pinMessage = useCallback((messageId: string) => {
+    setPinnedMessageId((prev) => (prev === messageId ? null : messageId));
+  }, []);
+
+  const clearChatDisplay = useCallback(() => {
+    setDisplayCleared(true);
+    setPinnedMessageId(null);
+  }, []);
 
   const sendChatMessage = useCallback(
     async (e: React.FormEvent) => {
@@ -152,14 +173,30 @@ export function useStreamChat({ streamKey, senderDisplayName = "You" }: UseStrea
     [newMessage, roomId, senderDisplayName],
   );
 
+  const visibleMessages = useMemo(() => {
+    if (displayCleared) return [];
+    return chatMessages;
+  }, [chatMessages, displayCleared]);
+
+  const pinnedMessage = useMemo(() => {
+    if (!pinnedMessageId) return null;
+    return chatMessages.find((m) => m.id === pinnedMessageId) ?? null;
+  }, [chatMessages, pinnedMessageId]);
+
   return {
     roomId,
     chatEnabled,
-    chatMessages,
+    chatMessages: visibleMessages,
+    pinnedMessage,
+    pinnedMessageId,
     newMessage,
     setNewMessage,
     chatError,
     sending,
     sendChatMessage,
+    isCreatorVariant,
+    pinMessage,
+    clearChatDisplay,
+    displayCleared,
   };
 }

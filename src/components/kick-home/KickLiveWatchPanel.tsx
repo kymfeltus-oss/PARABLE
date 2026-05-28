@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import KickStreamMetaBar from "@/components/kick-home/KickStreamMetaBar";
-import KickStreamPlayerChrome from "@/components/kick-home/KickStreamPlayerChrome";
 import GiftOverlayCanvas from "@/components/GiftOverlayCanvas";
 
 export type KickLiveWatchPanelProps = {
@@ -46,7 +45,7 @@ export default function KickLiveWatchPanel({
 }: KickLiveWatchPanelProps) {
   return (
     <div className="overflow-hidden rounded-none border-0 bg-black sm:rounded-lg">
-      <div className="relative aspect-video w-full bg-black">
+      <div className="relative aspect-video w-full bg-black" data-watch-player-root>
         <GiftOverlayCanvas streamId={streamId} enabled />
         {loadingVideo ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 text-sm text-slate-400">
@@ -60,7 +59,6 @@ export default function KickLiveWatchPanel({
         ) : (
           videoSlot
         )}
-        <KickStreamPlayerChrome isLive />
       </div>
 
       <KickStreamMetaBar

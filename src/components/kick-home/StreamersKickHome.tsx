@@ -10,6 +10,7 @@ import CategoryCard from "@/components/kick-home/CategoryCard";
 import StreamCard from "@/components/kick-home/StreamCard";
 import ParableLiveWorkspaceLayout from "@/components/kick-home/ParableLiveWorkspaceLayout";
 import ParableLiveChatRail, { ParableLiveChatMobile } from "@/components/kick-home/ParableLiveChatRail";
+import { useCategoryActivitySimulation } from "@/hooks/useCategoryActivitySimulation";
 import { KICK_LIVE_CATEGORIES, streamerToCardData, type KickStreamCardData } from "@/lib/kick-home-data";
 import {
   streamerToKickChannel,
@@ -19,10 +20,18 @@ import {
 } from "@/lib/streamers-types";
 import { useLiveSimulation } from "@/hooks/useLiveSimulation";
 import {
+  getAllStreamersDemoRecords,
   STREAMERS_DISCOVERY_GRID_IDS,
   STREAMERS_LIVE_RAIL_SLOTS,
 } from "@/lib/streamers-demo-simulation";
 import { useStreamersUiStore } from "@/stores/streamers-ui-store";
+import { useStreamWorkspaceMode } from "@/hooks/useStreamWorkspaceMode";
+import { useLiveBroadcastStore } from "@/stores/live-broadcast-store";
+import CreatorCommandStrip from "@/components/kick-home/CreatorCommandStrip";
+
+function initialDemoStreamers(): StreamerProfileRecord[] {
+  return getAllStreamersDemoRecords();
+}
 
 export default function StreamersKickHome() {
   const router = useRouter();
@@ -30,18 +39,30 @@ export default function StreamersKickHome() {
   const toggleSidebar = useStreamersUiStore((s) => s.toggleSidebar);
   const toggleChat = useStreamersUiStore((s) => s.toggleChat);
 
-  const [streamers, setStreamers] = useState<StreamerProfileRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [streamers, setStreamers] = useState<StreamerProfileRecord[]>(initialDemoStreamers);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
+  const [activeChannelId, setActiveChannelId] = useState<string | null>(
+    () => initialDemoStreamers()[0]?.id ?? null,
+  );
 
   const displayName = userProfile?.username || userProfile?.full_name || "Guest";
+  const observerId = userProfile?.id ?? null;
+  const { isCreatorHub } = useStreamWorkspaceMode({
+    channelId: activeChannelId,
+    userId: observerId,
+  });
+  const liveViewerCount = useLiveBroadcastStore((s) => s.viewerCount);
+  const isPublishing = useLiveBroadcastStore((s) => s.isPublishing);
+  const chatVariant = isCreatorHub ? "creator" : "viewer";
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadStreamers() {
-      setIsLoading(true);
+      setIsRefreshing(true);
+      setLoadError(null);
       try {
         const res = await fetch("/api/streamers");
         const data = (await res.json()) as StreamersApiResponse | StreamersApiErrorResponse;
@@ -49,14 +70,23 @@ export default function StreamersKickHome() {
           throw new Error("error" in data ? data.error : "Failed to load streamers");
         }
         if (!cancelled) {
-          setStreamers(data.streamers);
-          setActiveChannelId(data.streamers[0]?.id ?? null);
+          const rows =
+            data.streamers.length > 0 ? data.streamers : getAllStreamersDemoRecords();
+          setStreamers(rows);
+          setActiveChannelId((prev) =>
+            rows.some((r) => r.id === prev) ? prev : (rows[0]?.id ?? null),
+          );
         }
       } catch (err) {
         console.error("Streamers discovery fetch failed", err);
-        if (!cancelled) setStreamers([]);
+        if (!cancelled) {
+          const fallback = getAllStreamersDemoRecords();
+          setStreamers(fallback);
+          setActiveChannelId(fallback[0]?.id ?? null);
+          setLoadError("Showing demo live channels while discovery reconnects.");
+        }
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) setIsRefreshing(false);
       }
     }
 
@@ -67,6 +97,19 @@ export default function StreamersKickHome() {
   }, []);
 
   const simulatedStreamers = useLiveSimulation(streamers);
+  const liveCategories = useCategoryActivitySimulation(KICK_LIVE_CATEGORIES);
+
+  const platformLiveLabel = useMemo(() => {
+    if (isPublishing && liveViewerCount > 0) {
+      return `${liveViewerCount.toLocaleString()} in your live room`;
+    }
+    const total = simulatedStreamers
+      .filter((s) => s.status === "live")
+      .reduce((sum, s) => sum + s.currentViewers, 0);
+    if (total >= 1_000_000) return `${(total / 1_000_000).toFixed(1)}M+ watching live`;
+    if (total >= 1000) return `${Math.round(total / 1000)}K+ watching live`;
+    return `${total.toLocaleString()}+ watching live`;
+  }, [isPublishing, liveViewerCount, simulatedStreamers]);
 
   const liveRail = useMemo(() => {
     const byId = new Map(simulatedStreamers.map((row) => [row.id, row]));
@@ -82,16 +125,24 @@ export default function StreamersKickHome() {
 
   const allStreams = useMemo((): KickStreamCardData[] => {
     const byId = new Map(simulatedStreamers.map((row) => [row.id, streamerToCardData(row)]));
+    const seen = new Set<string>();
     const ordered: KickStreamCardData[] = [];
+
+    const pushUnique = (card: KickStreamCardData | undefined) => {
+      if (!card || seen.has(card.id)) return;
+      seen.add(card.id);
+      ordered.push(card);
+    };
+
     for (const id of STREAMERS_DISCOVERY_GRID_IDS) {
-      const card = byId.get(id);
-      if (card) ordered.push(card);
+      pushUnique(byId.get(id));
     }
     for (const row of simulatedStreamers) {
       if (!STREAMERS_DISCOVERY_GRID_IDS.includes(row.id)) {
-        ordered.push(streamerToCardData(row));
+        pushUnique(streamerToCardData(row));
       }
     }
+
     return ordered;
   }, [simulatedStreamers]);
 
@@ -113,11 +164,28 @@ export default function StreamersKickHome() {
 
   const goWatch = (id: string) => router.push(`/watch/${id}`);
   const searchActive = query.trim().length > 0;
-  const showEmptySearch = !isLoading && searchActive && filteredStreams.length === 0;
+  const showEmptySearch = searchActive && filteredStreams.length === 0;
+  const showStreamSkeleton = streamers.length === 0 && isRefreshing;
 
   const centerContent = (
     <div className="min-w-0 space-y-8 p-4 pb-6 sm:p-6">
-      <KickHeroCarousel slides={featuredSlides} onWatch={goWatch} />
+      {loadError ? (
+        <p className="rounded-lg border border-[#00f2fe]/25 bg-[#00f2fe]/10 px-3 py-2 text-center text-xs text-[#94a3b8]">
+          {loadError}
+        </p>
+      ) : null}
+      <div className="relative min-w-0">
+        <KickHeroCarousel slides={featuredSlides} onWatch={goWatch} />
+        {isPublishing ? <CreatorCommandStrip /> : null}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#00f2fe]/20 bg-[#00f2fe]/5 px-3 py-2">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
+        <span className="text-xs font-bold uppercase tracking-widest text-[#00f2fe]">
+          {platformLiveLabel}
+        </span>
+        <span className="text-[10px] text-[#64748b]">· Fellowship-wide live pulse</span>
+      </div>
 
       <section>
         <div className="mb-4 flex items-center justify-between gap-3">
@@ -131,7 +199,7 @@ export default function StreamersKickHome() {
           </button>
         </div>
         <div className="grid min-w-0 grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 md:grid-cols-3 md:gap-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-6 3xl:grid-cols-8">
-          {KICK_LIVE_CATEGORIES.map((cat) => (
+          {liveCategories.map((cat) => (
             <CategoryCard key={cat.id} category={cat} />
           ))}
         </div>
@@ -140,9 +208,12 @@ export default function StreamersKickHome() {
       <section>
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-lg font-black tracking-tight text-white sm:text-xl">Recommended Streams</h2>
-          <span className="text-xs tabular-nums text-[#64748b]">{filteredStreams.length} channels</span>
+          <span className="text-xs tabular-nums text-[#64748b]">
+            {filteredStreams.length} live now
+            {isRefreshing ? " · updating…" : ""}
+          </span>
         </div>
-        {isLoading ? (
+        {showStreamSkeleton ? (
           <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-6 3xl:grid-cols-8">
             {Array.from({ length: 8 }, (_, i) => (
               <div
@@ -178,6 +249,7 @@ export default function StreamersKickHome() {
           streamKey={activeChannelId}
           streamLabel={activeChatLabel}
           senderDisplayName={displayName}
+          variant={chatVariant}
         />
       </div>
     </div>
@@ -198,7 +270,7 @@ export default function StreamersKickHome() {
           <KickRecommendedSidebar
             channels={liveRail}
             activeChannelId={activeChannelId}
-            isLoading={isLoading}
+            isLoading={showStreamSkeleton}
             onSelectChannel={(id) => {
               setActiveChannelId(id);
               router.push(`/watch/${id}`);
@@ -211,6 +283,7 @@ export default function StreamersKickHome() {
             streamKey={activeChannelId}
             streamLabel={activeChatLabel}
             senderDisplayName={displayName}
+            variant={chatVariant}
           />
         }
       />

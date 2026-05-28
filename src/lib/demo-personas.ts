@@ -1,4 +1,8 @@
 import type { SanctuaryLayoutData, SanctuaryPost, SanctuaryProfile } from "@/app/my-sanctuary/actions";
+import {
+  demoStreamMp4ForChannel,
+  streamThumbnailPhoto,
+} from "@/lib/black-church-demo-media";
 
 /** Stable UUIDs shared with optional `supabase/seed-demo-personas.sql`. */
 export const DEMO_PERSONA_IDS = {
@@ -10,9 +14,6 @@ export const DEMO_PERSONA_IDS = {
 } as const;
 
 export type DemoPersonaUsername = keyof typeof DEMO_PERSONA_IDS;
-
-const SAMPLE_VIDEO =
-  "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
 
 export type DemoPersona = {
   id: string;
@@ -43,10 +44,6 @@ function avatarUrl(username: DemoPersonaUsername): string {
 
 export const DEMO_AVATAR_FALLBACK = "/demo/avatars/default.svg";
 
-function picsum(seed: string, w = 800, h = 600): string {
-  return `https://picsum.photos/seed/${seed}/${w}/${h}`;
-}
-
 function demoPost(
   username: DemoPersonaUsername,
   n: number,
@@ -60,8 +57,8 @@ function demoPost(
 ): SanctuaryPost {
   const media =
     opts.video || opts.media_type === "video"
-      ? SAMPLE_VIDEO
-      : picsum(`parable-${username}-${n}`, 800, 600);
+      ? demoStreamMp4ForChannel(username)
+      : streamThumbnailPhoto(username, 800, 600);
   return {
     id: `demo-post-${username}-${n}`,
     media_url: media,
@@ -392,7 +389,7 @@ export function createDemoHomeFeedPosts(): DemoHomeFeedPost[] {
       role: james.role,
       is_verified: james.is_verified,
       caption: p1.content ?? "",
-      media_url: p1.media_url ?? picsum("parable-pastor-feed", 800, 600),
+      media_url: p1.media_url ?? streamThumbnailPhoto("pastor_james", 800, 600),
       post_type: "image",
       likes: p1.likesCount,
       comments: p1.commentsCount,
@@ -408,7 +405,7 @@ export function createDemoHomeFeedPosts(): DemoHomeFeedPost[] {
       role: gamer.role,
       is_verified: gamer.is_verified,
       caption: p2.content ?? "",
-      media_url: p2.media_url ?? SAMPLE_VIDEO,
+      media_url: p2.media_url ?? demoStreamMp4ForChannel("kingdom_gamer"),
       post_type: "video",
       likes: p2.likesCount,
       comments: p2.commentsCount,
@@ -427,7 +424,7 @@ export function createDemoHomeEvents(): DemoHomeEvent[] {
       title: "Global Prophetic Summit 2026",
       description:
         "Immersive online live event with session token validation. Full AV processing and digital download materials included.",
-      cover_image: picsum("parable-summit", 600, 280),
+      cover_image: streamThumbnailPhoto("pastor_james", 600, 280),
       scheduled_for: "Tonight @ 7:30 PM CST",
       ticket_price: 25,
       requires_registration: true,
@@ -439,7 +436,7 @@ export function createDemoHomeEvents(): DemoHomeEvent[] {
       title: "Interactive Ministry Masterclass",
       description:
         "Strategy roundtable on media integration workflows and broadcast distribution for ministries.",
-      cover_image: picsum("parable-masterclass", 600, 280),
+      cover_image: streamThumbnailPhoto("gospel_vibe", 600, 280),
       scheduled_for: "May 28th @ 6:00 PM",
       ticket_price: 0,
       requires_registration: true,
@@ -497,7 +494,7 @@ export function createDemoStoryGroups(): import("@/lib/sanctuary-stories/types")
       stories: [
         {
           id: `demo-story-${username}-1`,
-          mediaUrl: picsum(`parable-story-${username}`, 1080, 1920),
+          mediaUrl: streamThumbnailPhoto(username, 1080, 1920),
           mediaType: "image" as const,
           createdAt: new Date(Date.now() - 3_600_000).toISOString(),
           viewed: false,

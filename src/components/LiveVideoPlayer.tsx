@@ -10,22 +10,22 @@ import {
 } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import { getLiveKitClientUrl } from "@/lib/livekit-env";
+import BroadcastRoomTelemetry from "@/components/kick-home/BroadcastRoomTelemetry";
+import { KickStreamPlayerChromeLiveKit } from "@/components/kick-home/KickStreamPlayerChrome";
 
 export type LiveVideoPlayerProps = {
-  /** Stream room identifier (e.g. unified room name from `unifiedStreamRoomName`). */
   roomName?: string;
-  /** JWT from `/api/livekit/token` (publisher) or `/api/livekit/get-token` / `viewer-token` (viewer). */
   token: string;
-  /** LiveKit edge URL (`wss://…`). Falls back to `NEXT_PUBLIC_LIVEKIT_URL`. */
   serverUrl?: string;
   className?: string;
   onDisconnected?: () => void;
   onError?: (message: string) => void;
+  /** Render wired player chrome inside the LiveKit room. */
+  showChrome?: boolean;
+  /** Sync creator telemetry when publishing from studio. */
+  syncBroadcastTelemetry?: boolean;
 };
 
-/**
- * Subscribe-only LiveKit viewer — renders host camera or screen share from OBS/browser ingest.
- */
 export default function LiveVideoPlayer({
   roomName,
   token,
@@ -33,6 +33,8 @@ export default function LiveVideoPlayer({
   className,
   onDisconnected,
   onError,
+  showChrome = true,
+  syncBroadcastTelemetry = false,
 }: LiveVideoPlayerProps) {
   if (!token) {
     return (
@@ -44,7 +46,7 @@ export default function LiveVideoPlayer({
           .filter(Boolean)
           .join(" ")}
       >
-        <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-[#00f2ff] border-t-transparent" />
+        <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-[#00f2fe] border-t-transparent" />
         <p className="text-sm">Connecting to media edge server…</p>
         {roomName ? (
           <p className="mt-1 font-mono text-[10px] text-zinc-600">room: {roomName}</p>
@@ -71,6 +73,10 @@ export default function LiveVideoPlayer({
     >
       <ActiveStreamRenderer roomName={roomName} />
       <RoomAudioRenderer />
+      {syncBroadcastTelemetry ? <BroadcastRoomTelemetry /> : null}
+      {showChrome ? (
+        <KickStreamPlayerChromeLiveKit isLive engine="livekit" />
+      ) : null}
     </LiveKitRoom>
   );
 }

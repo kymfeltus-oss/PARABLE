@@ -23,7 +23,7 @@ export default function ParableLiveWorkspaceLayout({
   return (
     <div
       data-testid="stream-workspace"
-      className="flex h-[100dvh] min-h-0 w-full flex-col overflow-hidden bg-[#0b0e11] font-inter text-[#e2e8f0] selection:bg-[#00f2fe]/30"
+      className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-[#0b0e11] font-inter text-[#e2e8f0] selection:bg-[#00f2fe]/30"
     >
       {topNav}
       <div className="flex min-h-0 flex-1 pt-14">

@@ -1,13 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import LiveVideoPlayer from "@/components/LiveVideoPlayer";
 import KickLiveWatchPanel from "@/components/kick-home/KickLiveWatchPanel";
+import ParableHeroVideo from "@/components/kick-home/ParableHeroVideo";
+import KickStreamPlayerChrome from "@/components/kick-home/KickStreamPlayerChrome";
+import CreatorCommandStrip from "@/components/kick-home/CreatorCommandStrip";
 import InstagramProfileView from "@/components/profile/InstagramProfileView";
 import StreamersHubLiveChat from "@/components/streamers/StreamersHubLiveChat";
 import { useAuth } from "@/hooks/useAuth";
+import { useStreamWorkspaceMode } from "@/hooks/useStreamWorkspaceMode";
+import { demoStreamMp4ForChannel } from "@/lib/demo-hls-stream";
+import { useLiveBroadcastStore } from "@/stores/live-broadcast-store";
 import {
   DEMO_AVATAR_FALLBACK,
   demoAvatarPath,
@@ -113,6 +119,13 @@ export default function UnifiedHybridProfileClient({
   const unifiedRoomName = streamId ? unifiedStreamRoomName(streamId) : "";
   const liveKitClientUrl = getLiveKitClientUrl();
   const observerId = userProfile?.id ?? viewerUserId;
+  const demoVideoRef = useRef<HTMLVideoElement>(null);
+  const { isCreatorHub } = useStreamWorkspaceMode({
+    channelId: streamId,
+    userId: observerId,
+  });
+  const liveRoomCount = useLiveBroadcastStore((s) => s.viewerCount);
+  const chatVariant = isCreatorHub ? "creator" : "viewer";
 
   const loadProfileData = useCallback(async () => {
     setLoading(true);
@@ -315,6 +328,37 @@ export default function UnifiedHybridProfileClient({
   }
 
   const showKickLive = creator.is_live && viewMode === "gamer";
+  const displayViewerCount =
+    isCreatorHub && liveRoomCount > 0 ? liveRoomCount : creator.viewer_count;
+  const useDemoTheatrePlayer = Boolean(
+    creator.is_live && !lkToken && getDemoPersonaById(streamId),
+  );
+
+  const videoSlot = lkToken ? (
+    <LiveVideoPlayer
+      roomName={unifiedRoomName}
+      token={lkToken}
+      serverUrl={liveKitClientUrl}
+      className="h-full w-full"
+      showChrome
+      syncBroadcastTelemetry={isCreatorHub}
+    />
+  ) : useDemoTheatrePlayer ? (
+    <>
+      <ParableHeroVideo
+        streamUrl={demoStreamMp4ForChannel(streamId)}
+        mp4FallbackUrl={demoStreamMp4ForChannel(streamId)}
+        className="absolute inset-0 h-full w-full"
+        videoRef={demoVideoRef}
+      />
+      <KickStreamPlayerChrome
+        engine="html5"
+        videoRef={demoVideoRef}
+        isLive
+        playerRootSelector="[data-watch-player-root]"
+      />
+    </>
+  ) : null;
 
   return (
     <div className="flex min-h-screen select-none flex-col bg-[#0B0E11] font-inter text-[#E2E8F0]">
@@ -342,33 +386,25 @@ export default function UnifiedHybridProfileClient({
       <div className="mx-auto w-full max-w-6xl flex-1 space-y-6 overflow-y-auto p-6">
         {showKickLive ? (
           <div className="grid items-start gap-4 lg:grid-cols-4">
-            <div className="space-y-0 lg:col-span-3">
+            <div className="relative min-w-0 space-y-0 lg:col-span-3">
               <KickLiveWatchPanel
                 streamId={creator.id}
                 username={creator.username}
                 avatarUrl={creator.avatar_url}
                 streamTitle={creator.stream_title}
                 tags={buildStreamTags(creator)}
-                viewerCount={creator.viewer_count}
+                viewerCount={displayViewerCount}
                 isFollowing={isFollowing}
                 followBusy={followBusy}
                 giftBusy={sendingGiftSku !== null}
                 onFollow={() => void toggleFollowRelationship()}
                 onGiftSubs={() => void sendVirtualGift("gift_applause")}
                 onSubscribe={() => alert("Subscriptions coming soon.")}
-                loadingVideo={!lkToken && !tokenError}
-                videoError={tokenError}
-                videoSlot={
-                  lkToken ? (
-                    <LiveVideoPlayer
-                      roomName={unifiedRoomName}
-                      token={lkToken}
-                      serverUrl={liveKitClientUrl}
-                      className="h-full w-full"
-                    />
-                  ) : null
-                }
+                loadingVideo={!lkToken && !useDemoTheatrePlayer && !tokenError}
+                videoError={tokenError && !useDemoTheatrePlayer ? tokenError : null}
+                videoSlot={videoSlot}
               />
+              {isCreatorHub ? <CreatorCommandStrip className="!top-14" /> : null}
               <p className="px-4 py-2 text-center text-[10px] text-slate-500">
                 {followerCount.toLocaleString()} followers · unified via user_follows
               </p>
@@ -379,6 +415,7 @@ export default function UnifiedHybridProfileClient({
                 streamKey={creator.id}
                 streamLabel={creator.username}
                 senderDisplayName={userProfile?.username ?? "You"}
+                variant={chatVariant}
                 fillHeight
                 showHeader
               />

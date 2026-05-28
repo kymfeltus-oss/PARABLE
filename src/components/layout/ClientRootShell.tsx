@@ -71,7 +71,7 @@ export default function ClientRootShell({
     if (fullBleed) {
       return (
         <div
-          className="flex h-full min-h-screen w-full min-w-0 flex-1 flex-col overflow-hidden"
+          className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden"
           data-parable-streaming-shell
         >
           {children}
