@@ -29,6 +29,7 @@ import {
 } from "@/lib/user-follows";
 import type { InstagramMediaItem, InstagramProfileData } from "@/lib/profile/instagram-profile-data";
 import { createClient } from "@/utils/supabase/client";
+import { WORSHIP_GIFT_OPTIONS } from "@/lib/worship-reactions";
 import type { StreamProfileRow } from "@/components/StreamWorkspaceClient";
 
 export type CreatorProfile = {
@@ -51,11 +52,7 @@ type UnifiedHybridProfileClientProps = {
 const PROFILE_SELECT =
   "id, username, display_name, full_name, avatar_url, is_live, role, bio";
 
-const GIFT_OPTIONS = [
-  { sku: "gift_applause", label: "Applause 👏", cost: "50c" },
-  { sku: "gift_controller", label: "Arcade 🎮", cost: "200c" },
-  { sku: "gift_trophy", label: "Trophy 🏆", cost: "1000c" },
-] as const;
+const GIFT_OPTIONS = WORSHIP_GIFT_OPTIONS;
 
 function mapProfileRow(row: StreamProfileRow & { role?: string | null; bio?: string | null }): CreatorProfile {
   const demo = getDemoPersonaById(row.id);
@@ -398,7 +395,7 @@ export default function UnifiedHybridProfileClient({
                 followBusy={followBusy}
                 giftBusy={sendingGiftSku !== null}
                 onFollow={() => void toggleFollowRelationship()}
-                onGiftSubs={() => void sendVirtualGift("gift_applause")}
+                onGiftSubs={() => void sendVirtualGift("gift_clap")}
                 onSubscribe={() => alert("Subscriptions coming soon.")}
                 loadingVideo={!lkToken && !useDemoTheatrePlayer && !tokenError}
                 videoError={tokenError && !useDemoTheatrePlayer ? tokenError : null}

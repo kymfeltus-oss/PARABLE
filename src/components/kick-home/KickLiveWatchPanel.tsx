@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import KickStreamMetaBar from "@/components/kick-home/KickStreamMetaBar";
 import GiftOverlayCanvas from "@/components/GiftOverlayCanvas";
+import WorshipReactionHud from "@/components/kick-home/WorshipReactionHud";
+import type { WorshipReactionKind } from "@/lib/worship-reactions";
 
 export type KickLiveWatchPanelProps = {
   streamId: string;
@@ -18,6 +20,7 @@ export type KickLiveWatchPanelProps = {
   giftBusy?: boolean;
   onFollow: () => void;
   onGiftSubs: () => void;
+  onWorshipReaction?: (kind: WorshipReactionKind) => void;
   onSubscribe?: () => void;
   videoSlot: ReactNode;
   loadingVideo?: boolean;
@@ -38,6 +41,7 @@ export default function KickLiveWatchPanel({
   giftBusy,
   onFollow,
   onGiftSubs,
+  onWorshipReaction,
   onSubscribe,
   videoSlot,
   loadingVideo,
@@ -59,6 +63,9 @@ export default function KickLiveWatchPanel({
         ) : (
           videoSlot
         )}
+        {onWorshipReaction ? (
+          <WorshipReactionHud onReaction={onWorshipReaction} disabled={giftBusy} />
+        ) : null}
       </div>
 
       <KickStreamMetaBar

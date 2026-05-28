@@ -2,7 +2,17 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { AMEN_REACTION_EVENT, streamInteractionChannelName } from '@/lib/stream-interactions';
+import {
+  AMEN_WORSHIP_EMOJIS,
+  emojiForGiftSku,
+  emojiForReactionKind,
+  type WorshipReactionKind,
+} from '@/lib/worship-reactions';
+import {
+  AMEN_REACTION_EVENT,
+  WORSHIP_REACTION_EVENT,
+  streamInteractionChannelName,
+} from '@/lib/stream-interactions';
 
 interface FloatingParticle {
   id: string;
@@ -14,12 +24,6 @@ interface FloatingParticle {
   opacity: number;
 }
 
-const GIFT_EMOJI_MAP: Record<string, string> = {
-  gift_applause: '👏',
-  gift_controller: '🎮',
-  gift_trophy: '🏆',
-};
-
 const PARTICLE_BURST_COUNT = 12;
 
 const AMEN_WAVE_COUNT = 8;
@@ -27,7 +31,7 @@ const AMEN_WAVE_COUNT = 8;
 function spawnAmenWave(): FloatingParticle[] {
   return Array.from({ length: AMEN_WAVE_COUNT }, () => ({
     id: crypto.randomUUID(),
-    emoji: '🙏',
+    emoji: AMEN_WORSHIP_EMOJIS[Math.floor(Math.random() * AMEN_WORSHIP_EMOJIS.length)]!,
     x: 10 + Math.random() * 80,
     y: 90,
     scale: 1.2 + Math.random() * 1.8,
@@ -40,7 +44,7 @@ function spawnParticleBurst(emoji: string): FloatingParticle[] {
   return Array.from({ length: PARTICLE_BURST_COUNT }, () => ({
     id: crypto.randomUUID(),
     emoji,
-    x: 20 + Math.random() * 60,
+    x: 28 + Math.random() * 44,
     y: 100,
     scale: 1 + Math.random() * 1.5,
     speed: 2 + Math.random() * 4,
@@ -83,7 +87,7 @@ export default function GiftOverlayCanvas({ streamId, enabled }: GiftOverlayCanv
             .eq('id', giftId)
             .maybeSingle();
 
-          const targetEmoji = GIFT_EMOJI_MAP[gift?.sku ?? ''] ?? '✨';
+          const targetEmoji = emojiForGiftSku(gift?.sku);
           setParticles((prev) => [...prev, ...spawnParticleBurst(targetEmoji)]);
         },
       )
@@ -102,6 +106,21 @@ export default function GiftOverlayCanvas({ streamId, enabled }: GiftOverlayCanv
       .on('broadcast', { event: AMEN_REACTION_EVENT }, () => {
         setParticles((prev) => [...prev, ...spawnAmenWave()]);
       })
+      .on(
+        'broadcast',
+        { event: WORSHIP_REACTION_EVENT },
+        ({ payload }) => {
+          const p = payload as { kind?: WorshipReactionKind; emoji?: string } | undefined;
+          const emoji =
+            p?.emoji ??
+            (p?.kind ? emojiForReactionKind(p.kind) : "✨");
+          if (p?.kind === "amen") {
+            setParticles((prev) => [...prev, ...spawnAmenWave()]);
+            return;
+          }
+          setParticles((prev) => [...prev, ...spawnParticleBurst(emoji)]);
+        },
+      )
       .subscribe();
 
     return () => {

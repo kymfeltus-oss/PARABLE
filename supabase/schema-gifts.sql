@@ -39,10 +39,22 @@ create policy "stream_gifts_public_read"
 
 insert into public.gift_catalog (name, sku, coin_cost, animation_manifest)
 values
+  ('Amen', 'gift_amen', 25, '{"particles":"🙏","speed":"normal","scale":1}'::jsonb),
+  ('Praise', 'gift_praise', 40, '{"particles":"🙌","speed":"normal","scale":1.1}'::jsonb),
+  ('Clap', 'gift_clap', 50, '{"particles":"👏","speed":"normal","scale":1}'::jsonb),
+  ('Holy Fire', 'gift_fire', 75, '{"particles":"🔥","speed":"fast","scale":1.2}'::jsonb),
+  ('Offering', 'gift_offering', 100, '{"particles":"💰","speed":"normal","scale":1.15}'::jsonb),
+  ('Glory', 'gift_glory', 60, '{"particles":"✨","speed":"normal","scale":1.1}'::jsonb),
+  ('Peace', 'gift_peace', 45, '{"particles":"🕊️","speed":"slow","scale":1}'::jsonb),
+  ('The Word', 'gift_word', 55, '{"particles":"📖","speed":"normal","scale":1}'::jsonb),
+  ('Love', 'gift_love', 35, '{"particles":"❤️","speed":"normal","scale":1}'::jsonb),
   ('Applause', 'gift_applause', 50, '{"particles":"👏","speed":"normal","scale":1}'::jsonb),
-  ('Arcade Controller', 'gift_controller', 200, '{"particles":"🎮","speed":"fast","scale":1.2}'::jsonb),
-  ('Champion Trophy', 'gift_trophy', 1000, '{"particles":"🏆","speed":"slow","scale":1.5}'::jsonb)
-on conflict (sku) do nothing;
+  ('Arcade Controller', 'gift_controller', 200, '{"particles":"📖","speed":"fast","scale":1.2}'::jsonb),
+  ('Champion Trophy', 'gift_trophy', 1000, '{"particles":"✨","speed":"slow","scale":1.5}'::jsonb)
+on conflict (sku) do update set
+  name = excluded.name,
+  coin_cost = excluded.coin_cost,
+  animation_manifest = excluded.animation_manifest;
 
 -- Enable Realtime inserts for GiftOverlayCanvas particle triggers.
 do $$

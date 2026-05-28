@@ -27,6 +27,16 @@ import type {
   StreamersApiResponse,
 } from "@/lib/streamers-types";
 import { createClient } from "@/utils/supabase/client";
+import {
+  emojiForReactionKind,
+  skuForReactionKind,
+  type WorshipReactionKind,
+} from "@/lib/worship-reactions";
+import {
+  WORSHIP_REACTION_EVENT,
+  streamInteractionChannelName,
+} from "@/lib/stream-interactions";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 type Props = {
   channelId: string;
@@ -36,6 +46,7 @@ export default function KickWatchExperience({ channelId }: Props) {
   const { userProfile } = useAuth();
   const supabase = useMemo(() => createClient(), []);
   const demoVideoRef = useRef<HTMLVideoElement>(null);
+  const interactionChannelRef = useRef<RealtimeChannel | null>(null);
 
   const [streamer, setStreamer] = useState<StreamerProfileRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,6 +103,17 @@ export default function KickWatchExperience({ channelId }: Props) {
   useEffect(() => {
     void loadStreamer();
   }, [loadStreamer]);
+
+  useEffect(() => {
+    if (!channelId) return;
+    const ch = supabase.channel(streamInteractionChannelName(channelId));
+    ch.subscribe();
+    interactionChannelRef.current = ch;
+    return () => {
+      void supabase.removeChannel(ch);
+      interactionChannelRef.current = null;
+    };
+  }, [channelId, supabase]);
 
   useEffect(() => {
     if (!channelId || !observerId) return;
@@ -153,29 +175,49 @@ export default function KickWatchExperience({ channelId }: Props) {
     setFollowerCount((c) => Math.max(0, c + (isFollowing ? -1 : 1)));
   };
 
-  const sendGift = async (sku = "gift_applause") => {
-    if (!observerId) {
-      alert("Please log in to send gifts.");
-      return;
-    }
-    setGiftBusy(true);
-    try {
-      const res = await fetch("/api/stream/gift", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: observerId,
-          streamerId: streamer?.id,
-          giftSku: sku,
-          streamId: streamer?.id,
-        }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) alert(data.error || "Gift failed.");
-    } finally {
-      setGiftBusy(false);
-    }
-  };
+  const sendGift = useCallback(
+    async (sku = "gift_clap") => {
+      if (!observerId) {
+        alert("Please log in to send gifts.");
+        return;
+      }
+      setGiftBusy(true);
+      try {
+        const res = await fetch("/api/stream/gift", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: observerId,
+            streamerId: streamer?.id,
+            giftSku: sku,
+            streamId: streamer?.id,
+          }),
+        });
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        if (!res.ok) alert(data.error || "Gift failed.");
+      } finally {
+        setGiftBusy(false);
+      }
+    },
+    [observerId, streamer],
+  );
+
+  const emitWorshipReaction = useCallback(
+    (kind: WorshipReactionKind) => {
+      const ch = interactionChannelRef.current;
+      if (ch) {
+        void ch.send({
+          type: "broadcast",
+          event: WORSHIP_REACTION_EVENT,
+          payload: { kind, emoji: emojiForReactionKind(kind) },
+        });
+      }
+      if (kind === "offering" && observerId && streamer) {
+        void sendGift(skuForReactionKind("offering"));
+      }
+    },
+    [observerId, streamer, sendGift],
+  );
 
   const tags = useMemo(() => {
     if (!streamer) return [];
@@ -264,7 +306,8 @@ export default function KickWatchExperience({ channelId }: Props) {
                 followBusy={followBusy}
                 giftBusy={giftBusy}
                 onFollow={() => void toggleFollow()}
-                onGiftSubs={() => void sendGift("gift_applause")}
+                onGiftSubs={() => void sendGift("gift_clap")}
+                onWorshipReaction={emitWorshipReaction}
                 onSubscribe={() => alert("Subscriptions coming soon.")}
                 loadingVideo={!lkToken && !useDemoTheatrePlayer && !tokenError}
                 videoError={tokenError && !useDemoTheatrePlayer ? tokenError : null}
