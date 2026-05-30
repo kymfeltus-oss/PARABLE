@@ -18,6 +18,7 @@ type Props = {
   className?: string;
   /** Native controls steal clicks from overlay HUD — default off on watch. */
   showNativeControls?: boolean;
+  videoRef?: React.RefObject<HTMLVideoElement | null>;
 };
 
 declare global {
@@ -67,11 +68,13 @@ export default function HybridStreamPlayer({
   ivsPlaybackUrl,
   className = "",
   showNativeControls = false,
+  videoRef: externalVideoRef,
 }: Props) {
   const [engine, setEngine] = useState<PlayerEngine>(isLive ? "LOADING" : "OFFLINE");
   const [livekitTrack, setLivekitTrack] = useState<RemoteTrack | null>(null);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const internalVideoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = externalVideoRef ?? internalVideoRef;
   const ivsPlayerRef = useRef<IvsPlayerInstance | null>(null);
   const livekitRoomRef = useRef<Room | null>(null);
   const failoverStartedRef = useRef(false);
@@ -191,7 +194,7 @@ export default function HybridStreamPlayer({
 
   return (
     <div
-      className={`relative flex aspect-video w-full items-center justify-center overflow-hidden bg-black ${className}`}
+      className={`pointer-events-none relative flex aspect-video w-full items-center justify-center overflow-hidden bg-black ${className}`}
       data-watch-player-root
     >
       <video
@@ -200,7 +203,7 @@ export default function HybridStreamPlayer({
         autoPlay
         muted={engine === "LIVEKIT_FAILOVER"}
         controls={showNativeControls}
-        className={`h-full w-full object-contain ${engine === "OFFLINE" || engine === "LOADING" ? "hidden" : "block"}`}
+        className={`pointer-events-none h-full w-full object-contain ${engine === "OFFLINE" || engine === "LOADING" ? "hidden" : "block"}`}
       />
 
       {engine === "LOADING" ? (

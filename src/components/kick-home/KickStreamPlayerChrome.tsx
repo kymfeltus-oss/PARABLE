@@ -9,6 +9,7 @@ import {
   VolumeX,
 } from "lucide-react";
 import { useRemoteParticipants, useRoomContext } from "@livekit/components-react";
+import { debugSessionLog } from "@/lib/debug-session-log";
 
 export type KickStreamPlayerChromeProps = {
   isLive?: boolean;
@@ -142,6 +143,15 @@ function KickStreamPlayerChromeHtml5({
 
   const togglePlay = () => {
     const v = videoRef?.current;
+    // #region agent log
+    debugSessionLog({
+      runId: "pre-fix",
+      hypothesisId: "H5",
+      location: "KickStreamPlayerChrome.tsx:togglePlay",
+      message: "play/pause click",
+      data: { hasVideo: Boolean(v), paused: v?.paused },
+    });
+    // #endregion
     if (!v) return;
     if (v.paused) void v.play().catch(() => undefined);
     else v.pause();
@@ -150,6 +160,15 @@ function KickStreamPlayerChromeHtml5({
 
   const toggleMute = () => {
     const v = videoRef?.current;
+    // #region agent log
+    debugSessionLog({
+      runId: "pre-fix",
+      hypothesisId: "H5",
+      location: "KickStreamPlayerChrome.tsx:toggleMute",
+      message: "mute click",
+      data: { hasVideo: Boolean(v), muted: v?.muted },
+    });
+    // #endregion
     if (!v) return;
     const next = !v.muted;
     v.muted = next;
@@ -159,6 +178,15 @@ function KickStreamPlayerChromeHtml5({
 
   const onVolumeChange = (value: number) => {
     const v = videoRef?.current;
+    // #region agent log
+    debugSessionLog({
+      runId: "pre-fix",
+      hypothesisId: "H5",
+      location: "KickStreamPlayerChrome.tsx:onVolumeChange",
+      message: "volume change",
+      data: { hasVideo: Boolean(v), value },
+    });
+    // #endregion
     setVolume(value);
     if (v) {
       v.volume = value;

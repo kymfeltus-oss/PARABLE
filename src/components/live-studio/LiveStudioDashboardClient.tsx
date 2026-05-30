@@ -9,10 +9,14 @@ import {
   X,
   Smile,
   Gavel,
-  Users,
+  Sliders,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { streamInteractionChannelName } from "@/lib/stream-interactions";
+import CreatorStudioControlRoom from "@/components/go-live/CreatorStudioControlRoom";
+import GoLiveHeaderBar from "@/components/go-live/GoLiveHeaderBar";
+import StreamHealthMatrix from "@/components/go-live/StreamHealthMatrix";
+import BroadcastChatPanel from "@/components/go-live/BroadcastChatPanel";
 
 type ChatMessage = {
   id: string;
@@ -79,6 +83,14 @@ export default function LiveStudioDashboardClient({ userId }: Props) {
   const [targetUsername, setTargetUsername] = useState("");
   const [modActionType, setModActionType] = useState<"TIMEOUT" | "BAN">("TIMEOUT");
   const [modBusy, setModBusy] = useState(false);
+
+  const [isLive, setIsLive] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [uptime, setUptime] = useState(0);
+  const [bitrate, setBitrate] = useState(5800);
+  const [fps, setFps] = useState(60);
+  const [streamTitle, setStreamTitle] = useState("Sanctuary Broadcast Stream");
+  const [streamCategory, setStreamCategory] = useState("Worship");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -231,6 +243,27 @@ export default function LiveStudioDashboardClient({ userId }: Props) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    if (!isLive) {
+      setUptime(0);
+      return;
+    }
+    const ticker = window.setInterval(() => {
+      setUptime((prev) => prev + 1);
+      setBitrate(Math.floor(5400 + Math.random() * 600));
+      setFps(Math.random() > 0.96 ? 59 : 60);
+    }, 1000);
+    return () => window.clearInterval(ticker);
+  }, [isLive]);
+
+  const toggleBroadcastPipeline = () => {
+    setIsProcessing(true);
+    window.setTimeout(() => {
+      setIsLive((prev) => !prev);
+      setIsProcessing(false);
+    }, 800);
+  };
+
   const handleClearChatRoom = async () => {
     setMessages([]);
     await broadcastRoomEvent(userId, "chat_clear_command", { timestamp: Date.now() });
@@ -325,187 +358,225 @@ export default function LiveStudioDashboardClient({ userId }: Props) {
     setShowEmoteTray(false);
   };
 
+  const displayViewerCount = isLive && viewerCount > 0 ? viewerCount : isLive ? 2450 : 0;
+
   return (
-    <div className="relative flex h-screen w-full flex-col overflow-hidden bg-[#080a0c] font-sans text-[#eff1f6] select-none">
-      <header className="z-20 flex w-full shrink-0 items-center justify-between border-b border-[#191f24] bg-[#191b1f] px-6 py-4 shadow-md">
-        <div className="flex items-center gap-3">
-          <h1 className="flex items-center gap-2 text-xs font-black tracking-widest text-white uppercase">
-            Live Console
-            <span className="animate-pulse rounded border border-red-500/20 bg-red-600/10 px-2 py-0.5 text-[10px] font-bold text-red-500">
-              BROADCASTING
-            </span>
-          </h1>
-        </div>
-        <div className="flex items-center gap-4 font-mono text-xs font-bold">
-          <span className="flex items-center gap-1.5 text-[#00e165]">
-            <Users className="h-4 w-4" />
-            {viewerCount > 0 ? viewerCount.toLocaleString() : "—"} Live Viewers
-          </span>
-        </div>
-      </header>
-
-      <div className="relative flex min-h-0 w-full flex-1 overflow-hidden">
-        <aside className="flex h-full w-[280px] shrink-0 flex-col border-r border-[#191f24] bg-[#0b0e11]">
-          <div className="border-b border-[#191f24] bg-[#191b1f] p-3.5 text-[10px] font-black tracking-wider text-gray-400 uppercase">
-            Stream Activity Log
-          </div>
-          <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto p-3 custom-scrollbar">
-            {alerts.length === 0 ? (
-              <div className="flex h-full items-center justify-center p-4 text-center font-mono text-[10px] text-gray-600">
-                Awaiting active monetization transactions…
+    <div className="relative font-sans text-[#eff1f6] select-none">
+      <CreatorStudioControlRoom
+        headerSlot={
+          <GoLiveHeaderBar
+            isLive={isLive}
+            viewerCount={displayViewerCount}
+            uptimeSeconds={uptime}
+            onToggleLive={toggleBroadcastPipeline}
+            isProcessing={isProcessing}
+          />
+        }
+        telemetrySlot={
+          <div className="flex h-full flex-col overflow-hidden">
+            <StreamHealthMatrix
+              status={isLive ? "LIVE" : "STANDBY"}
+              bitrateKbps={bitrate}
+              fps={fps}
+              viewerCount={displayViewerCount}
+              uptimeSeconds={uptime}
+            />
+            <div className="min-h-0 flex-1 overflow-y-auto border-t border-[#191f24] p-3 custom-scrollbar">
+              <div className="mb-2 text-[10px] font-black tracking-wider text-gray-500 uppercase">
+                Stream Activity Log
               </div>
-            ) : (
-              alerts.map((alert) => (
-                <div
-                  key={alert.id}
-                  className="flex items-start gap-2 rounded-lg border border-[#191f24] bg-[#111722]/60 p-3 text-xs leading-relaxed"
+              {alerts.length === 0 ? (
+                <p className="text-center font-mono text-[10px] text-gray-600">
+                  Awaiting active monetization transactions…
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {alerts.map((alert) => (
+                    <div
+                      key={alert.id}
+                      className="flex items-start gap-2 rounded-lg border border-[#191f24] bg-[#111722]/60 p-3 text-xs leading-relaxed"
+                    >
+                      <Award className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
+                      <span className="font-semibold text-gray-300">{alert.text}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        }
+        videoSlot={
+          isLive ? (
+            <div className="flex h-full w-full items-center justify-center bg-neutral-950 font-mono text-xs font-bold tracking-widest text-red-500 select-none">
+              LIVE BROADCAST CAPTURE RUNNING (WEBRTC HOOKS MOUNTED)
+            </div>
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-neutral-950 font-mono text-xs tracking-widest text-zinc-500 select-none">
+              READY TO STREAM COCKPIT STANDBY
+            </div>
+          )
+        }
+        metadataSlot={
+          <div className="space-y-4 font-mono select-none">
+            <div className="flex items-center gap-1.5 border-b border-[#191f24] pb-2 text-[10px] font-black tracking-wider text-gray-500 uppercase">
+              <Sliders className="h-3.5 w-3.5 text-[#00f2ff]" /> Metadata Modulators
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-gray-400 uppercase">
+                  Stream Layout Title
+                </label>
+                <input
+                  type="text"
+                  value={streamTitle}
+                  onChange={(e) => setStreamTitle(e.target.value)}
+                  className="w-full rounded-lg border border-[#191f24] bg-[#0b0e11] p-2.5 text-xs text-white outline-none focus:border-[#00f2ff]/40"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-gray-400 uppercase">
+                  Category Selection
+                </label>
+                <select
+                  value={streamCategory}
+                  onChange={(e) => setStreamCategory(e.target.value)}
+                  className="w-full cursor-pointer rounded-lg border border-[#191f24] bg-[#0b0e11] p-2.5 text-xs text-white outline-none focus:border-[#00f2ff]/40"
                 >
-                  <Award className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
-                  <span className="font-semibold text-gray-300">{alert.text}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </aside>
-
-        <main className="flex min-w-0 flex-1 flex-col space-y-4 overflow-y-auto bg-[#080a0c] p-4">
-          <div className="relative flex aspect-video max-h-[460px] w-full items-center justify-center overflow-hidden rounded-xl border border-[#191f24] bg-black shadow-2xl">
-            <div className="font-mono text-[10px] tracking-widest text-neutral-600 uppercase select-none">
-              Stream Preview Output Channel Window
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-[10px] font-black tracking-wider text-gray-500 uppercase">
-              Workspace Quick Controls
-            </h3>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <button
-                type="button"
-                onClick={() => void handleClearChatRoom()}
-                data-testid="live-studio-clear-chat"
-                className="group flex flex-col items-center justify-center gap-2 rounded-xl border border-[#191f24] bg-[#191b1f] p-4 text-xs font-bold text-white transition-colors hover:bg-[#242c33]"
-              >
-                <Trash2 className="h-4 w-4 text-red-400 transition-transform group-hover:scale-105" />
-                Clear Chat Room
-              </button>
-
-              <button
-                type="button"
-                onClick={() => void handleToggleEmoteOnly()}
-                data-testid="live-studio-emote-only"
-                className={`group flex flex-col items-center justify-center gap-2 rounded-xl border p-4 text-xs font-bold transition-colors ${
-                  emoteOnly
-                    ? "border-[#00e165] bg-[#00e165]/10 text-[#00e165]"
-                    : "border-[#191f24] bg-[#191b1f] text-white hover:bg-[#242c33]"
-                }`}
-              >
-                <Smile className="h-4 w-4 transition-transform group-hover:scale-105" />
-                {emoteOnly ? "Emote Only: ACTIVE" : "Toggle Emote Mode"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowBanPanel(true)}
-                data-testid="live-studio-discipline-panel"
-                className="group flex flex-col items-center justify-center gap-2 rounded-xl border border-[#191f24] bg-[#191b1f] p-4 text-xs font-bold text-white transition-colors hover:bg-[#242c33]"
-              >
-                <Gavel className="h-4 w-4 text-yellow-500 transition-transform group-hover:scale-105" />
-                Discipline Panel
-              </button>
-            </div>
-          </div>
-        </main>
-
-        <aside className="flex h-full w-[320px] shrink-0 flex-col border-l border-[#191f24] bg-[#0b0e11]">
-          <div className="border-b border-[#191f24] bg-[#191b1f] p-4 text-[10px] font-black tracking-wider text-gray-300 uppercase">
-            Channel Live Chat
-          </div>
-
-          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4 custom-scrollbar">
-            {messages.length === 0 ? (
-              <p className="text-center font-mono text-[10px] text-gray-600">
-                No messages yet — chat sync is live.
-              </p>
-            ) : (
-              messages.map((msg) => (
-                <div key={msg.id} className="text-xs leading-relaxed wrap-break-word">
-                  <span
-                    className={`mr-2 font-bold ${
-                      msg.display_name === HOST_DISPLAY_NAME || msg.sender_id === userId
-                        ? "text-red-400"
-                        : msg.display_name.toLowerCase().includes("mod")
-                          ? "text-[#00e165]"
-                          : "text-[#00f2fe]"
-                    }`}
-                  >
-                    {msg.display_name}:
-                  </span>
-                  <span className="text-gray-300">{msg.body}</span>
-                </div>
-              ))
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {chatError ? (
-            <p className="px-4 text-[10px] text-red-400" role="alert">
-              {chatError}
-            </p>
-          ) : null}
-
-          <form onSubmit={(e) => void handleSendHostMessage(e)} className="border-t border-[#191f24] bg-[#0b0e11] p-4">
-            {showEmoteTray ? (
-              <div
-                className="mb-2 grid grid-cols-5 gap-1 rounded-lg border border-[#191f24] bg-[#191b1f] p-2"
-                data-testid="live-studio-emote-tray"
-              >
-                {CUSTOM_EMOTES.map((emote) => (
-                  <button
-                    key={emote}
-                    type="button"
-                    onClick={() => appendEmote(emote)}
-                    className="rounded p-1.5 text-lg transition-transform hover:bg-[#242c33] active:scale-90"
-                  >
-                    {emote}
-                  </button>
-                ))}
+                  <option value="Worship">Worship &amp; Praise</option>
+                  <option value="Sermon">Theological Discourse</option>
+                </select>
               </div>
-            ) : null}
-
-            <div className="flex items-center gap-2 rounded-lg border border-[#191f24] bg-[#191b1f] px-3 py-2.5">
-              <button
-                type="button"
-                onClick={() => setShowEmoteTray((v) => !v)}
-                className="shrink-0 text-gray-400 transition-colors hover:text-white"
-                aria-label="Toggle emote tray"
-              >
-                <Smile className="h-4 w-4" />
-              </button>
-              <input
-                type="text"
-                value={inputMsg}
-                onChange={(e) => setInputMsg(e.target.value)}
-                placeholder={
-                  emoteOnly
-                    ? "Emote execution lock is active — use tray…"
-                    : "Chat as room host…"
-                }
-                readOnly={emoteOnly}
-                className="w-full bg-transparent text-xs text-white outline-none placeholder:text-gray-600 read-only:opacity-70"
-              />
-              <button
-                type="submit"
-                disabled={!inputMsg.trim()}
-                className="shrink-0 text-gray-400 transition-colors hover:text-white disabled:opacity-30"
-                aria-label="Send message"
-              >
-                <Send className="h-4 w-4" />
-              </button>
             </div>
-          </form>
-        </aside>
-      </div>
+            <div className="space-y-2">
+              <h3 className="text-[10px] font-black tracking-wider text-gray-500 uppercase">
+                Workspace Quick Controls
+              </h3>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <button
+                  type="button"
+                  onClick={() => void handleClearChatRoom()}
+                  data-testid="live-studio-clear-chat"
+                  className="group flex flex-col items-center justify-center gap-2 rounded-xl border border-[#191f24] bg-[#191b1f] p-4 text-xs font-bold text-white transition-colors hover:bg-[#242c33]"
+                >
+                  <Trash2 className="h-4 w-4 text-red-400 transition-transform group-hover:scale-105" />
+                  Clear Chat Room
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleToggleEmoteOnly()}
+                  data-testid="live-studio-emote-only"
+                  className={`group flex flex-col items-center justify-center gap-2 rounded-xl border p-4 text-xs font-bold transition-colors ${
+                    emoteOnly
+                      ? "border-[#00e165] bg-[#00e165]/10 text-[#00e165]"
+                      : "border-[#191f24] bg-[#191b1f] text-white hover:bg-[#242c33]"
+                  }`}
+                >
+                  <Smile className="h-4 w-4 transition-transform group-hover:scale-105" />
+                  {emoteOnly ? "Emote Only: ACTIVE" : "Toggle Emote Mode"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowBanPanel(true)}
+                  data-testid="live-studio-discipline-panel"
+                  className="group flex flex-col items-center justify-center gap-2 rounded-xl border border-[#191f24] bg-[#191b1f] p-4 text-xs font-bold text-white transition-colors hover:bg-[#242c33]"
+                >
+                  <Gavel className="h-4 w-4 text-yellow-500 transition-transform group-hover:scale-105" />
+                  Discipline Panel
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+        chatSlot={
+          <BroadcastChatPanel
+            messagesSlot={
+              <>
+                {messages.length === 0 ? (
+                  <p className="text-center font-mono text-[10px] text-gray-600">
+                    No messages yet — chat sync is live.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {messages.map((msg) => (
+                      <div key={msg.id} className="text-xs leading-relaxed wrap-break-word">
+                        <span
+                          className={`mr-2 font-bold ${
+                            msg.display_name === HOST_DISPLAY_NAME || msg.sender_id === userId
+                              ? "text-red-400"
+                              : msg.display_name.toLowerCase().includes("mod")
+                                ? "text-[#00e165]"
+                                : "text-[#00f2fe]"
+                          }`}
+                        >
+                          {msg.display_name}:
+                        </span>
+                        <span className="text-gray-300">{msg.body}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+                {chatError ? (
+                  <p className="mt-2 text-[10px] text-red-400" role="alert">
+                    {chatError}
+                  </p>
+                ) : null}
+              </>
+            }
+            composerSlot={
+              <form onSubmit={(e) => void handleSendHostMessage(e)}>
+                {showEmoteTray ? (
+                  <div
+                    className="mb-2 grid grid-cols-5 gap-1 rounded-lg border border-[#191f24] bg-[#191b1f] p-2"
+                    data-testid="live-studio-emote-tray"
+                  >
+                    {CUSTOM_EMOTES.map((emote) => (
+                      <button
+                        key={emote}
+                        type="button"
+                        onClick={() => appendEmote(emote)}
+                        className="rounded p-1.5 text-lg transition-transform hover:bg-[#242c33] active:scale-90"
+                      >
+                        {emote}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                <div className="flex items-center gap-2 rounded-lg border border-[#191f24] bg-[#191b1f] px-3 py-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmoteTray((v) => !v)}
+                    className="shrink-0 text-gray-400 transition-colors hover:text-white"
+                    aria-label="Toggle emote tray"
+                  >
+                    <Smile className="h-4 w-4" />
+                  </button>
+                  <input
+                    type="text"
+                    value={inputMsg}
+                    onChange={(e) => setInputMsg(e.target.value)}
+                    placeholder={
+                      emoteOnly
+                        ? "Emote execution lock is active — use tray…"
+                        : "Chat as room host…"
+                    }
+                    readOnly={emoteOnly}
+                    className="w-full bg-transparent text-xs text-white outline-none placeholder:text-gray-600 read-only:opacity-70"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!inputMsg.trim()}
+                    className="shrink-0 text-gray-400 transition-colors hover:text-white disabled:opacity-30"
+                    aria-label="Send message"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </div>
+              </form>
+            }
+          />
+        }
+      />
 
       {showBanPanel ? (
         <div

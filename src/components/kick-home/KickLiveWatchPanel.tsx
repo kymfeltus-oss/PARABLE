@@ -1,10 +1,14 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { Loader2 } from "lucide-react";
 import KickStreamMetaBar from "@/components/kick-home/KickStreamMetaBar";
 import GiftOverlayCanvas from "@/components/GiftOverlayCanvas";
 import WorshipReactionHud from "@/components/kick-home/WorshipReactionHud";
+import {
+  EmojiBurstOverlay,
+  type EmojiBurstHandle,
+} from "@/components/streaming/EmojiBurstOverlay";
 import type { WorshipReactionKind } from "@/lib/worship-reactions";
 
 export type KickLiveWatchPanelShell = "desktop" | "mobile";
@@ -33,6 +37,8 @@ export type KickLiveWatchPanelProps = {
   adminOverlay?: ReactNode;
   /** LiveKit CELEBRATION_BURST payloads for gift overlay HUD. */
   liveKitBursts?: { id: string; emoji: string }[];
+  /** Hardware-accelerated emoji burst layer (ref from watch experience). */
+  burstOverlayRef?: RefObject<EmojiBurstHandle | null>;
 };
 
 /** Kick-style video shell + player chrome + meta bar (Follow, Gift Subs, Subscribe, stats). */
@@ -57,6 +63,7 @@ export default function KickLiveWatchPanel({
   shell = "desktop",
   adminOverlay,
   liveKitBursts = [],
+  burstOverlayRef,
 }: KickLiveWatchPanelProps) {
   const isMobileShell = shell === "mobile";
 
@@ -65,14 +72,16 @@ export default function KickLiveWatchPanel({
     : "relative aspect-video w-full overflow-hidden bg-black";
 
   const playerBlock = (
-    <div className={playerRootClass} data-watch-player-root>
+    <div className={`${playerRootClass} pointer-events-auto`} data-watch-player-root>
       {adminOverlay}
       <GiftOverlayCanvas
         streamId={streamId}
         enabled
         clipToPlayer
         liveKitBursts={liveKitBursts}
+        burstOverlayRef={burstOverlayRef}
       />
+      {burstOverlayRef ? <EmojiBurstOverlay ref={burstOverlayRef} /> : null}
       {loadingVideo ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 text-sm text-slate-400">
           <Loader2 className="h-6 w-6 animate-spin" />

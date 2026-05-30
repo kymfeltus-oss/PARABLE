@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { DEMO_HLS_STREAM_URL, DEMO_MP4_FALLBACK_URL } from "@/lib/demo-hls-stream";
+import { debugSessionLog } from "@/lib/debug-session-log";
 
 export type ParableHeroVideoProps = {
   streamUrl?: string;
@@ -121,7 +122,18 @@ export default function ParableHeroVideo({
       </div>
       <video
         ref={videoRef}
-        className="absolute inset-0 h-full w-full object-cover"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        onLoadedData={() => {
+          // #region agent log
+          debugSessionLog({
+            runId: "pre-fix",
+            hypothesisId: "H3",
+            location: "ParableHeroVideo.tsx:loaded",
+            message: "demo hero video ready",
+            data: { streamUrl: streamUrl.slice(0, 48) },
+          });
+          // #endregion
+        }}
         playsInline
         muted
         autoPlay

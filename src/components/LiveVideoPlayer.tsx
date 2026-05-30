@@ -110,8 +110,11 @@ function ActiveStreamRenderer({ roomName }: { roomName?: string }) {
   }
 
   return (
-    <div className="relative h-full w-full">
-      <VideoTrack trackRef={activeTrack} className="h-full w-full object-contain" />
+    <div className="pointer-events-none relative h-full w-full">
+      <VideoTrack
+        trackRef={activeTrack}
+        className="pointer-events-none h-full w-full object-contain"
+      />
     </div>
   );
 }

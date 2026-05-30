@@ -37,6 +37,12 @@ create policy "stream_gifts_public_read"
   to authenticated, anon
   using (true);
 
+drop policy if exists "stream_gifts_service_role_write" on public.stream_gifts;
+create policy "stream_gifts_service_role_write"
+  on public.stream_gifts for insert
+  to service_role
+  with check (true);
+
 insert into public.gift_catalog (name, sku, coin_cost, animation_manifest)
 values
   ('Amen', 'gift_amen', 25, '{"particles":"🙏","speed":"normal","scale":1}'::jsonb),

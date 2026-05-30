@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { EmojiBurstHandle } from "@/components/streaming/EmojiBurstOverlay";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Radio } from "lucide-react";
 import LiveVideoPlayer from "@/components/LiveVideoPlayer";
@@ -69,7 +70,9 @@ export default function KickWatchExperience({ channelId, ivsPlaybackUrl = "" }: 
   const { userProfile } = useAuth();
   const supabase = useMemo(() => createClient(), []);
   const demoVideoRef = useRef<HTMLVideoElement>(null);
+  const hybridVideoRef = useRef<HTMLVideoElement>(null);
   const interactionChannelRef = useRef<RealtimeChannel | null>(null);
+  const burstOverlayRef = useRef<EmojiBurstHandle | null>(null);
 
   const [streamer, setStreamer] = useState<StreamerProfileRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -361,6 +364,7 @@ export default function KickWatchExperience({ channelId, ivsPlaybackUrl = "" }: 
   const emitWorshipReaction = useCallback(
     (kind: WorshipReactionKind) => {
       const emoji = emojiForReactionKind(kind);
+      burstOverlayRef.current?.triggerBurst(emoji);
       const ch = interactionChannelRef.current;
       const hasChannel = Boolean(ch);
 
@@ -390,7 +394,7 @@ export default function KickWatchExperience({ channelId, ivsPlaybackUrl = "" }: 
       } else {
         // #region agent log
         debugSessionLog({
-          runId: "post-fix",
+          runId: "pre-fix",
           hypothesisId: "H2",
           location: "KickWatchExperience.tsx:emitNoChannel",
           message: "no channel — local burst only",
@@ -428,6 +432,47 @@ export default function KickWatchExperience({ channelId, ivsPlaybackUrl = "" }: 
       ivsPlaybackUrl.trim().length > 0,
   );
 
+  useEffect(() => {
+    if (!streamer || loading) return;
+    // #region agent log
+    debugSessionLog({
+      runId: "pre-fix",
+      hypothesisId: "H6",
+      location: "KickWatchExperience.tsx:playerMode",
+      message: "watch player mode resolved",
+      data: {
+        channelId,
+        useHybridIvsPlayer,
+        useDemoTheatrePlayer,
+        hasLkToken: Boolean(lkToken),
+        giftBusy,
+        demoTheatreEligible,
+      },
+    });
+    // #endregion
+  }, [
+    channelId,
+    streamer,
+    loading,
+    useHybridIvsPlayer,
+    useDemoTheatrePlayer,
+    lkToken,
+    giftBusy,
+    demoTheatreEligible,
+  ]);
+
+  useEffect(() => {
+    // #region agent log
+    debugSessionLog({
+      runId: "pre-fix",
+      hypothesisId: "H1",
+      location: "KickWatchExperience.tsx:giftBusy",
+      message: "giftBusy changed",
+      data: { giftBusy },
+    });
+    // #endregion
+  }, [giftBusy]);
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black text-slate-400">
@@ -448,12 +493,21 @@ export default function KickWatchExperience({ channelId, ivsPlaybackUrl = "" }: 
   }
 
   const videoSlot = useHybridIvsPlayer ? (
-    <HybridStreamPlayer
-      streamId={channelId}
-      isLive={isLive ?? false}
-      ivsPlaybackUrl={ivsPlaybackUrl}
-      className="h-full w-full"
-    />
+    <>
+      <HybridStreamPlayer
+        streamId={channelId}
+        isLive={isLive ?? false}
+        ivsPlaybackUrl={ivsPlaybackUrl}
+        className="h-full w-full"
+        videoRef={hybridVideoRef}
+      />
+      <KickStreamPlayerChrome
+        engine="html5"
+        videoRef={hybridVideoRef}
+        isLive
+        playerRootSelector="[data-watch-player-root]"
+      />
+    </>
   ) : lkToken ? (
     <LiveVideoPlayer
       roomName={unifiedRoomName}
@@ -520,6 +574,8 @@ export default function KickWatchExperience({ channelId, ivsPlaybackUrl = "" }: 
     videoError: tokenError && !useDemoTheatrePlayer && !useHybridIvsPlayer ? tokenError : null,
     videoSlot,
     adminOverlay,
+    liveKitBursts,
+    burstOverlayRef,
   };
 
   return (
