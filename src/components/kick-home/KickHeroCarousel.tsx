@@ -80,7 +80,7 @@ export default function KickHeroCarousel({ slides, onWatch }: Props) {
                 className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#00f2fe] px-5 py-2.5 text-sm font-black text-black transition hover:brightness-110 active:scale-[0.98]"
               >
                 <Play size={16} fill="currentColor" />
-                Watch now
+                Watch Live Now
               </Link>
             </div>
 

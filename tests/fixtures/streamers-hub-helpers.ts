@@ -33,6 +33,7 @@ export async function fetchGuestSchedule(
 ): Promise<{ schedule: ScheduledBroadcast[]; notice?: string; error?: string }> {
   const res = await request.get(
     `${baseURL}/api/broadcast/schedule?userId=${encodeURIComponent(GUEST_USER_ID)}`,
+    { timeout: 60_000 },
   );
   const payload = (await res.json().catch(() => ({}))) as {
     schedule?: ScheduledBroadcast[];

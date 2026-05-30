@@ -6,6 +6,7 @@
 alter table public.profiles add column if not exists bio text;
 alter table public.profiles add column if not exists role text;
 alter table public.profiles add column if not exists is_live boolean not null default false;
+alter table public.profiles add column if not exists is_demo boolean not null default false;
 
 -- Persona metadata (updates rows where username matches)
 -- Avatars use local SVG initials served from /public/demo/avatars — not real photos.
@@ -48,6 +49,9 @@ update public.profiles set
   avatar_url = null,
   is_live = false
 where lower(username) = 'prophetic_voices';
+
+update public.profiles set is_demo = true
+where lower(username) in ('pastor_james', 'sister_sarah', 'gospel_vibe', 'kingdom_gamer', 'prophetic_voices');
 
 -- Clear stale real-photo or placeholder URLs on known demo handles
 update public.profiles set avatar_url = null

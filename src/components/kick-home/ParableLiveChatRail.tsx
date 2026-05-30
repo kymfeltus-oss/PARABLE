@@ -13,6 +13,10 @@ type Props = {
   variant?: StreamersHubLiveChatVariant;
 };
 
+/**
+ * Desktop / tablet chat rail — Postgres chat + Supabase broadcast reactions
+ * on `realtime-stream-interactions:{streamKey}` (synced with watch player overlay).
+ */
 export default function ParableLiveChatRail({
   streamKey,
   streamLabel,
@@ -35,17 +39,27 @@ export default function ParableLiveChatRail({
 
       <aside
         data-testid="stream-chat-rail"
-        className={`fixed bottom-0 right-0 top-14 z-40 w-[min(100vw,20rem)] shrink-0 flex-col overflow-hidden border-l border-[#24272c] bg-[#191b1f] transition-transform duration-200 sm:w-80 md:static md:z-0 md:flex md:w-80 md:translate-x-0 ${
+        className={`fixed bottom-0 right-0 top-14 z-40 w-[min(100vw,20rem)] shrink-0 flex-col overflow-hidden border-l border-[#191f24] bg-[#0b0e11] transition-transform duration-200 sm:w-80 md:static md:z-0 md:flex md:w-80 md:translate-x-0 ${
           chatOpen ? "flex translate-x-0" : "hidden translate-x-full md:flex md:translate-x-0"
         }`}
       >
         <div className="flex h-full min-h-0 flex-col pb-parable-bottom md:pb-0">
+          <div className="flex shrink-0 items-center justify-between border-b border-[#191f24] bg-[#191b1f] px-4 py-3 md:hidden">
+            <span className="text-xs font-black uppercase tracking-wider text-gray-300">
+              Stream Chat
+            </span>
+            <span className="flex items-center gap-1.5 rounded bg-[#00e165]/10 px-2 py-0.5 text-xs font-bold text-[#00e165]">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#00e165]" />
+              Live
+            </span>
+          </div>
           <StreamersHubLiveChat
             streamKey={streamKey}
             streamLabel={streamLabel}
             senderDisplayName={senderDisplayName}
             variant={variant}
             fillHeight
+            enableQuickReactions={Boolean(streamKey)}
             className="h-full min-h-0"
           />
         </div>
@@ -75,6 +89,7 @@ export function ParableLiveChatMobile({
           variant={variant}
           fillHeight
           showHeader={false}
+          enableQuickReactions={Boolean(streamKey)}
           className="h-full min-h-0"
         />
       </div>

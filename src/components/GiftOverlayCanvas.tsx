@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import {
   AMEN_WORSHIP_EMOJIS,
@@ -10,8 +10,10 @@ import {
 } from '@/lib/worship-reactions';
 import {
   AMEN_REACTION_EVENT,
+  LOCAL_WORSHIP_REACTION_EVENT,
   WORSHIP_REACTION_EVENT,
   streamInteractionChannelName,
+  type LocalWorshipReactionDetail,
 } from '@/lib/stream-interactions';
 
 interface FloatingParticle {
@@ -52,20 +54,39 @@ function spawnParticleBurst(emoji: string): FloatingParticle[] {
   }));
 }
 
+type LiveKitBurst = { id: string; emoji: string };
+
 type GiftOverlayCanvasProps = {
   streamId: string;
   enabled: boolean;
   /** Keep particle animations inside the 16:9 player box (mobile watch). */
   clipToPlayer?: boolean;
+  /** LiveKit data-channel celebration bursts from streamer cockpit. */
+  liveKitBursts?: LiveKitBurst[];
 };
 
 export default function GiftOverlayCanvas({
   streamId,
   enabled,
   clipToPlayer = false,
+  liveKitBursts = [],
 }: GiftOverlayCanvasProps) {
   const [particles, setParticles] = useState<FloatingParticle[]>([]);
   const supabase = useMemo(() => createClient(), []);
+  const seenLiveKitBurstIds = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (!enabled || liveKitBursts.length === 0) return;
+    const fresh = liveKitBursts.filter((b) => !seenLiveKitBurstIds.current.has(b.id));
+    if (fresh.length === 0) return;
+    for (const burst of fresh) {
+      seenLiveKitBurstIds.current.add(burst.id);
+    }
+    setParticles((prev) => [
+      ...prev,
+      ...fresh.flatMap((b) => spawnParticleBurst(b.emoji)),
+    ]);
+  }, [enabled, liveKitBursts]);
 
   useEffect(() => {
     if (!enabled || !streamId) {
@@ -133,6 +154,23 @@ export default function GiftOverlayCanvas({
       void supabase.removeChannel(interactionChannel);
     };
   }, [enabled, streamId, supabase]);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const onLocalReaction = (event: Event) => {
+      const detail = (event as CustomEvent<LocalWorshipReactionDetail>).detail;
+      const emoji = detail?.emoji ?? "✨";
+      if (detail?.kind === "amen") {
+        setParticles((prev) => [...prev, ...spawnAmenWave()]);
+        return;
+      }
+      setParticles((prev) => [...prev, ...spawnParticleBurst(emoji)]);
+    };
+
+    window.addEventListener(LOCAL_WORSHIP_REACTION_EVENT, onLocalReaction);
+    return () => window.removeEventListener(LOCAL_WORSHIP_REACTION_EVENT, onLocalReaction);
+  }, [enabled]);
 
   useEffect(() => {
     if (!enabled || particles.length === 0) return;

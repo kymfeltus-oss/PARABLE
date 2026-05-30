@@ -22,6 +22,8 @@ export type ProfileDiscoveryRow = {
   category_id?: string | null;
   display_name?: string | null;
   full_name?: string | null;
+  /** Discovery backfill flag — see supabase/schema-discovery-is-demo.sql */
+  is_demo?: boolean | null;
 };
 
 /** Fallback when `public.categories` is not migrated yet. */

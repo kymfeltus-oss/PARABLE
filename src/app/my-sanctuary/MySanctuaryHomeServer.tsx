@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { agentDebugLogServer } from "@/lib/agent-debug-log-server";
 import { createClient } from "@/utils/supabase/server";
 import {
   getParableGuestUserId,
@@ -24,37 +25,47 @@ export default async function MySanctuaryHomeServer({ loginNext }: Props) {
   if (!guestPreview) {
     const supabase = await createClient();
     const {
-      data: { user },
+      data: { session },
       error,
-    } = await supabase.auth.getUser();
+    } = await supabase.auth.getSession();
 
-    if (error || !user) {
+    if (error || !session?.user) {
       redirect(`/login?next=${encodeURIComponent(loginNext)}`);
     }
-    userId = user.id;
+    userId = session.user.id;
   }
 
-  const layout = guestPreview
-    ? {
-        profile: {
-          id: PARABLE_GUEST_PROFILE.id,
-          username: PARABLE_GUEST_PROFILE.username,
-          full_name: PARABLE_GUEST_PROFILE.full_name,
-          avatar_url: null,
-          bio: null,
-        },
-        posts: [],
-        taggedPosts: [],
-        totalPosts: 0,
-        followersCount: 0,
-        followingCount: 0,
-        isFollowingCurrentUser: false,
-      }
-    : await getProfileLayout(userId, userId);
-  const [registeredEventIds, homePayload] = await Promise.all([
+  const guestLayout = {
+    profile: {
+      id: PARABLE_GUEST_PROFILE.id,
+      username: PARABLE_GUEST_PROFILE.username,
+      full_name: PARABLE_GUEST_PROFILE.full_name,
+      avatar_url: null,
+      bio: null,
+    },
+    posts: [],
+    taggedPosts: [],
+    totalPosts: 0,
+    followersCount: 0,
+    followingCount: 0,
+    isFollowingCurrentUser: false,
+  };
+
+  const sanctuaryT0 = Date.now();
+  const [layout, registeredEventIds, homePayload] = await Promise.all([
+    guestPreview ? Promise.resolve(guestLayout) : getProfileLayout(userId, userId),
     guestPreview ? Promise.resolve([] as string[]) : fetchSanctuaryEventRegistrations(userId),
     fetchSanctuaryHomePayload(),
   ]);
+  // #region agent log
+  agentDebugLogServer({
+    runId: "post-fix-4",
+    hypothesisId: "H4",
+    location: "MySanctuaryHomeServer.tsx:prefetch",
+    message: "sanctuary parallel prefetch done",
+    data: { guestPreview, ms: Date.now() - sanctuaryT0 },
+  });
+  // #endregion
 
   return (
     <MySanctuaryHomeClientView

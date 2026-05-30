@@ -28,7 +28,7 @@ export default function ClientRootShell({
 }) {
   const pathname = usePathname();
 
-  const entryPages = ["/", "/welcome", "/login", "/create-account"];
+  const entryPages = ["/", "/welcome", "/login", "/create-account", "/auth/callback", "/logout"];
   const shouldHideNav = entryPages.includes(pathname ?? "");
   const useAppShell = !shouldHideNav;
 

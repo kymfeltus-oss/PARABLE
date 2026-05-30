@@ -31,6 +31,8 @@ export type KickLiveWatchPanelProps = {
   shell?: KickLiveWatchPanelShell;
   /** Admin moderation overlay (gear HUD). */
   adminOverlay?: ReactNode;
+  /** LiveKit CELEBRATION_BURST payloads for gift overlay HUD. */
+  liveKitBursts?: { id: string; emoji: string }[];
 };
 
 /** Kick-style video shell + player chrome + meta bar (Follow, Gift Subs, Subscribe, stats). */
@@ -54,6 +56,7 @@ export default function KickLiveWatchPanel({
   videoError,
   shell = "desktop",
   adminOverlay,
+  liveKitBursts = [],
 }: KickLiveWatchPanelProps) {
   const isMobileShell = shell === "mobile";
 
@@ -64,7 +67,12 @@ export default function KickLiveWatchPanel({
   const playerBlock = (
     <div className={playerRootClass} data-watch-player-root>
       {adminOverlay}
-      <GiftOverlayCanvas streamId={streamId} enabled clipToPlayer />
+      <GiftOverlayCanvas
+        streamId={streamId}
+        enabled
+        clipToPlayer
+        liveKitBursts={liveKitBursts}
+      />
       {loadingVideo ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 text-sm text-slate-400">
           <Loader2 className="h-6 w-6 animate-spin" />

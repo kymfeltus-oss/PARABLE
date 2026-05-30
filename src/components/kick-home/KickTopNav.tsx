@@ -11,6 +11,7 @@ import {
   MonitorPlay,
   Search,
   Settings,
+  Radio,
   User,
   X,
 } from "lucide-react";
@@ -36,12 +37,18 @@ export default function KickTopNav({ query, onQueryChange, onMenuClick, onChatCl
       <header className="fixed inset-x-0 top-0 z-50 flex h-14 shrink-0 items-center gap-2 border-b border-[#24272c] bg-black px-3 md:hidden">
         <Link href="/streamers" className="flex shrink-0 items-center gap-1.5">
           <span className="text-xl font-black uppercase tracking-tight text-[#53fc18]">PARABLE</span>
-          <span className="rounded bg-white/10 px-1 py-px text-[8px] font-bold uppercase text-[#94a3b8]">
-            Beta
-          </span>
         </Link>
 
-        <div className="ml-auto flex shrink-0 items-center gap-0.5">
+        <Link
+          href="/dashboard/streamers"
+          data-testid="streamers-go-live-studio"
+          className="ml-auto flex shrink-0 items-center gap-1.5 rounded-lg bg-[#00f2fe] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-black shadow-[0_0_20px_rgba(0,242,254,0.25)] transition hover:brightness-110 active:scale-[0.98]"
+        >
+          <Radio className="h-3.5 w-3.5" />
+          Go Live
+        </Link>
+
+        <div className="flex shrink-0 items-center gap-0.5">
           <button
             type="button"
             onClick={() => router.push("/streamers")}
@@ -128,9 +135,6 @@ export default function KickTopNav({ query, onQueryChange, onMenuClick, onChatCl
 
         <Link href="/streamers" className="relative flex shrink-0 items-center gap-2 lg:hidden">
           <span className="text-lg font-black uppercase tracking-tight text-[#53fc18]">PARABLE</span>
-          <span className="rounded bg-white/10 px-1 py-px text-[8px] font-bold uppercase text-[#94a3b8]">
-            Beta
-          </span>
         </Link>
 
         <div className="mx-auto flex min-w-0 max-w-xl flex-1 items-center justify-center px-1 sm:px-4">
@@ -147,6 +151,14 @@ export default function KickTopNav({ query, onQueryChange, onMenuClick, onChatCl
         </div>
 
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <Link
+            href="/dashboard/streamers"
+            data-testid="streamers-go-live-studio"
+            className="flex items-center gap-1.5 rounded-lg bg-[#00f2fe] px-3 py-2 text-xs font-black uppercase tracking-wider text-black shadow-[0_0_20px_rgba(0,242,254,0.25)] transition hover:brightness-110 active:scale-[0.98]"
+          >
+            <Radio className="h-4 w-4" />
+            <span className="hidden sm:inline">Go Live</span>
+          </Link>
           <button
             type="button"
             onClick={onChatClick}

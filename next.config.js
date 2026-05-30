@@ -7,6 +7,9 @@ const { execSync } = require('child_process');
  * CI sets AWS_COMMIT_ID / VERCEL_* ; locally we use `git rev-parse HEAD`.
  * Inlined as NEXT_PUBLIC_GIT_SHA on the client (see layout.tsx data-git-sha).
  */
+/** Isolated build dir for E2E on port 3005 (avoids `.next/dev/lock` clash with port 3004). */
+const distDir = process.env.NEXT_DIST_DIR?.trim() || '.next';
+
 function resolveGitSha() {
   const fromEnv =
     process.env.NEXT_PUBLIC_GIT_SHA ||
@@ -62,6 +65,7 @@ function resolveSupabaseUrl(envUrl, anonKey) {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  distDir,
   // Playwright hits 127.0.0.1 while Next dev listens on localhost — allow HMR/assets cross-origin.
   allowedDevOrigins: ['127.0.0.1', 'localhost'],
   env: {
@@ -114,8 +118,9 @@ const nextConfig = {
       },
     ];
   },
-  // Forces Next.js 16 to ONLY look inside the project folder
+  // Forces Next.js / Turbopack to resolve only inside PARABLE-main (avoids parent lockfiles)
   turbopack: {
+    root: __dirname,
     resolveAlias: {
       'tailwindcss': path.join(__dirname, 'node_modules', 'tailwindcss'),
     },

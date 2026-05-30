@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Radio } from "lucide-react";
 import LiveVideoPlayer from "@/components/LiveVideoPlayer";
+import HybridStreamPlayer from "@/components/watch/HybridStreamPlayer";
 import KickLiveWatchPanel from "@/components/kick-home/KickLiveWatchPanel";
 import KickWatchAboutPanel from "@/components/kick-home/KickWatchAboutPanel";
 import ParableLiveChatRail from "@/components/kick-home/ParableLiveChatRail";
@@ -45,9 +46,12 @@ import {
 } from "@/lib/worship-reactions";
 import {
   WORSHIP_REACTION_EVENT,
+  dispatchLocalWorshipReaction,
   streamInteractionChannelName,
 } from "@/lib/stream-interactions";
+import { debugSessionLog } from "@/lib/debug-session-log";
 import { resolveStreamChatRoomId } from "@/lib/stream-chat-room";
+import { useLiveKitCelebrationReceiver } from "@/hooks/useLiveKitCelebrationReceiver";
 import { isParableAdminProfile, profileRowToStreamerRecord } from "@/lib/categories";
 import AdminCategoryOverrideHud from "@/components/kick-home/AdminCategoryOverrideHud";
 import type { RealtimeChannel } from "@supabase/supabase-js";
@@ -57,9 +61,11 @@ const PROFILE_UUID_RE =
 
 type Props = {
   channelId: string;
+  /** Amazon IVS playback URL from server profile row (real creators). */
+  ivsPlaybackUrl?: string;
 };
 
-export default function KickWatchExperience({ channelId }: Props) {
+export default function KickWatchExperience({ channelId, ivsPlaybackUrl = "" }: Props) {
   const { userProfile } = useAuth();
   const supabase = useMemo(() => createClient(), []);
   const demoVideoRef = useRef<HTMLVideoElement>(null);
@@ -303,21 +309,102 @@ export default function KickWatchExperience({ channelId }: Props) {
     [observerId, streamer],
   );
 
+  const isLive = streamer?.status === "live";
+
+  const liveKitBursts = useLiveKitCelebrationReceiver({
+    streamId: streamer?.id,
+    enabled: Boolean(isLive && streamer?.id),
+  });
+
+  const executeSubscriptionPurchase = useCallback(async () => {
+    if (!streamer) return;
+    if (!observerId) {
+      alert("Please log in to subscribe.");
+      return;
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("stripe_connect_id")
+      .eq("id", streamer.id)
+      .maybeSingle();
+
+    const streamerStripeAccountId = profile?.stripe_connect_id?.trim();
+    if (!streamerStripeAccountId) {
+      alert("Creator has not linked a Stripe Connect payout account yet.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/checkout/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          streamerId: streamer.id,
+          streamerStripeAccountId,
+          userId: observerId,
+          tierPriceInCents: 499,
+        }),
+      });
+      const session = (await response.json()) as { checkoutUrl?: string; error?: string };
+      if (session.checkoutUrl) {
+        window.location.href = session.checkoutUrl;
+        return;
+      }
+      alert(session.error ?? "Checkout session could not be created.");
+    } catch (err) {
+      console.error("Subscription checkout failed:", err);
+      alert("Network error while starting checkout.");
+    }
+  }, [observerId, streamer, supabase]);
+
   const emitWorshipReaction = useCallback(
     (kind: WorshipReactionKind) => {
+      const emoji = emojiForReactionKind(kind);
       const ch = interactionChannelRef.current;
+      const hasChannel = Boolean(ch);
+
+      const showLocalBurst = () => {
+        dispatchLocalWorshipReaction({ kind, emoji });
+      };
+
       if (ch) {
-        void ch.send({
-          type: "broadcast",
-          event: WORSHIP_REACTION_EVENT,
-          payload: { kind, emoji: emojiForReactionKind(kind) },
+        void ch
+          .send({
+            type: "broadcast",
+            event: WORSHIP_REACTION_EVENT,
+            payload: { kind, emoji },
+          })
+          .then((result) => {
+            // #region agent log
+            debugSessionLog({
+              runId: "post-fix",
+              hypothesisId: "H2",
+              location: "KickWatchExperience.tsx:emitSendResult",
+              message: "broadcast send result",
+              data: { kind, hasChannel, error: result !== "ok" ? String(result) : null },
+            });
+            // #endregion
+            if (result !== "ok") showLocalBurst();
+          });
+      } else {
+        // #region agent log
+        debugSessionLog({
+          runId: "post-fix",
+          hypothesisId: "H2",
+          location: "KickWatchExperience.tsx:emitNoChannel",
+          message: "no channel — local burst only",
+          data: { kind, channelId },
         });
+        // #endregion
+        showLocalBurst();
       }
+
       if (kind === "offering" && observerId && streamer) {
         void sendGift(skuForReactionKind("offering"));
       }
     },
-    [observerId, streamer, sendGift],
+    [observerId, streamer, sendGift, channelId],
   );
 
   const tags = useMemo(() => {
@@ -333,6 +420,12 @@ export default function KickWatchExperience({ channelId }: Props) {
 
   const useDemoTheatrePlayer = Boolean(
     streamer?.status === "live" && !lkToken && demoTheatreEligible,
+  );
+
+  const useHybridIvsPlayer = Boolean(
+    streamer?.status === "live" &&
+      !demoTheatreEligible &&
+      ivsPlaybackUrl.trim().length > 0,
   );
 
   if (loading) {
@@ -354,9 +447,14 @@ export default function KickWatchExperience({ channelId }: Props) {
     );
   }
 
-  const isLive = streamer.status === "live";
-
-  const videoSlot = lkToken ? (
+  const videoSlot = useHybridIvsPlayer ? (
+    <HybridStreamPlayer
+      streamId={channelId}
+      isLive={isLive ?? false}
+      ivsPlaybackUrl={ivsPlaybackUrl}
+      className="h-full w-full"
+    />
+  ) : lkToken ? (
     <LiveVideoPlayer
       roomName={unifiedRoomName}
       token={lkToken}
@@ -388,7 +486,7 @@ export default function KickWatchExperience({ channelId }: Props) {
     null;
   const channelBio =
     personaBio?.bio ??
-    `Watch ${streamer.username} live on PARABLE — worship, prayer, and community.`;
+    `Watch ${streamer.username} live on PARABLE — chat, reactions, and community.`;
 
   const adminOverlay =
     isAdmin && broadcasterProfileId && isLive ? (
@@ -417,8 +515,9 @@ export default function KickWatchExperience({ channelId }: Props) {
     onGiftSubs: () => void sendGift("gift_clap"),
     onWorshipReaction: emitWorshipReaction,
     onSubscribe: () => alert("Subscriptions coming soon."),
-    loadingVideo: !lkToken && !useDemoTheatrePlayer && !tokenError,
-    videoError: tokenError && !useDemoTheatrePlayer ? tokenError : null,
+    loadingVideo:
+      !lkToken && !useDemoTheatrePlayer && !useHybridIvsPlayer && !tokenError,
+    videoError: tokenError && !useDemoTheatrePlayer && !useHybridIvsPlayer ? tokenError : null,
     videoSlot,
     adminOverlay,
   };
@@ -433,7 +532,7 @@ export default function KickWatchExperience({ channelId }: Props) {
             {isCreatorHub ? <CreatorCommandStrip className="top-14!" /> : null}
 
             <div
-              className="flex shrink-0 border-b border-slate-800 bg-slate-950"
+              className="flex shrink-0 items-center border-b border-slate-800 bg-slate-950"
               role="tablist"
               aria-label="Stream sections"
             >
@@ -479,6 +578,7 @@ export default function KickWatchExperience({ channelId }: Props) {
                     showHeader={false}
                     composerPlacement="viewport-fixed"
                     showReactionToggle
+                    enableQuickReactions
                     reactionHud={
                       <WorshipReactionHud
                         layout="mobile-drawer"
@@ -504,7 +604,7 @@ export default function KickWatchExperience({ channelId }: Props) {
                   giftBusy={giftBusy}
                   onFollow={() => void toggleFollow()}
                   onGiftSubs={() => void sendGift("gift_clap")}
-                  onSubscribe={() => alert("Subscriptions coming soon.")}
+                  onSubscribe={() => void executeSubscriptionPurchase()}
                 />
               )}
             </div>

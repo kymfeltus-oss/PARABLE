@@ -133,8 +133,10 @@ export function useStreamChat({
       e.preventDefault();
       if (!newMessage.trim() || !roomId) return;
 
-      const currentText = newMessage.trim();
+      const textContent = newMessage.trim();
       setNewMessage("");
+      setSending(true);
+      setChatError(null);
 
       const supabase = createClient();
       const {
@@ -142,32 +144,33 @@ export function useStreamChat({
       } = await supabase.auth.getUser();
 
       if (!user) {
+        setSending(false);
         setChatError("Sign in to participate in live chat.");
+        setNewMessage(textContent);
         return;
       }
 
-      setSending(true);
-      setChatError(null);
-
-      const label =
-        senderDisplayName.trim() ||
-        user.user_metadata?.display_name ||
-        user.email?.split("@")[0] ||
-        "Anonymous";
-
+      // ALIGNMENT FIX: Use exact schema column names (sender_id and body)
       const { error } = await supabase.from("stream_chat_messages").insert({
         stream_id: roomId,
         sender_id: user.id,
-        display_name: label,
-        body: currentText,
+        body: textContent,
+        display_name:
+          senderDisplayName.trim() ||
+          (typeof user.user_metadata?.display_name === "string"
+            ? user.user_metadata.display_name
+            : null) ||
+          user.email?.split("@")[0] ||
+          "User",
+        client_temp_id: crypto.randomUUID(),
       });
 
       setSending(false);
 
       if (error) {
-        console.error("Failed to sync chat transmission:", error.message);
-        setChatError(error.message);
-        setNewMessage(currentText);
+        console.error("Chat insert failure details:", error.message);
+        setChatError(`Message transmission failure: ${error.message}`);
+        setNewMessage(textContent);
       }
     },
     [newMessage, roomId, senderDisplayName],

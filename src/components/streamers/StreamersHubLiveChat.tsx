@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Loader2, MessageSquare, Pin, Trash2, Smile } from "lucide-react";
 import { useStreamChat } from "@/hooks/useStreamChat";
+import { useStreamInteractionChannel } from "@/hooks/useStreamInteractionChannel";
 import { useSimulatedChatFeed } from "@/hooks/useSimulatedChatFeed";
 import { isStreamersSimChatEnabled } from "@/lib/streamers-sim-config";
 import { fallbackAvatarOnError } from "@/lib/avatar-display";
@@ -25,7 +26,63 @@ type Props = {
   reactionHud?: ReactNode;
   /** Toggle drawer for `reactionHud` when using viewport-fixed composer. */
   showReactionToggle?: boolean;
+  /** Quick emoji bursts on `realtime-stream-interactions:{streamKey}` (desktop rail + inline composer). */
+  enableQuickReactions?: boolean;
+  /** Kick discovery rail: inline badge · username: message */
+  messageLayout?: "card" | "kick-inline";
 };
+
+const QUICK_REACTIONS = ["🔥", "😂", "😮", "🙌", "💯", "👑", "🚀", "💥"] as const;
+
+function kickUsernameColor(name: string): string {
+  const n = name.toLowerCase();
+  if (n.includes("mod") || n.includes("host")) return "text-[#53fc18]";
+  if (n.includes("vip") || n.includes("sub")) return "text-[#ff6b6b]";
+  return "text-[#53fc18]";
+}
+
+function KickInlineChatLine({
+  username,
+  text,
+  simulated,
+  isCreatorVariant,
+  onPin,
+}: {
+  username: string;
+  text: string;
+  simulated?: boolean;
+  isCreatorVariant: boolean;
+  onPin: () => void;
+}) {
+  let badge: string | null = null;
+  const h = username.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+  if (simulated && h % 4 === 0) badge = "SUB";
+  else if (h % 5 === 0) badge = "VIP";
+  else if (h % 7 === 0) badge = "MOD";
+
+  return (
+    <p className="group min-w-0 break-words text-[13px] leading-snug text-[#e2e8f0]">
+      {badge ? (
+        <span className="mr-1.5 inline-flex rounded border border-[#53fc18]/25 bg-[#53fc18]/10 px-1 py-px text-[9px] font-black uppercase tracking-wide text-[#53fc18]">
+          {badge}
+        </span>
+      ) : null}
+      <span className={`font-bold ${kickUsernameColor(username)}`}>{username}</span>
+      <span className="font-bold text-[#94a3b8]">: </span>
+      <span className="font-medium text-[#f8fafc]">{text}</span>
+      {isCreatorVariant ? (
+        <button
+          type="button"
+          onClick={onPin}
+          className="ml-1 inline-flex align-middle opacity-0 transition-opacity group-hover:opacity-100"
+          aria-label="Pin message"
+        >
+          <Pin size={10} className="text-[#64748b]" />
+        </button>
+      ) : null}
+    </p>
+  );
+}
 
 export default function StreamersHubLiveChat({
   streamKey,
@@ -38,9 +95,13 @@ export default function StreamersHubLiveChat({
   composerPlacement = "inline",
   reactionHud,
   showReactionToggle = false,
+  enableQuickReactions = false,
+  messageLayout = "card",
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [reactionsOpen, setReactionsOpen] = useState(false);
+  const { sendReactionBurst } = useStreamInteractionChannel(streamKey);
+  const showQuickReactionControl = enableQuickReactions || showReactionToggle;
   const {
     chatEnabled,
     chatMessages,
@@ -89,6 +150,26 @@ export default function StreamersHubLiveChat({
 
   const fixedComposer = composerPlacement === "viewport-fixed";
 
+  const quickReactionDrawer =
+    showQuickReactionControl && reactionsOpen && enableQuickReactions ? (
+      <div className="mx-3 mb-2 grid grid-cols-4 gap-2 rounded-lg border border-[#24272c] bg-[#191b1f] p-2 shadow-lg">
+        {QUICK_REACTIONS.map((emoji) => (
+          <button
+            key={emoji}
+            type="button"
+            onClick={() => {
+              sendReactionBurst({ emoji });
+              setReactionsOpen(false);
+            }}
+            className="rounded p-2 text-xl transition-transform hover:bg-[#242c33] active:scale-90"
+            aria-label={`Send ${emoji} reaction`}
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+    ) : null;
+
   const composerForm = (
     <form
       onSubmit={sendChatMessage}
@@ -99,7 +180,7 @@ export default function StreamersHubLiveChat({
       }
     >
       <div className={fixedComposer ? "flex min-w-0 flex-1 items-center gap-2" : "flex min-w-0 gap-2"}>
-        {showReactionToggle ? (
+        {showQuickReactionControl ? (
           <button
             type="button"
             aria-label={reactionsOpen ? "Hide reactions" : "Show reactions"}
@@ -232,6 +313,17 @@ export default function StreamersHubLiveChat({
               <p className="text-center text-xs text-white/35">
                 {displayCleared ? "Chat display cleared." : "No messages yet — say hello."}
               </p>
+            ) : messageLayout === "kick-inline" ? (
+              displayMessages.map((msg) => (
+                <KickInlineChatLine
+                  key={msg.id}
+                  username={msg.user}
+                  text={msg.text}
+                  simulated={msg.simulated}
+                  isCreatorVariant={isCreatorVariant}
+                  onPin={() => pinMessage(msg.id)}
+                />
+              ))
             ) : (
               displayMessages.map((msg) => (
                 <div
@@ -281,10 +373,14 @@ export default function StreamersHubLiveChat({
           {reactionsOpen && reactionHud ? (
             <div className="mb-2">{reactionHud}</div>
           ) : null}
+          {quickReactionDrawer}
           {composerForm}
         </div>
       ) : (
-        composerForm
+        <>
+          {quickReactionDrawer}
+          {composerForm}
+        </>
       )}
     </div>
   );

@@ -55,9 +55,6 @@ export default function KickSidebarBrand({ collapsed = false }: Props) {
             >
               PARABLE
             </span>
-            <span className="absolute -right-1 -top-2 rounded bg-white/10 px-1 py-px text-[8px] font-bold uppercase tracking-wider text-[#94a3b8]">
-              Beta
-            </span>
           </Link>
         ) : (
           <Link

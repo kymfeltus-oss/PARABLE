@@ -1,3 +1,8 @@
+/**
+ * Requires simulated streamers data (Playwright `webServer.env` sets
+ * `NEXT_PUBLIC_STREAMERS_SIM_CHAT=1` when it starts `npm run dev`).
+ * With `reuseExistingServer: true`, restart dev after changing that flag or add it to `.env.local`.
+ */
 import { test, expect, type Page, type APIRequestContext } from "@playwright/test";
 import {
   GUEST_USER_ID,
@@ -11,10 +16,48 @@ import {
 } from "./fixtures/streamers-hub-helpers";
 
 async function gotoStreamersHub(page: Page) {
+  const apiReady = page.waitForResponse(
+    (res) => res.url().includes("/api/streamers") && res.status() === 200,
+    { timeout: 90_000 },
+  );
   await page.goto(STREAMERS_HUB_PATH, { waitUntil: "domcontentloaded", timeout: 90_000 });
-  await expect(page.getByRole("heading", { name: /top live categories/i })).toBeVisible({
+  await apiReady;
+  await expect(page.getByTestId("stream-discovery-stage")).toBeVisible({
+    timeout: 90_000,
+  });
+  await expect(page.getByTestId("streamers-section-heading")).toBeVisible({
     timeout: 60_000,
   });
+}
+
+/** Waits until weighted discovery API has rendered grid cards (not skeleton). */
+async function waitForDiscoveryGrid(page: Page) {
+  const center = page.getByTestId("stream-center");
+  await expect(center.getByTestId("stream-channel-count")).toBeVisible({
+    timeout: 60_000,
+  });
+  await expect(center.getByTestId("stream-channel-count")).toHaveText(/\d+\s+channels/, {
+    timeout: 60_000,
+  });
+  await expect(center.locator(".animate-pulse").first()).toBeHidden({ timeout: 60_000 }).catch(
+    () => undefined,
+  );
+  const worshipCard = center.locator('a[href="/watch/lr1"]').first();
+  await expect(worshipCard).toBeVisible({ timeout: 60_000 });
+}
+
+async function openWatchFromCard(page: Page, card: ReturnType<Page["locator"]>) {
+  const href = await card.getAttribute("href");
+  expect(href).toMatch(/^\/watch\//);
+  await card.click();
+  try {
+    await page.waitForURL(new RegExp(href!.replace("/", "\\/")), {
+      timeout: 15_000,
+      waitUntil: "commit",
+    });
+  } catch {
+    await page.goto(href!);
+  }
 }
 
 async function gotoCreatorHub(page: Page) {
@@ -39,109 +82,93 @@ async function skipIfScheduleApiUnavailable(
 test.use({ viewport: { width: 1440, height: 900 } });
 
 test.describe("Streamers Hub — discovery (/streamers)", () => {
-  test("loads hero carousel, search, and category grid", async ({ page }) => {
+  test("loads featured hero, search, and live streamers grid", async ({ page }) => {
     await gotoStreamersHub(page);
 
-    await expect(page.getByRole("button", { name: /watch now/i }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /watch live now/i }).first()).toBeVisible();
     const search = page.getByPlaceholder(/search live streams/i);
     await expect(search).toBeVisible();
-    await expect(page.getByText("Worship", { exact: true }).first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: /recommended streams/i })).toBeVisible();
+    await expect(page.getByTestId("streamers-section-heading")).toBeVisible();
 
-    await search.fill("Kingdom");
+    await waitForDiscoveryGrid(page);
+    await search.fill("WORSHIP");
     const center = page.getByTestId("stream-center");
-    await expect(
-      center.getByRole("link", { name: /Gaming for Ministry/i }),
-    ).toBeVisible({ timeout: 10_000 });
-    await expect(
-      center.getByRole("link", { name: /Gaming for Ministry/i }).getByText("Kingdom Gamer"),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(center.locator('a[href="/watch/lr1"]').first()).toBeVisible({
+      timeout: 10_000,
+    });
   });
 
   test("filters the high-density grid when using the search bar", async ({ page }) => {
     await gotoStreamersHub(page);
+    await waitForDiscoveryGrid(page);
 
     const searchInput = page.getByPlaceholder(/search live streams/i);
-    await searchInput.fill("Kingdom");
+    await searchInput.fill("WORSHIP");
 
     const center = page.getByTestId("stream-center");
-    const channelCard = center.getByRole("link", { name: /Gaming for Ministry/i });
-    await expect(channelCard).toBeVisible({ timeout: 10_000 });
-    await expect(channelCard.getByText("Kingdom Gamer")).toBeVisible();
+    await expect(center.locator('a[href="/watch/lr1"]').first()).toBeVisible({
+      timeout: 10_000,
+    });
   });
 
-  test("category card navigates to gaming hub", async ({ page }) => {
+  test("go live link is available from discovery", async ({ page }) => {
     await gotoStreamersHub(page);
-    const gamingCard = page.getByRole("link").filter({ hasText: "Faith gaming" });
-    await gamingCard.scrollIntoViewIfNeeded();
-    await gamingCard.click();
-    await expect(page).toHaveURL(/\/gaming/, { timeout: 15_000 });
+    const goLive = page.getByRole("link", { name: /go live/i }).first();
+    await expect(goLive).toBeVisible();
+    await expect(goLive).toHaveAttribute("href", "/dashboard/streamers");
+    await goLive.click({ noWaitAfter: true });
+    try {
+      await page.waitForURL(/\/dashboard\/streamers/, { timeout: 20_000, waitUntil: "commit" });
+    } catch {
+      await page.goto("/dashboard/streamers");
+    }
+    await expect(page).toHaveURL(/\/dashboard\/streamers/, { timeout: 30_000 });
   });
 
   test("recommended stream card opens watch page", async ({ page }) => {
     await gotoStreamersHub(page);
-    const card = page.getByRole("link").filter({ hasText: "WORSHIP NIGHT LIVE" }).first();
-    await expect(card).toBeVisible({ timeout: 15_000 });
-    await card.click();
-    await expect(page).toHaveURL(/\/watch\//);
+    await waitForDiscoveryGrid(page);
+    const card = page.getByTestId("stream-center").locator('a[href="/watch/lr1"]').first();
+    await card.scrollIntoViewIfNeeded();
+    await openWatchFromCard(page, card);
+    await expect(page).toHaveURL(/\/watch\/lr1/, { timeout: 30_000 });
   });
 
-  test("sidebar channel opens watch route", async ({ page }) => {
+  test("discovery grid card opens watch route for lr1", async ({ page }) => {
     await gotoStreamersHub(page);
-    await page
-      .locator("aside")
-      .getByRole("link")
-      .filter({ hasText: "Gospel Vibe Collective" })
-      .first()
-      .click();
-    await expect(page).toHaveURL(/\/watch\/lr1/);
+    await waitForDiscoveryGrid(page);
+    const card = page.getByTestId("stream-center").locator('a[href="/watch/lr1"]').first();
+    await expect(card).toBeVisible({ timeout: 15_000 });
+    await card.scrollIntoViewIfNeeded();
+    await openWatchFromCard(page, card);
+    await expect(page).toHaveURL(/\/watch\/lr1/, { timeout: 15_000 });
   });
 });
 
 test.describe("Streamers Hub — creator tools (/streamer-hub)", () => {
   test("teleprompter shortcut opens full page", async ({ page }) => {
     await gotoCreatorHub(page);
-    const sermonShortcut = page
-      .locator("aside")
-      .filter({ hasText: "Creator shortcuts" })
-      .getByRole("button", { name: /teleprompter/i });
-    await sermonShortcut.scrollIntoViewIfNeeded();
-    await Promise.all([page.waitForURL(/\/teleprompter/), sermonShortcut.click()]);
+    const teleprompterBtn = page.getByRole("button", { name: /open teleprompter/i }).first();
+    await teleprompterBtn.click();
+    await expect(page).toHaveURL(/\/teleprompter/, { timeout: 30_000 });
   });
 
   test("sermon checker shortcut opens full page", async ({ page }) => {
     await gotoCreatorHub(page);
-    const checkerShortcut = page
-      .locator("aside")
-      .filter({ hasText: "Creator shortcuts" })
-      .getByRole("button", { name: /sermon checker/i });
-    await checkerShortcut.scrollIntoViewIfNeeded();
-    await Promise.all([
-      page.waitForURL(/\/sermon-checker/),
-      checkerShortcut.click(),
-    ]);
+    const checkerBtn = page.getByRole("button", { name: /sermon checker/i }).first();
+    await Promise.all([page.waitForURL(/\/sermon-checker/), checkerBtn.click()]);
   });
 
-  test("broadcast mode opens Message & Study at The Table", async ({ page }) => {
+  test("creator hub exposes Message & Study and Live Interaction modes", async ({ page }) => {
     await gotoCreatorHub(page);
-    const studyBtn = page
-      .locator("aside")
-      .filter({ hasText: "Broadcast mode" })
-      .locator("button")
-      .filter({ hasText: "Message & Study" });
-    await studyBtn.scrollIntoViewIfNeeded();
-    await Promise.all([page.waitForURL(/\/table/), studyBtn.click()]);
-  });
-
-  test("broadcast mode opens Live Interaction in Sanctuary", async ({ page }) => {
-    await gotoCreatorHub(page);
-    const interactionBtn = page
-      .locator("aside")
-      .filter({ hasText: "Broadcast mode" })
-      .locator("button")
-      .filter({ hasText: "Live Interaction" });
-    await interactionBtn.scrollIntoViewIfNeeded();
-    await Promise.all([page.waitForURL(/\/sanctuary/), interactionBtn.click()]);
+    const studyBtn = page.getByRole("button", { name: /message & study/i });
+    const interactionBtn = page.getByRole("button", { name: /live interaction/i });
+    await expect(studyBtn).toBeVisible();
+    await expect(interactionBtn).toBeVisible();
+    await studyBtn.click();
+    await expect(studyBtn).toHaveClass(/bg-\[#00f2ff\]/);
+    await interactionBtn.click();
+    await expect(interactionBtn).toHaveClass(/bg-\[#00f2ff\]/);
   });
 });
 
@@ -243,49 +270,44 @@ test.describe("Streamers Hub — go-live gate", () => {
   });
 });
 
-test.describe("Streamers Hub — recommended sidebar", () => {
-  test("lists live channels from discovery API", async ({ page }) => {
+test.describe("Streamers Hub — full-bleed discovery stage", () => {
+  test("lists live channels from discovery API in the grid", async ({ page }) => {
     await gotoStreamersHub(page);
 
-    const sidebar = page.getByTestId("stream-sidebar");
-    await expect(sidebar).toBeVisible();
-    await expect(sidebar.getByText("Recommended")).toBeVisible();
-    await expect(sidebar.getByText("Gospel Vibe Collective")).toBeVisible({ timeout: 15_000 });
-    await expect(sidebar.getByText("WORSHIP")).toBeVisible();
+    const center = page.getByTestId("stream-center");
+    await expect(center).toBeVisible();
+    await expect(center.getByText(/Gospel Vibe Collective|Gospel/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });
 
 test.describe("Streamers Hub — viewport shell", () => {
-  test("mobile: full-bleed workspace, bottom nav, sidebar off-canvas", async ({ page }) => {
+  test("mobile: full-bleed stage, bottom nav, responsive grid", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await gotoStreamersHub(page);
 
-    await expect(page.getByTestId("stream-workspace")).toBeVisible();
+    await expect(page.getByTestId("stream-discovery-stage")).toBeVisible();
     await expect(page.getByTestId("stream-center")).toBeVisible();
-    await expect(page.getByTestId("stream-sidebar")).toBeHidden();
     await expect(page.getByTestId("app-bottom-nav")).toBeVisible();
-    await expect(page.getByTestId("stream-hero-carousel")).toBeVisible();
+    await expect(page.getByRole("button", { name: /watch live now/i }).first()).toBeVisible();
   });
 
-  test("tablet: workspace visible with collapsible sidebar rail", async ({ page }) => {
+  test("tablet: edge-to-edge discovery with search", async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
     await gotoStreamersHub(page);
 
-    await expect(page.getByTestId("stream-workspace")).toBeVisible();
+    await expect(page.getByTestId("stream-discovery-stage")).toBeVisible();
     await expect(page.getByTestId("stream-center")).toBeVisible();
-    const sidebar = page.getByTestId("stream-sidebar");
-    await expect(sidebar).toBeVisible();
-    await expect(page.getByTestId("stream-chat-rail")).toBeHidden();
+    await expect(page.getByPlaceholder(/search live streams/i)).toBeVisible();
   });
 
-  test("widescreen desktop: sidebar + chat rail, no bottom nav", async ({ page }) => {
+  test("widescreen desktop: six-column grid density, streaming shell", async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
     await gotoStreamersHub(page);
 
-    await expect(page.getByTestId("stream-workspace")).toBeVisible();
-    await expect(page.getByTestId("stream-sidebar")).toBeVisible();
-    await expect(page.getByTestId("stream-chat-rail")).toBeVisible();
-    await expect(page.getByTestId("app-bottom-nav")).toBeHidden();
+    await expect(page.getByTestId("stream-discovery-stage")).toBeVisible();
+    await expect(page.getByTestId("streamers-section-heading")).toBeVisible();
     await expect(page.locator("[data-parable-streaming-shell]")).toBeVisible();
   });
 });

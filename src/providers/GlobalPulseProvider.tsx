@@ -28,7 +28,7 @@ export type GlobalPulseValue = {
 const GlobalPulseContext = createContext<GlobalPulseValue | null>(null);
 
 /**
- * Single 10s poll for `get_global_pulse` — shared by {@link GlobalPulseTicker}, Lobby Pulse, and Flight deck styling.
+ * Single 10s poll for `get_global_pulse` — shared by Lobby Pulse, Flight deck, and testify globe styling.
  */
 export function GlobalPulseProvider({ children }: { children: React.ReactNode }) {
   const [pulseScore, setPulseScore] = useState(0.5);

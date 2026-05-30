@@ -1,14 +1,13 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import GlobalPulseTicker from "@/components/GlobalPulseTicker";
-import MainHeader from "@/components/MainHeader";
+import ParableGlobalHeader from "@/components/navigation/ParableGlobalHeader";
 import { getShellProfile, shouldHideGlobalTopStack } from "@/lib/app-shell-profiles";
 import { GlobalPulseProvider } from "@/providers/GlobalPulseProvider";
 
 /**
- * Global in-app shell: optional top stack → profile-aware main workspace.
- * `FULL_BLEED` (streaming / watch / stream) drops header/ticker and max-width constraints.
+ * Global in-app shell: optional top header → profile-aware main workspace.
+ * `FULL_BLEED` (streaming / watch / stream) drops header and max-width constraints.
  */
 export default function ParableGlobalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -28,17 +27,14 @@ export default function ParableGlobalLayout({ children }: { children: React.Reac
       >
         {!hideGlobalTopStack ? (
           <div className="flex min-w-0 shrink-0 flex-col">
-            <GlobalPulseTicker />
-            <MainHeader />
+            <ParableGlobalHeader />
           </div>
         ) : null}
         <main
           data-parable-shell-profile={profile}
           className={[
             "relative flex min-h-0 min-w-0 flex-1 flex-col",
-            fullBleed
-              ? "h-full w-full overflow-hidden"
-              : "overflow-hidden",
+            fullBleed ? "h-full w-full overflow-hidden" : "overflow-hidden",
           ].join(" ")}
         >
           {children}

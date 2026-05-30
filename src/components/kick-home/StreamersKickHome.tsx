@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Radio } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import KickTopNav from "@/components/kick-home/KickTopNav";
 import KickRecommendedSidebar from "@/components/kick-home/KickRecommendedSidebar";
@@ -86,7 +88,7 @@ export default function StreamersKickHome() {
           const fallback = getAllStreamersDemoRecords();
           setStreamers(fallback);
           setActiveChannelId(fallback[0]?.id ?? null);
-          setLoadError("Showing demo live channels while discovery reconnects.");
+          setLoadError("Live discovery is reconnecting — showing cached channels.");
         }
       } finally {
         if (!cancelled) setIsRefreshing(false);
@@ -250,12 +252,21 @@ export default function StreamersKickHome() {
         {isPublishing ? <CreatorCommandStrip /> : null}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#00f2fe]/20 bg-[#00f2fe]/5 px-3 py-2">
-        <span className="h-2 w-2 animate-pulse rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
-        <span className="text-xs font-bold uppercase tracking-widest text-[#00f2fe]">
-          {platformLiveLabel}
-        </span>
-        <span className="text-[10px] text-[#64748b]">· Fellowship-wide live pulse</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#00f2fe]/20 bg-[#00f2fe]/5 px-3 py-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
+          <span className="text-xs font-bold uppercase tracking-widest text-[#00f2fe]">
+            {platformLiveLabel}
+          </span>
+          <span className="text-[10px] text-[#64748b]">· Fellowship-wide live pulse</span>
+        </div>
+        <Link
+          href="/dashboard/streamers"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#00f2fe] px-4 py-2 text-xs font-black uppercase tracking-wider text-black transition hover:brightness-110 active:scale-[0.98]"
+        >
+          <Radio className="h-4 w-4" />
+          Go Live Studio
+        </Link>
       </div>
 
       <section>

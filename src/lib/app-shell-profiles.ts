@@ -7,13 +7,13 @@ export { isStreamingRoute };
 
 /**
  * Parable Live module only: `/streamers`, `/watch/*`, `/stream/*`.
- * Full-bleed shell, header/ticker unmount, and `h-dvh` viewport lock apply here only.
+ * Full-bleed shell, global header hidden, and `h-dvh` viewport lock apply here only.
  */
 export function isFullBleedRoute(pathname: string | null | undefined): boolean {
   return isStreamingRoute(pathname);
 }
 
-/** Hide global ticker + MainHeader on streaming routes (phase-scoped). */
+/** Hide global header on streaming routes (phase-scoped). */
 export function shouldHideGlobalTopStackForStreaming(
   pathname: string | null | undefined,
 ): boolean {

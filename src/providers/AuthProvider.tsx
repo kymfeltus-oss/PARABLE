@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { agentDebugLog } from "@/lib/agent-debug-log";
 import { createClient } from "@/utils/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -123,8 +124,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const run = (async () => {
+      const loadT0 = Date.now();
       const gen = ++loadGenRef.current;
       const showLoadingSpinner = !hasHydratedAuthRef.current;
+      // #region agent log
+      agentDebugLog({
+        runId: "post-fix-4",
+        hypothesisId: "H1",
+        location: "AuthProvider.tsx:loadUser:start",
+        message: "loadUser started",
+        data: { gen, showLoadingSpinner },
+      });
+      // #endregion
       if (showLoadingSpinner) {
         setLoading(true);
       }
@@ -453,6 +464,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         hasHydratedAuthRef.current = true;
       }
+      // #region agent log
+      agentDebugLog({
+        runId: "post-fix-4",
+        hypothesisId: "H1",
+        location: "AuthProvider.tsx:loadUser:end",
+        message: "loadUser finished",
+        data: { gen, ms: Date.now() - loadT0 },
+      });
+      // #endregion
     }
     })();
 
@@ -471,10 +491,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadUser]);
 
   useEffect(() => {
+    void loadUser();
     const supabase = createClient();
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
+    } = supabase.auth.onAuthStateChange((event) => {
+      // INITIAL_SESSION fires on subscribe; mount loadUser already hydrates once.
+      if (event === "INITIAL_SESSION") return;
       void loadUser();
     });
 

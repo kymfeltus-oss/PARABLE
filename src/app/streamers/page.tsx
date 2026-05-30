@@ -1,10 +1,8 @@
-"use client";
+// Force dynamic rendering to bypass static pre-render and stale compilation passes
+export const dynamic = "force-dynamic";
 
-import StreamersKickHome from "@/components/kick-home/StreamersKickHome";
+import StreamersPageClient from "./StreamersPageClient";
 
-/**
- * Streamers tab — Kick.com-style discovery homepage (bottom nav → /streamers).
- */
 export default function StreamersPage() {
-  return <StreamersKickHome />;
+  return <StreamersPageClient />;
 }

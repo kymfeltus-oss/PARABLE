@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import {
   BadgeCheck,
   Gift,
   Heart,
+  Radio,
   Share2,
   Star,
   TriangleAlert,
@@ -160,6 +162,16 @@ export default function KickStreamMetaBar({
               <Star size={16} />
               Subscribe
             </button>
+
+            <Link
+              href="/live-studio"
+              data-testid="watch-go-live"
+              className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-black uppercase tracking-wider text-black transition-opacity hover:opacity-90"
+              style={{ backgroundColor: "#00f2fe" }}
+            >
+              <Radio size={16} />
+              Go Live
+            </Link>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-sm">
