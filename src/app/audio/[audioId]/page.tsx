@@ -4,15 +4,20 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, Music2, Play } from "lucide-react";
 import { fallbackAvatarOnError } from "@/lib/avatar-display";
+import MusicMiniPlayer from "@/components/music/MusicMiniPlayer";
+import { trackFromPostAudio } from "@/lib/music/demo-tracks";
 import { getAudioTrackById, getPostsByAudioId } from "@/lib/sanctuary-post-interactions";
 import { sanctuaryProfileHref } from "@/lib/demo-personas";
+import { useMusicPlayback } from "@/providers/MusicPlaybackProvider";
 
 /** Audio hub — lists reels/posts using a shared sound asset. */
 export default function AudioHubPage() {
   const params = useParams();
   const audioId = decodeURIComponent(String((params as { audioId?: string }).audioId ?? ""));
-  const track = getAudioTrackById(audioId);
+  const postAudio = getAudioTrackById(audioId);
   const posts = getPostsByAudioId(audioId);
+  const { playTrack, state } = useMusicPlayback();
+  const playbackTrack = postAudio ? trackFromPostAudio(postAudio) : null;
 
   return (
     <div className="min-h-full bg-[#01040A] pb-8 font-sans text-[#F8FAFC]">
@@ -23,30 +28,34 @@ export default function AudioHubPage() {
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <Music2 className="h-5 w-5 shrink-0 text-[#00F2FE]" />
           <div className="min-w-0">
-            <h1 className="truncate text-sm font-bold">{track?.title ?? "Audio"}</h1>
+            <h1 className="truncate text-sm font-bold">{postAudio?.title ?? "Audio"}</h1>
             <p className="truncate text-[11px] text-[#64748B]">{posts.length} posts · Reels</p>
           </div>
         </div>
       </header>
 
-      {!track ? (
+      {!postAudio ? (
         <p className="px-6 py-16 text-center text-sm text-[#64748B]">This audio track is not available.</p>
       ) : (
         <>
           <div className="border-b border-[#06111E]/80 px-4 py-4">
-            <button
-              type="button"
-              className="flex w-full items-center gap-3 rounded-xl border border-[#00F2FE]/25 bg-[#00F2FE]/10 px-4 py-3 text-left"
-              onClick={() => window.alert(`Playing preview for "${track.title}" (simulated).`)}
-            >
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#00F2FE] text-[#01040A]">
-                <Play className="h-5 w-5 fill-current" />
-              </span>
-              <span>
-                <span className="block text-sm font-bold">{track.title}</span>
-                <span className="block text-[11px] text-[#94A3B8]">Tap to preview audio</span>
-              </span>
-            </button>
+            {state.currentTrack?.id === playbackTrack?.id ? (
+              <MusicMiniPlayer showQueueControls={false} />
+            ) : (
+              <button
+                type="button"
+                className="flex w-full items-center gap-3 rounded-xl border border-[#00F2FE]/25 bg-[#00F2FE]/10 px-4 py-3 text-left"
+                onClick={() => playbackTrack && playTrack(playbackTrack, [playbackTrack])}
+              >
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#00F2FE] text-[#01040A]">
+                  <Play className="h-5 w-5 fill-current" />
+                </span>
+                <span>
+                  <span className="block text-sm font-bold">{postAudio.title}</span>
+                  <span className="block text-[11px] text-[#94A3B8]">Tap to preview audio</span>
+                </span>
+              </button>
+            )}
           </div>
 
           <ul className="grid grid-cols-3 gap-0.5 p-0.5 sm:grid-cols-4">

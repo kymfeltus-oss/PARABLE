@@ -13,6 +13,7 @@ import {
 import { installDevReactDevToolsGuard } from "@/lib/dev-react-devtools-guard";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { MessagesProvider } from "@/providers/MessagesProvider";
+import { MusicPlaybackProvider } from "@/providers/MusicPlaybackProvider";
 
 const APP_TITLE =
   process.env.NEXT_PUBLIC_APP_VARIANT === "parable-study-ai"
@@ -103,6 +104,7 @@ export default function ClientRootShell({
   return (
     <AuthProvider>
       <MessagesProvider>
+        <MusicPlaybackProvider>
         {useAppShell ? (
           <div
             className={[
@@ -116,6 +118,7 @@ export default function ClientRootShell({
         ) : (
           children
         )}
+        </MusicPlaybackProvider>
       </MessagesProvider>
     </AuthProvider>
   );

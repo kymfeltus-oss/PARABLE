@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import MusicMiniPlayer from "@/components/music/MusicMiniPlayer";
+import { MUSIC_HUB_DEMO_TRACK } from "@/lib/music/demo-tracks";
+import { useMusicPlayback } from "@/providers/MusicPlaybackProvider";
 import {
   BadgeCheck,
   Camera,
@@ -187,6 +190,7 @@ function WaveBars() {
 }
 
 export default function MusicHubPage() {
+  const { playTrack, state } = useMusicPlayback();
   const [navHighlight, setNavHighlight] = useState<string>(SECTIONS[0].id);
 
   useEffect(() => {
@@ -542,25 +546,28 @@ export default function MusicHubPage() {
           </GradientFrame>
         </motion.div>
 
-        {/* Mini player */}
-        <div className="mt-8 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#111118] via-[#0a0a10] to-[#111118] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#00f2ff] text-black shadow-[0_0_24px_rgba(0,242,255,0.4)] transition hover:scale-105 active:scale-95"
-              aria-label="Play demo"
-            >
-              <Play size={22} className="ml-0.5" fill="currentColor" />
-            </button>
-            <div className="min-w-0 flex-1">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Now playing</p>
-              <p className="truncate text-sm font-black text-white">Sanctuary session (demo)</p>
-              <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full w-[35%] rounded-full bg-gradient-to-r from-[#00f2ff] to-violet-400" />
+        <div className="mt-8">
+          {state.currentTrack ? (
+            <MusicMiniPlayer />
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#111118] via-[#0a0a10] to-[#111118] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#00f2ff] text-black shadow-[0_0_24px_rgba(0,242,255,0.4)] transition hover:scale-105 active:scale-95"
+                  aria-label="Play demo"
+                  onClick={() => playTrack(MUSIC_HUB_DEMO_TRACK, [MUSIC_HUB_DEMO_TRACK])}
+                >
+                  <Play size={22} className="ml-0.5" fill="currentColor" />
+                </button>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Preview</p>
+                  <p className="truncate text-sm font-black text-white">{MUSIC_HUB_DEMO_TRACK.title}</p>
+                  <p className="mt-1 truncate text-[11px] text-white/45">{MUSIC_HUB_DEMO_TRACK.artist}</p>
+                </div>
               </div>
             </div>
-          </div>
-          <p className="mt-3 text-center text-[10px] text-white/35">Full Main Stage player + merch drawer ship next.</p>
+          )}
         </div>
       </div>
     </div>
